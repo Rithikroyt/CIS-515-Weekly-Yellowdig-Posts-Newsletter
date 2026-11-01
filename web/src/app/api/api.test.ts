@@ -7,6 +7,7 @@ import { GET as pdf } from "./pdf/[runId]/route";
 import { parseWeek } from "@/lib/weeks";
 
 const SECRET = "test-secret-value-0123456789";
+const SALT = "test-salt-value-0123456789abcdefghij";
 const RUN = "r_0123456789abcdef01234567";
 const HTML = "<!doctype html>\n<html><body><p>Week 2</p></body></html>\n";
 const params = (runId: string) => ({ params: Promise.resolve({ runId }) });
@@ -27,6 +28,7 @@ beforeEach(() => {
   calls = [];
   vi.stubEnv("N8N_GENERATE_WEBHOOK_URL", "https://n8n.example.com/webhook/cis515-newsletter");
   vi.stubEnv("N8N_WEBHOOK_SECRET", SECRET);
+  vi.stubEnv("PSEUDONYMIZATION_SALT", SALT);
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
@@ -65,6 +67,8 @@ describe("generate", () => {
     expect((calls[0].init.headers as Record<string, string>)["x-cis515-webhook-secret"]).toBe(SECRET);
     expect(String(calls[0].init.body)).not.toContain(SECRET);
     expect(JSON.stringify(body)).not.toContain(SECRET);
+    expect(JSON.parse(String(calls[0].init.body)).pseudonymSalt).toBe(SALT);
+    expect(JSON.stringify(body)).not.toContain(SALT);
   });
 
   it("returns the active run on a duplicate request", async () => {
@@ -86,6 +90,15 @@ describe("generate", () => {
     stubN8n(() => ({}));
     const res = await generate(post({ week: 2 }));
     expect(res.status).toBe(503);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses to start a live run without the pseudonymization salt", async () => {
+    vi.stubEnv("PSEUDONYMIZATION_SALT", "too-short");
+    stubN8n(() => ({}));
+    const res = await generate(post({ week: 2 }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "SALT_NOT_CONFIGURED" });
     expect(calls).toHaveLength(0);
   });
 });

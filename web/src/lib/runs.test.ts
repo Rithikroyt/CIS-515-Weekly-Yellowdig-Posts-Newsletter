@@ -4,17 +4,24 @@ import { decideStart, failureCode, routeRequest, statusReply } from "./runs";
 import { WEEK_TOPICS } from "./weeks";
 
 const RUN = "r_0123456789abcdef01234567";
+const SALT = "s".repeat(32);
 const NOW = "2026-11-01T12:00:00Z";
 const ago = (min: number) => new Date(Date.parse(NOW) - min * 60000).toISOString();
 
 describe("routeRequest", () => {
   it("accepts configured weeks only, from the body only", () => {
-    expect(routeRequest({ action: "generate", week: 2, runId: RUN }, false)).toEqual({ action: "generate", week: 2, runId: RUN, test: null });
+    expect(routeRequest({ action: "generate", week: 2, runId: RUN, pseudonymSalt: SALT }, false)).toEqual({ action: "generate", week: 2, runId: RUN, test: null });
     expect(routeRequest({ action: "generate", week: 4, runId: RUN }, false)).toEqual({ action: "reject", errorCode: "WEEK_NOT_CONFIGURED" });
     expect(routeRequest({ action: "generate", week: "2", runId: RUN }, false)).toEqual({ action: "reject", errorCode: "INVALID_WEEK" });
     expect(routeRequest({ action: "generate", week: 2, runId: "bad" }, false)).toEqual({ action: "reject", errorCode: "INVALID_RUN_ID" });
     expect(routeRequest({ action: "delete", runId: RUN }, false)).toEqual({ action: "reject", errorCode: "INVALID_ACTION" });
     expect(routeRequest(null, false)).toEqual({ action: "reject", errorCode: "INVALID_RUN_ID" });
+  });
+
+  it("requires the salt for live runs and never returns it", () => {
+    expect(routeRequest({ action: "generate", week: 2, runId: RUN }, false)).toEqual({ action: "reject", errorCode: "SALT_NOT_CONFIGURED" });
+    expect(routeRequest({ action: "generate", week: 2, runId: RUN, pseudonymSalt: "short" }, false)).toEqual({ action: "reject", errorCode: "SALT_NOT_CONFIGURED" });
+    expect(JSON.stringify(routeRequest({ action: "generate", week: 2, runId: RUN, pseudonymSalt: SALT }, false))).not.toContain(SALT);
   });
 
   it("allows the synthetic test flag only from the manual trigger", () => {

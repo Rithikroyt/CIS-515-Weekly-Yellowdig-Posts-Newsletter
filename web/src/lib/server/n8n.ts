@@ -2,7 +2,7 @@
 // One authenticated n8n webhook handles three actions: generate, status and artifact.
 import { randomBytes } from "node:crypto";
 
-import { RUN_ID_RE } from "../runs";
+import { MIN_SALT_LENGTH, RUN_ID_RE } from "../runs";
 export { RUN_ID_RE };
 export const newRunId = () => "r_" + randomBytes(12).toString("hex");
 
@@ -17,7 +17,7 @@ export type RunStatus = { runId: string; week: number; status: RunState; errorCo
 export type Artifact = { runId: string; week: number; status: RunState; html: string };
 
 export class N8nError extends Error {
-  constructor(public code: "N8N_NOT_CONFIGURED" | "N8N_UNAVAILABLE" | "N8N_BAD_RESPONSE" | "RUN_NOT_FOUND", public httpStatus: number) {
+  constructor(public code: "N8N_NOT_CONFIGURED" | "SALT_NOT_CONFIGURED" | "N8N_UNAVAILABLE" | "N8N_BAD_RESPONSE" | "RUN_NOT_FOUND", public httpStatus: number) {
     super(code);
   }
 }
@@ -66,9 +66,15 @@ function toStatus(j: Record<string, unknown>): RunStatus {
   };
 }
 
-/** Starts a run. n8n returns the active run for that week instead when one is already in progress. */
+/**
+ * Starts a run. n8n returns the active run for that week instead when one is already in progress.
+ * The pseudonymization salt travels server-to-server with the webhook secret; n8n hands it only to workflow 01.
+ */
 export async function startGeneration(week: number): Promise<RunStatus> {
-  return toStatus(await call({ action: "generate", week, runId: newRunId() }));
+  config();
+  const pseudonymSalt = process.env.PSEUDONYMIZATION_SALT ?? "";
+  if (pseudonymSalt.length < MIN_SALT_LENGTH) throw new N8nError("SALT_NOT_CONFIGURED", 503);
+  return toStatus(await call({ action: "generate", week, runId: newRunId(), pseudonymSalt }));
 }
 
 export async function getStatus(runId: string): Promise<RunStatus> {

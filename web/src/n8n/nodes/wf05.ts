@@ -7,7 +7,7 @@ import { buildEditorialInput } from "../../lib/editorial/input";
 import type { EditorialDraft } from "../../lib/editorial/machine";
 import type { EditorialInput } from "../../lib/editorial/types";
 import { renderNewsletter } from "../../lib/render/newsletter";
-import { decideStart, failureCode, routeRequest as route, statusReply as reply, type RunRow } from "../../lib/runs";
+import { MIN_SALT_LENGTH, decideStart, failureCode, routeRequest as route, statusReply as reply, type RunRow } from "../../lib/runs";
 import { SYNTHETIC_WEEK2_RUN } from "../../lib/source/synthetic-week2";
 import type { WeekDataset } from "../../lib/source/normalize";
 import { COURSE, YELLOWDIG_SOURCE, weekConfig, type Week } from "../../lib/weeks";
@@ -42,12 +42,17 @@ export const queuedReply: NodeEntry = (ctx) => {
 };
 
 /** Run input for workflow 01. Production reads Yellowdig only (no fixture fallback); the test path uses the fixture. */
+const WEBHOOK_NODE = "Newsletter Webhook";
+
 export const sourceConfig: NodeEntry = (ctx) => {
   const req = ctx.node(WF05.route) as { week: Week; test: string | null };
   if (req.test === "synthetic") return [{ ...SYNTHETIC_WEEK2_RUN }];
   const w = weekConfig(req.week);
   if (!w.topic || !w.startDate || !w.endDate) throw new Error("[WEEK_NOT_CONFIGURED] week " + req.week);
-  return [{ sourceMode: "yellowdig", week: w.week, startDate: w.startDate, endDate: w.endDate, topic: w.topic, ...YELLOWDIG_SOURCE, yellowdigCredentialConfigured: true }];
+  // The salt comes from the authenticated webhook body (Vercel's server-only PSEUDONYMIZATION_SALT) and goes only to 01.
+  const salt = ((ctx.node(WEBHOOK_NODE) as { body?: { pseudonymSalt?: unknown } } | null)?.body?.pseudonymSalt);
+  if (typeof salt !== "string" || salt.length < MIN_SALT_LENGTH) throw new Error("[SALT_NOT_CONFIGURED] no pseudonymization salt");
+  return [{ sourceMode: "yellowdig", week: w.week, startDate: w.startDate, endDate: w.endDate, topic: w.topic, ...YELLOWDIG_SOURCE, yellowdigCredentialConfigured: true, pseudonymSalt: salt }];
 };
 
 /** Builds the deterministic editorial input. No workflow files are uploaded in this flow, so no profiles. */

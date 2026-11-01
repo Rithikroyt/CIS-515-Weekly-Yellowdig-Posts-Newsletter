@@ -14,7 +14,13 @@ export type RoutedRequest =
   | { action: "status" | "artifact"; runId: string }
   | { action: "reject"; errorCode: string };
 
-/** Validates an untrusted webhook body. Only `action`, `week` and `runId` are read. */
+/** Live runs need the server-side pseudonymization salt (PSEUDONYMIZATION_SALT) for workflow 01. */
+export const MIN_SALT_LENGTH = 32;
+
+/**
+ * Validates an untrusted webhook body. Only `action`, `week`, `runId` and (for live generate) the presence of
+ * `pseudonymSalt` are read. The salt itself is never part of the result; Source Config reads it from the webhook.
+ */
 export function routeRequest(body: unknown, allowTest: boolean): RoutedRequest {
   const b = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
   const runId = typeof b.runId === "string" && RUN_ID_RE.test(b.runId) ? b.runId : null;
@@ -25,6 +31,7 @@ export function routeRequest(body: unknown, allowTest: boolean): RoutedRequest {
   if (week === null) return { action: "reject", errorCode: "INVALID_WEEK" };
   const test = allowTest && b.test === "synthetic" ? "synthetic" : null;
   if (!test && !weekConfig(week).topic) return { action: "reject", errorCode: "WEEK_NOT_CONFIGURED" };
+  if (!test && (typeof b.pseudonymSalt !== "string" || b.pseudonymSalt.length < MIN_SALT_LENGTH)) return { action: "reject", errorCode: "SALT_NOT_CONFIGURED" };
   return { action: "generate", week, runId, test };
 }
 
