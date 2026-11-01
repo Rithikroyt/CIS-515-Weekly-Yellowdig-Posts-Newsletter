@@ -1,6 +1,6 @@
 # Architecture — CIS 515 Workflow Observatory
 
-Status: **Phases 0–3 complete** (audit, contracts, source layer, workflows 01–02, and workflow-asset profiling with workflow 03). Sections marked _Planned_ are not built yet.
+Status: **Phases 0–3 complete** (audit, contracts, source layer, workflows 01–02, and workflow-asset profiling with workflow 03). The public web frontend is built; see [frontend-architecture.md](frontend-architecture.md). Sections marked _Planned_ are not built yet.
 
 ## Product
 
@@ -14,7 +14,7 @@ Status: **Phases 0–3 complete** (audit, contracts, source layer, workflows 01�
 | VS Code + Claude Code | Development. n8n changes go through the n8n Cloud MCP server. |
 | GitHub (`Rithikroyt/CIS-515-Weekly-Yellowdig-Posts-Newsletter`) | Source of truth for code, schemas, sanitized workflow exports and **approved** issues. The repository is public. |
 | n8n Cloud (`rithikroy18.app.n8n.cloud`) | Live automation backend. |
-| Vercel | Hosts the Next.js app (`web/`). _Planned._ |
+| Vercel | Hosts the Next.js app (Root Directory `web`). Static pages from approved issue files. |
 | Local Docker (`n8n/docker-compose.yml`) | Optional sandbox only. |
 
 ## Data flow
