@@ -43,7 +43,10 @@ describe("renderNewsletter", () => {
   });
 
   it("omits withheld claims and reports ready_with_omissions", async () => {
-    const { input, draft } = await draftFor("revision-limit");
+    const bad = JSON.parse(JSON.stringify(E.MOCK_FIXTURE.newsletterClean));
+    bad.hero.dek = { text: "13 workflows used human approval this week.", evidenceRefs: ["metric:capabilities.usesHumanApproval"] };
+    const input = E.syntheticEditorialInput();
+    const draft = await E.runEditorial({ input, provider: E.createMockProvider({ ...E.NAMED_SCENARIOS.clean, "newsletter-editor": [{ json: bad }], "newsletter-reviser": [{ json: bad }] }), now: NOW });
     const r = renderNewsletter({ input, draft });
     expect(draft.review.unresolved.length).toBeGreaterThan(0);
     expect(r.status).toBe("ready_with_omissions");

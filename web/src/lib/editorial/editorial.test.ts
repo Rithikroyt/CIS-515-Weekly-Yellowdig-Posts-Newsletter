@@ -342,7 +342,10 @@ describe("20–24: revision loop and provider failures", () => {
     const { draft, provider } = await run(E.NAMED_SCENARIOS["revision-limit"]);
     expect(provider.calls.filter((c) => c.promptId === "newsletter-reviser")).toHaveLength(2);
     expect(draft).toMatchObject({ status: "human_review", review: { passed: false }, run: { revisionCount: 2, errorCode: "REVISION_LIMIT_REACHED" } });
-    expect(draft.newsletter!.executiveSummary[0].text).toBe(E.WITHHELD_TEXT);
+    // The rejected sentence never reaches the issue; the introduction is rebuilt instead of left blank.
+    expect(draft.newsletter!.executiveSummary.map((c) => c.text)).not.toContain(E.WITHHELD_TEXT);
+    expect(draft.newsletter!.executiveSummary.map((c) => c.text).join(" ")).not.toContain(F.inventedCountClaim.text);
+    expect(draft.introSource).toBe("repaired");
     expect(draft.review.unresolved).toEqual([{ claimId: "executiveSummary[0]", originalText: F.inventedCountClaim.text, reviewStatus: "conflict", codes: ["MODEL_NUMERIC_CONFLICT"] }]);
   });
   it("the model reviewer can lower a claim but never raise it; a flagged claim triggers revision", async () => {

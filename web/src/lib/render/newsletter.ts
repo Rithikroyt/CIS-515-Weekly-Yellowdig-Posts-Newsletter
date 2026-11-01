@@ -25,6 +25,7 @@ export type RenderOptions = {
 export type QualityReport = {
   spotlights: number; everyBuild: number; groups: number; images: number;
   headlineWords: number; dekWords: number; introWords: number; takeaways: number; nextSteps: number;
+  introSource: "ai" | "repaired" | "deterministic" | null;
 };
 export type RenderResult = {
   html: string; status: "ready" | "ready_with_omissions"; omittedClaims: number; quality: QualityReport;
@@ -300,6 +301,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const prov = [
     "Generated from " + (posts_ ?? input.posts.length) + " Week " + week + " posts" + (comments !== null ? " and " + comments + " comments" : "") + (synthetic ? " in a synthetic test dataset." : " on Yellowdig."),
     "Numbers are counted in code. Summaries are AI-drafted and evidence-checked against the posts; they have not been reviewed by an instructor.",
+    draft.introSource === "deterministic" ? "The introduction was assembled by code from checked facts because the AI-written one did not pass evidence review." : "",
     omitted ? omitted + (omitted === 1 ? " statement that did" : " statements that did") + " not pass evidence review " + (omitted === 1 ? "was" : "were") + " left out." : "",
   ].filter(Boolean).join(" ");
   push('<tr><td style="border-top:1px solid ' + INK + ";padding:14px 0 0;font-family:" + SANS + ";font-size:11px;line-height:1.6;color:" + MUTED + '">' + esc(prov) + "</td></tr>");
@@ -308,6 +310,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const quality: QualityReport = {
     spotlights: shown.length, everyBuild, groups: groups.length, images: imagesShown,
     headlineWords: words(title), dekWords: words(dek), introWords: words(intro), takeaways: takeaways.length, nextSteps: steps.length,
+    introSource: draft.introSource ?? null,
   };
   return { html: out.join("\n") + "\n", status: omitted ? "ready_with_omissions" : "ready", omittedClaims: omitted, quality };
 }

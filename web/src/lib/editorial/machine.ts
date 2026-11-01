@@ -4,10 +4,11 @@
 // MAX_REVISIONS revisions, and a hard MAX_STEPS budget.
 import { inputHash, sha256Hex, stableStringify } from "../ids";
 import {
-  WITHHELD_TEXT, collectClaims, indexInput, parseModelJson, reviewNewsletter, validateDiscussion, validatePostNotes,
+  WITHHELD_TEXT, checkClaim, collectClaims, indexInput, parseModelJson, reviewNewsletter, validateDiscussion, validatePostNotes,
   validateSelection, validateThemes, worst, type ClaimResult, type ClaimStatus, type StageIssue,
 } from "./checks";
 import { chooseSpotlights, screenDiscussion, screenNotes, validateBuildGroups } from "./curate";
+import { finalizeIntroduction, type IntroSource } from "./intro";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
 import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
 import type { BuildGroups, Discussion, EditorialCode, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
@@ -363,19 +364,35 @@ export function buildDraft(s: RunState, now: string) {
       if (r.status === "unsupported" || r.status === "conflict") claim.text = WITHHELD_TEXT;
     });
   }
+  // The introduction is never left blank: rejected sentences are removed and re-checked, else code assembles one
+  // from checked evidence (intro.ts). Rejected originals stay in review.unresolved for the human reviewer.
+  const isIntro = (id: string) => id.startsWith("executiveSummary[");
+  let introSource: IntroSource | null = null;
+  const introClaims: Array<{ claimId: string; method: "ai-drafted" | "code-generated"; evidenceRefs: string[]; reviewStatus: ClaimStatus; codes: EditorialCode[] }> = [];
+  if (newsletter && s.newsletter) {
+    const idx = indexInput(s.input);
+    const intro = finalizeIntroduction(idx, s.newsletter.executiveSummary, reviewById, { notes: s.notes, selection: s.selection, themes: s.themes });
+    newsletter.executiveSummary = intro.claims;
+    introSource = intro.source;
+    intro.claims.forEach((c, i) => {
+      const id = "executiveSummary[" + i + "]";
+      const r = intro.source === "ai" ? reviewById.get(id) : checkClaim(idx, id, c);
+      introClaims.push({ claimId: id, method: intro.source === "deterministic" ? "code-generated" : "ai-drafted", evidenceRefs: c.evidenceRefs, reviewStatus: r?.status ?? "supported", codes: r?.codes ?? [] });
+    });
+  }
   const review = {
     passed: s.status !== "failed" && !!newsletter && s.review.length > 0 && s.review.every((r) => r.status === "supported"),
-    claims: s.review.map((r) => {
+    claims: [...s.review.filter((r) => !isIntro(r.claimId)).map((r) => {
       const c = newsletter ? collectClaims(newsletter).find((x) => x.claimId === r.claimId)?.claim : undefined;
       return { claimId: r.claimId, method: "ai-drafted" as const, evidenceRefs: c ? c.evidenceRefs : [], reviewStatus: r.status, codes: r.codes };
-    }),
+    }), ...introClaims],
     unresolved,
     stageIssues: s.stageIssues.slice(0, 400),
   };
   const body = {
     schemaVersion: "1.0" as const, issueId: s.input.issueId, week: s.input.week, status: s.status, inputHash: s.inputHash, idempotencyKey: s.idempotencyKey,
     metrics: s.input.metrics, postNotes: s.notes, capabilityChecks: s.capabilityChecks, themes: s.themes, selection: s.selection,
-    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, review,
+    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource, review,
   };
   const usedPrompts = [...new Map(s.modelCalls.map((c) => [c.promptId, c.promptVersion])).entries()].map(([promptId, promptVersion]) => ({ promptId, promptVersion }));
   const run = {

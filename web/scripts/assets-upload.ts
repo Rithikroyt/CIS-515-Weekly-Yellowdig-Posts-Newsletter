@@ -1,5 +1,6 @@
 // Private weekly asset intake: real post screenshots and workflow JSON → the n8n Data Table `newsletter_assets`.
-// Usage (from web/): npm run assets:upload -- --week 2 --manifest <path/to/manifest.json> [--dry-run]
+// Usage (from web/): npm run assets:upload -- --week 2 --manifest <path/to/manifest.json> [--dry-run] [--skip-post-check]
+// Post ids are checked against the links in the latest finished issue for the week; --skip-post-check is for tests.
 //
 // The manifest maps every file to a Yellowdig post id explicitly (format in docs/newsletter-generator.md).
 // Workflow JSON is validated, sanitized and profiled by the same shared code as workflow 03 and is never executed;
@@ -19,6 +20,18 @@ const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg"
 function arg(name: string): string | null {
   const i = process.argv.indexOf("--" + name);
   return i > 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith("--") ? process.argv[i + 1] : null;
+}
+
+/**
+ * The week's real post ids, read from the links in the latest finished issue for the week (newsletter_runs). Used to
+ * refuse assets mapped to a post that is not in the week. Returns null when no finished issue exists yet.
+ */
+async function knownPostIds(week: number): Promise<string[] | null> {
+  const f = encodeURIComponent(JSON.stringify({ type: "and", filters: [{ columnName: "week", condition: "eq", value: week }] }));
+  const rows = ((await api("/data-tables/uWls7HHm5Ek7u1SQ/rows?limit=100&sortBy=" + encodeURIComponent("updatedAt:desc") + "&filter=" + f)) as { data: Array<{ status?: string; html?: string }> }).data;
+  const done = rows.find((r) => (r.status === "ready" || r.status === "ready_with_omissions") && typeof r.html === "string" && !r.html.includes("Synthetic test issue."));
+  if (!done) return null;
+  return [...new Set([...done.html!.matchAll(/[?&]postId=([A-Za-z0-9._:-]+)/g)].map((m) => m[1]))];
 }
 
 /** Re-encodes to JPEG at display resolution (2× the 544px column), dropping EXIF, GPS and other metadata. */
@@ -70,14 +83,42 @@ async function main() {
   });
 
   // Same validation and static profiling as workflow 03. Workflow JSON is parsed as data only.
-  const { manifest: assetManifest, profiles } = processAssetBatch({ week, assets: inputs });
-  const okImages = images.filter((x) => assetManifest.assets[x.index]?.status === "VALIDATED");
-  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles }) }];
-  for (const x of featured(okImages)) rows.push({ week, kind: "image", post_id: x.a.postId, role: x.a.role, alt: x.a.altText, payload: await optimize(x.buf) });
+  const known = process.argv.includes("--skip-post-check") ? null : await knownPostIds(week);
+  if (!known && !process.argv.includes("--skip-post-check")) throw new Error("[POSTS_UNKNOWN] no finished Week " + week + " issue to check post ids against; generate the week once first");
+  const { manifest: assetManifest, profiles } = processAssetBatch({ week, knownPostRefs: known, assets: inputs });
+  const entries = assetManifest.assets;
+  const count = (st: string) => entries.filter((e) => e.status === st).length;
+  const reasons = entries.filter((e) => e.reason).reduce<Record<string, number>>((m, e) => ((m[e.reason!] = (m[e.reason!] ?? 0) + 1), m), {});
 
-  const statuses = assetManifest.assets.reduce<Record<string, number>>((m, e) => ((m[e.status] = (m[e.status] ?? 0) + 1), m), {});
-  console.log("week", week, "| assets", assetManifest.assets.length, JSON.stringify(statuses), "| workflow profiles", profiles.length,
-    "| images stored", rows.length - 1, "| posts with assets", new Set(manifest.assets.map((a) => a.postId)).size, "| stored bytes", rows.reduce((s, r) => s + r.payload.length, 0));
+  // Ambiguous mappings stop the upload: unknown posts, one file mapped to two posts, or two workflow files for one post.
+  const ambiguous: string[] = [];
+  if (count("UNMATCHED_ASSET")) ambiguous.push(count("UNMATCHED_ASSET") + " asset(s) mapped to a post id that is not in Week " + week);
+  const byId = new Map(entries.map((e) => [e.asset.assetId, e]));
+  const crossPost = entries.filter((e) => e.status === "DUPLICATE" && e.duplicateOf && byId.get(e.duplicateOf)?.asset.postRef !== e.asset.postRef).length;
+  if (crossPost) ambiguous.push(crossPost + " identical file(s) mapped to different posts");
+  const wfPerPost = entries.filter((e) => e.asset.kind === "n8n_workflow_json" && e.status === "PROFILED").reduce<Record<string, number>>((m, e) => ((m[e.asset.postRef ?? ""] = (m[e.asset.postRef ?? ""] ?? 0) + 1), m), {});
+  const multiWf = Object.values(wfPerPost).filter((n) => n > 1).length;
+  if (multiWf) ambiguous.push(multiWf + " post(s) with more than one workflow file");
+
+  const okImages = images.filter((x) => entries[x.index]?.status === "VALIDATED");
+  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles }) }];
+  let stripped = 0;
+  for (const x of featured(okImages)) {
+    const payload = await optimize(x.buf);
+    const meta = await sharp(Buffer.from(payload.split(",")[1], "base64")).metadata();
+    if (!meta.exif && !meta.icc && !meta.xmp && !meta.iptc) stripped++;
+    rows.push({ week, kind: "image", post_id: x.a.postId, role: x.a.role, alt: x.a.altText, payload });
+  }
+
+  // Counts only: no file names, contents or post text are printed.
+  console.log(JSON.stringify({
+    week, postsInWeek: known?.length ?? "not checked", assets: entries.length,
+    accepted: count("PROFILED") + count("VALIDATED"), workflowFilesProfiled: count("PROFILED"), imagesValidated: count("VALIDATED"),
+    rejected: count("REJECTED"), duplicates: count("DUPLICATE"), unmatched: count("UNMATCHED_ASSET"), rejectedReasons: reasons,
+    postsWithWorkflowFile: Object.keys(wfPerPost).length, postsWithImage: rows.length - 1, hero: rows.some((r) => r.role === "hero"),
+    imagesMetadataStripped: stripped + "/" + (rows.length - 1), storedBytes: rows.reduce((t, r) => t + r.payload.length, 0),
+  }, null, 1));
+  if (ambiguous.length) throw new Error("[AMBIGUOUS_MAPPING] " + ambiguous.join("; ") + ". Fix the manifest; nothing was uploaded.");
   if (dry) { console.log("dry run: nothing uploaded"); return; }
 
   const tables = (await api("/data-tables?limit=100")) as { data: Array<{ id: string; name: string }> };

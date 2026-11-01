@@ -35,6 +35,7 @@
     "discussion": { "$ref": "#/$defs/discussionOutput" },
     "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
     "buildGroups": { "$ref": "#/$defs/buildGroupsOutput" },
+    "introSource": { "enum": ["ai", "repaired", "deterministic", null] },
     "review": {
       "type": "object",
       "additionalProperties": false,
@@ -50,7 +51,7 @@
             "required": ["claimId", "method", "evidenceRefs", "reviewStatus", "codes"],
             "properties": {
               "claimId": { "$ref": "#/$defs/claimId" },
-              "method": { "const": "ai-drafted" },
+              "method": { "enum": ["ai-drafted", "code-generated"] },
               "evidenceRefs": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/evidenceRef" } },
               "reviewStatus": { "enum": ["supported", "partially-supported", "unsupported", "conflict"] },
               "codes": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/code" } }
