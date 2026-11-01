@@ -69,7 +69,7 @@ Posts are selected by the structured `post/topics` label. Labels come only from 
 1. In n8n, create a **Header Auth** credential named `CIS 515 Newsletter Webhook`: name `x-cis515-webhook-secret`, value a random string of 32+ characters. Select it on the **Newsletter Webhook** node. n8n currently auto-attaches the existing `Yellowdig CIS 515` credential there (it is the only Header Auth credential); it must be replaced before publishing.
 2. Attach the Gemini (`googlePalmApi`) credential to **Gemini generateContent** in workflow 04, and confirm workflow 01's Yellowdig credential.
 3. Publish workflow 05. Its production URL is `https://rithikroy18.app.n8n.cloud/webhook/cis515-newsletter`.
-4. Vercel (server-side only, never `NEXT_PUBLIC_*`): `N8N_GENERATE_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `CHROMIUM_PACK_URL` (see `.env.example`).
+4. Vercel (server-side only, never `NEXT_PUBLIC_*`): `N8N_GENERATE_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `PSEUDONYMIZATION_SALT`, `CHROMIUM_PACK_URL` (see `.env.example`). The salt (32+ random characters, kept stable) is sent with each generate request; workflow 05 checks it is present and passes it only to 01, which hashes Yellowdig user ids with it. It is never stored or returned. Without it, generate returns `SALT_NOT_CONFIGURED`.
 5. Add the Week 3–5 topic labels to `weeks.ts` once those topics exist, after re-running the probe.
 
 ## Local checks
