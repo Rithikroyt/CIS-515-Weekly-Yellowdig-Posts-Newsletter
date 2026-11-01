@@ -36,10 +36,22 @@ renderer are unchanged. Each new source is one adapter beside `yellowdigAttachme
 | Source | Status |
 |---|---|
 | Yellowdig Events API (API key, `data.yellowdig.app`) | **VERIFIED — no attachments.** 2026-11-01: across all 819 events the key can read, no field carries attachments, media, files or URLs; post bodies are plain text; the API spec documents only events, points, communities and stats. |
-| Yellowdig internal attachment request (what the website itself calls) | **NOT VERIFIED.** Needs the browser Network details (method, host, path pattern, field names, cookie vs API-key auth; no secret values). |
+| Yellowdig internal attachment request (what the website itself calls) | **IDENTIFIED, NOT VERIFIED WITH THE API KEY.** The website calls `POST https://galactus.yellowdig.app/graphql`, operation `FetchBoardPostDetail` (variables `boardId` = the community id, `postId`), with attachments at `data.findBoard.boardPost.attachmentsV2` (`assetUrl, description, id, mimetype, size, title, type, __typename`; images are `ImageAttachment`, e.g. `IMG`, `image/png`). In the browser it authenticates with the Yellowdig **session cookie and a CSRF token**; no API-key header is sent. Asset URLs open logged out (they redirect to `cdn-v2.yellowdig.app`). |
 | Instructor export | **NOT VERIFIED.** Unknown whether Yellowdig offers one with images and files. |
 | n8n binary upload (Form Trigger / Webhook) | **AVAILABLE FALLBACK.** Not built. |
 | Private asset uploader (`npm run assets:upload` → `newsletter_assets`) | **IMPLEMENTED FALLBACK.** Paused for real Week 2 data; kept as is. |
+
+## One-post test (2026-11-01)
+
+Temporary workflow **TEST - Yellowdig Attachments** (`6A0bD9b4kVactaek`, inactive): Manual Trigger → test values →
+HTTP Request (`FetchBoardPostDetail`, minimal attachment fields only, `Yellowdig CIS 515` credential, no cookies,
+redirects off) → safe summary (types, MIME types, sizes, asset host; no URLs, text or names).
+
+**Result: REQUEST_FAILED — blocked before sending.** n8n refused to attach the credential: *"This credential is
+restricted from accessing galactus.yellowdig.app. Only the following domains are allowed: data.yellowdig.app."*
+No request reached Yellowdig, so whether the API key works on the GraphQL endpoint is still unknown. Widening the
+credential's allowed domains would send the API key to a second Yellowdig host; that needs the owner's explicit
+approval. No-auth and session-cookie attempts were not made. Workflows 01–05 were not changed.
 
 ## What would settle it
 
