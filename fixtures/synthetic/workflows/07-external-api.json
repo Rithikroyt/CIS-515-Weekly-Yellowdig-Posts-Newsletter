@@ -1,0 +1,91 @@
+{
+  "name": "External API to sheet",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Fetch rates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "parameters": {
+        "url": "https://api.example.invalid/rates"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "Shape rows",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "Append rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "append"
+      }
+    }
+  ],
+  "connections": {
+    "Daily": {
+      "main": [
+        [
+          {
+            "node": "Fetch rates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch rates": {
+      "main": [
+        [
+          {
+            "node": "Shape rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape rows": {
+      "main": [
+        [
+          {
+            "node": "Append rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

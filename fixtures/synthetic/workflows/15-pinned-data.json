@@ -1,0 +1,56 @@
+{
+  "name": "Pinned data",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Shape",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Shape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {
+    "Manual": [
+      {
+        "json": {
+          "student": "Synthetic Student",
+          "note": "pinned synthetic row"
+        }
+      }
+    ]
+  },
+  "staticData": {
+    "lastRun": "2026-01-01"
+  }
+}

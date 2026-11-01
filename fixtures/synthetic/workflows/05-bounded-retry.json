@@ -1,0 +1,204 @@
+{
+  "name": "Bounded API retry",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Call API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "parameters": {
+        "url": "https://api.example.invalid/items"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "Check response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "parameters": {
+        "jsCode": "return [{ json: { ok: $json.status === 'ok' } }];"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "position": [
+        880,
+        0
+      ],
+      "name": "Done",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "position": [
+        1100,
+        0
+      ],
+      "name": "Attempts left?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "position": [
+        1320,
+        0
+      ],
+      "name": "Pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "amount": 2
+      }
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Call API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call API": {
+      "main": [
+        [
+          {
+            "node": "Check response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check response": {
+      "main": [
+        [
+          {
+            "node": "OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OK?": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Attempts left?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attempts left?": {
+      "main": [
+        [
+          {
+            "node": "Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pause": {
+      "main": [
+        [
+          {
+            "node": "Call API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

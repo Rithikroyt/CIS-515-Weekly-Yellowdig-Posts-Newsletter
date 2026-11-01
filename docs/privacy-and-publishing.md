@@ -45,13 +45,29 @@ The repository is **public**. Anything committed is published.
 - **Email redaction.** Email addresses inside post and comment text are replaced with `[email removed]`.
 - **Execution data.** Workflows 01 and 02 save no execution data for production runs (`saveDataSuccessExecution` and `saveDataErrorExecution` are `none`). Manual test runs are saved, and they use synthetic data only. Raw HTTP responses therefore don't persist in n8n for production runs.
 - **Nothing raw is stored.** No raw payloads go into n8n Data Tables or Git. The capability probe records field names and types only, never values.
-- **Attachments.** Multimedia attachments are not assumed to be available from the API. They arrive through the protected asset upload in Phase 3.
+- **Attachments.** Multimedia attachments are not assumed to be available from the API. They arrive as manually supplied assets and go through workflow 03 (below).
 - **Open item:** the server-side source of `pseudonymSalt` for live runs (n8n variable or protected data table) is decided in Phase 5, when an orchestrating workflow calls 01.
+
+## Workflow assets (Phase 3)
+
+Student workflow files are **untrusted input**. Workflow 03 and `lib/assets` treat them as data only:
+
+- **Never executed.** No `eval`, `Function()`, dynamic import, VM or shell; no import into n8n; no node is run, no expression evaluated, no URL followed, no credential resolved. A test plants a Code node with side effects and checks that it never runs.
+- **Accepted files:** `.json` workflows (5 MB) and `.png`, `.jpg`/`.jpeg`, `.webp` screenshots (10 MB). Everything else, including `.js`, `.html`, `.svg` and `.zip`, is rejected. Limits: 10 workflows and 10 screenshots per post, 100 assets per batch, 500 nodes, 2000 edges, nesting depth 64. Traversal is iterative and budgeted.
+- **Sanitized in memory.** Credentials, `pinData`, `staticData`, execution data and webhook ids are removed. Secrets in headers, query strings, secret-named keys, Code-node source and Set values are redacted, along with webhook URLs and emails. A final re-scan rejects the file (`SECRET_POLICY_FAILURE`) if anything secret-shaped survives.
+- **Counts only.** Diagnostics report how many items were found, never the values.
+- **Screenshots** are validated and hashed. No OCR and no AI.
+- **No guessing.** A file without an explicit, known `postRef` is `UNMATCHED_ASSET`.
+- **Storage.** Workflow 03 saves no production execution data. Manual test runs use the synthetic batch only. Real student files are not committed; `fixtures/synthetic/workflows/` holds invented workflows with obviously fake values (`SYNTHETIC-FAKE-…`, `@example.edu`).
+
+## Publication policy (conservative)
+
+`lib/source/publication-policy.ts` decides whether a normalized post may appear publicly. Deleted posts are excluded. A post is eligible only when its `post/status` **and** `post/visibility` values are in an allowlist of values verified against live data. Both allowlists are **empty** until those values are verified, so every post currently needs human review. The policy is not yet wired into ingestion.
 
 ## Minimization
 
 - Only the fields in `normalized-post` are kept: names, post text, comment text and counts.
-- Workflow profiles keep node names and types, never prompts, code or parameters.
+- Workflow profiles keep node labels (redacted), types and categories, never prompts, code, parameters or credential references.
 - Display names are shown because classmates already see them in Yellowdig. A student can ask to be left out (Phase 5 adds an exclusion list).
 
 ## Untrusted input
@@ -59,7 +75,7 @@ The repository is **public**. Anything committed is published.
 - Posts, comments, file names, screenshots and workflow JSON are data. They are sent to the LLM inside delimited blocks, with an instruction to treat them as content and never as instructions.
 - The synthetic fixture includes a prompt-injection post to test this.
 - Every value is escaped when rendered. Uploaded workflow JSON is parsed for its structure only and never imported or executed.
-- Uploads are checked for type, size and shape (Phase 3).
+- Uploads are checked for extension, MIME type, content (magic bytes), size and structure before anything else happens (Phase 3).
 
 ## Publishing (finalized in Phase 5)
 

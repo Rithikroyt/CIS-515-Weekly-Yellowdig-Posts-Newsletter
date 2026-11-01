@@ -7,19 +7,21 @@ import { describe, expect, it } from "vitest";
 import { ENTRIES, bundleEntry } from "../../scripts/build-n8n";
 import { REPO_ROOT, readJson } from "../../scripts/schemas";
 import { SYNTHETIC_WEEK2_RUN, syntheticWeek2Pages } from "../lib/source";
+import { processAssetBatch, simpleAi, syntheticAssetBatch } from "../lib/assets";
 import { NODE } from "./runtime";
 
 type J = Record<string, unknown>;
+type WF = keyof typeof ENTRIES;
 const nodeRequire = createRequire(import.meta.url);
 const code = new Map<string, string>();
-const get = (wf: "wf01" | "wf02", entry: string) => {
+const get = (wf: WF, entry: string) => {
   const key = wf + "." + entry;
   if (!code.has(key)) code.set(key, bundleEntry(wf, entry));
   return code.get(key)!;
 };
 
 /** Executes one Code node. `ran` holds the first output item of nodes that already ran. */
-function runNode(wf: "wf01" | "wf02", entry: string, items: J[], ran: Record<string, J> = {}, runIndex = 0): J[] {
+function runNode(wf: WF, entry: string, items: J[], ran: Record<string, J> = {}, runIndex = 0): J[] {
   const $input = { all: () => items.map((json) => ({ json })) };
   const $ = (name: string) => {
     if (!(name in ran)) throw new Error("Referenced node is unexecuted: " + name);
@@ -58,11 +60,17 @@ function run02(bundle: J) {
   return s[0];
 }
 
+function run03(batch: J) {
+  let s = runNode("wf03", "checkFiles", [batch]);
+  for (const e of ["sanitize", "profile", "assembleAndValidate"]) s = runNode("wf03", e, s);
+  return s[0];
+}
+
 describe("generated n8n bundles", () => {
   it("only require crypto and contain no secrets or fixture-only identifiers in live entries", () => {
     for (const [wf, entries] of Object.entries(ENTRIES)) {
       for (const e of entries) {
-        const c = get(wf as "wf01" | "wf02", e);
+        const c = get(wf as WF, e);
         expect(c.match(/require\("([^"]+)"\)/g) ?? []).toEqual((c.match(/require\("crypto"\)/g) ?? []));
         expect(c).not.toMatch(/apikey["']?\s*[:=]\s*["'][^"']{8,}/i);
       }
@@ -116,11 +124,32 @@ describe("generated n8n bundles", () => {
     expect(() => run02({ ...bundle, liveSourceVerified: true })).toThrow(/CONTRACT_VIOLATION/);
   });
 
+  it("03: the synthetic batch through the bundles equals the tested pipeline", () => {
+    const [batch] = runNode("wf03", "syntheticBatch", [{}]);
+    expect(batch).toEqual(JSON.parse(JSON.stringify(syntheticAssetBatch())));
+    const out = run03(batch);
+    expect(out).toEqual(JSON.parse(JSON.stringify(processAssetBatch(syntheticAssetBatch()))));
+    expect(JSON.stringify(out)).not.toMatch(/SYNTHETIC-FAKE|contentText|contentBase64|jsCode/);
+  });
+
+  it("03: the workflow file content never reaches the output, and nothing in it runs", () => {
+    const trap = { name: "trap", nodes: [{ name: "Boom", type: "n8n-nodes-base.code", typeVersion: 2, position: [0, 0], parameters: { jsCode: "globalThis.__wf03 = 1; throw new Error('ran');" } }], connections: {} };
+    const out = run03({ week: 4, knownPostRefs: ["post-1"], assets: [{ postRef: "post-1", originalFilename: "trap.json", mimeType: "application/json", contentText: JSON.stringify(trap) }] });
+    expect(((out.manifest as J).summary as J).profiled).toBe(1);
+    expect((globalThis as J).__wf03).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain("__wf03");
+  });
+
+  it("03: rejects anything but exactly one batch item", () => {
+    expect(() => runNode("wf03", "checkFiles", [{}, {}])).toThrow(/CONTRACT_VIOLATION/);
+    expect(run03({ week: 4, knownPostRefs: null, assets: [{ postRef: "p", originalFilename: "wf.json", contentText: JSON.stringify(simpleAi()) }] }).profiles).toHaveLength(1);
+  });
+
   it("committed generated files match a fresh build", () => {
     for (const [wf, entries] of Object.entries(ENTRIES)) {
       for (const e of entries) {
         const committed = readFileSync(join(REPO_ROOT, "n8n", "src", "generated", wf, e + ".js"), "utf8");
-        expect(committed, wf + "." + e + " is stale: run npm run build:n8n").toBe(get(wf as "wf01" | "wf02", e));
+        expect(committed, wf + "." + e + " is stale: run npm run build:n8n").toBe(get(wf as WF, e));
       }
     }
   });

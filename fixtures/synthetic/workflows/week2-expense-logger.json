@@ -1,0 +1,224 @@
+{
+  "name": "Expense Logger",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "New receipt email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Extract fields",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "parameters": {
+        "model": "gpt-4o-mini"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "Validate amount and date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "parameters": {
+        "jsCode": "const ok = typeof $json.amount === 'number' && $json.month === new Date().getMonth();\nreturn [{ json: { ...$json, ok } }];"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "position": [
+        880,
+        0
+      ],
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "position": [
+        1100,
+        0
+      ],
+      "name": "Append to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "append"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "position": [
+        1320,
+        0
+      ],
+      "name": "Retry allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "position": [
+        1540,
+        0
+      ],
+      "name": "Flag invalid receipt",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "append"
+      }
+    }
+  ],
+  "connections": {
+    "New receipt email": {
+      "main": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract fields": {
+      "main": [
+        [
+          {
+            "node": "Validate amount and date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate amount and date": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Append to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry allowed?": {
+      "main": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag invalid receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

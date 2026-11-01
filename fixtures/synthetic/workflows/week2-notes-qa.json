@@ -1,0 +1,91 @@
+{
+  "name": "Lecture Notes Q&A",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Answer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "parameters": {
+        "model": "gpt-4o-mini"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "Notes store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1,
+      "parameters": {
+        "mode": "retrieve-as-tool"
+      }
+    }
+  ],
+  "connections": {
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notes store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Answer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

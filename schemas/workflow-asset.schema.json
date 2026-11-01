@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/workflow-asset.schema.json",
+  "title": "WorkflowAsset",
+  "description": "Metadata for one manually supplied asset (an n8n workflow JSON file or a screenshot). No content, no local paths, no student identity fields. Content is untrusted data and is never executed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "week", "postRef", "assetId", "kind", "originalFilename", "mimeType", "sizeBytes", "sha256", "uploadedAt"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "postRef": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }], "description": "Normalized postId this asset was explicitly attached to, or null when unmatched." },
+    "assetId": { "$ref": "#/$defs/assetId" },
+    "kind": { "enum": ["n8n_workflow_json", "workflow_screenshot"] },
+    "originalFilename": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "Sanitized basename (unsafe characters replaced)." },
+    "mimeType": { "type": "string", "maxLength": 80 },
+    "sizeBytes": { "type": "integer", "minimum": 0 },
+    "sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }], "description": "SHA-256 of the file bytes; null when rejected before hashing (e.g. over the size limit)." },
+    "uploadedAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "assetId": { "type": "string", "pattern": "^asset_[a-f0-9]{16}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

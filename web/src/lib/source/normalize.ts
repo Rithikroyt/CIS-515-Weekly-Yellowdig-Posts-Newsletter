@@ -1,6 +1,6 @@
 // Workflow 02: classify events, join interactions to posts, compute metrics, report orphans.
 // No AI. Every number here comes from code.
-import type { AssetManifest, NormalizedPost } from "../contracts";
+import type { NormalizedPost } from "../contracts";
 import { computeDiscussion, computeIssueMetrics } from "../metrics";
 import { inputHash } from "../ids";
 import { SourceError, USED_EVENT_TYPES } from "./constants";
@@ -174,12 +174,3 @@ export function normalizeBundle(bundle: SourceBundle) {
 }
 
 export type WeekDataset = ReturnType<typeof normalizeBundle>;
-
-/** Joins admin-uploaded asset names onto posts (the API does not provide attachments). Pure. */
-export function applyAssetManifest(posts: NormalizedPost[], manifest: AssetManifest): NormalizedPost[] {
-  const byPost = new Map(manifest.assets.map((a) => [a.postId, a]));
-  return posts.map((p) => {
-    const a = byPost.get(p.postId);
-    return a ? { ...p, assets: { screenshots: [...a.screenshots], workflowJson: a.workflowJson } } : p;
-  });
-}

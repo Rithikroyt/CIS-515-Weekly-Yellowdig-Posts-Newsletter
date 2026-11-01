@@ -1,0 +1,56 @@
+{
+  "name": "Notify student.one@example.edu",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Compose",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "to",
+              "value": "student.two@example.edu"
+            },
+            {
+              "name": "note",
+              "value": "Ask student.three@example.edu"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Compose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

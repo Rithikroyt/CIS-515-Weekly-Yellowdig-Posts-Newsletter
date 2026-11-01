@@ -1,6 +1,6 @@
 # Architecture — CIS 515 Workflow Observatory
 
-Status: **Phases 0–2 complete** (audit, contracts, source layer and workflows 01–02). Sections marked _Planned_ are not built yet.
+Status: **Phases 0–3 complete** (audit, contracts, source layer, workflows 01–02, and workflow-asset profiling with workflow 03). Sections marked _Planned_ are not built yet.
 
 ## Product
 
@@ -22,7 +22,8 @@ Status: **Phases 0–2 complete** (audit, contracts, source layer and workflows 
 ```mermaid
 flowchart LR
   YD[Yellowdig Engage API] -->|01 fetch| RAW[raw-event bundle<br/>in memory only]
-  UP[Admin asset upload] -->|manifest| NORM
+  UP[Admin asset upload] -->|03 check, sanitize| MAN[asset manifest]
+  MAN -->|explicit postRef only| NORM
   RAW -->|02 normalize + join| NORM[normalized posts<br/>+ code-counted metrics]
   UP -->|03 parse, never execute| PROF[workflow profiles<br/>+ graph data]
   NORM --> ED[04 editorial intelligence<br/>4 structured AI stages]
@@ -49,8 +50,9 @@ Deterministic logic is written once in TypeScript under `web/src/lib/` and used 
 |---|---|
 | `lib/metrics.ts`, `lib/ids.ts` | Code-counted metrics, hashing, pseudonymous ids (Phase 1) |
 | `lib/source/` | Run config, Phoenix date windows, Yellowdig field map and privacy boundary, pagination and failure handling, dedupe, topic/date filter, normalization and joins, capability probe, synthetic Week 2 provider |
-| `lib/contracts/` | Zod types, and a small JSON Schema validator that reads `/schemas` (n8n has no Ajv or Zod) |
-| `n8n/nodes/wf01.ts`, `wf02.ts` | One thin entry per n8n Code node; each calls one shared stage |
+| `lib/assets/` | Phase 3: file checks, static parse and sanitization, node classifier, graph and capability detection, asset manifest, synthetic workflow fixtures. See [workflow-asset-profiling.md](workflow-asset-profiling.md) |
+| `lib/contracts/` | Zod types, plain vocabularies (`vocab.ts`), and a small JSON Schema validator that reads `/schemas` (n8n has no Ajv or Zod) |
+| `n8n/nodes/wf01.ts`, `wf02.ts`, `wf03.ts` | One thin entry per n8n Code node; each calls one shared stage |
 
 `npm run build:n8n` bundles each entry with esbuild into `n8n/src/generated/<wf>/<entry>.js` and fills the SDK templates in `n8n/sdk/`. Drift is caught three ways:
 
@@ -73,13 +75,25 @@ flowchart LR
   SB --> N2[02: validate, classify, join, metrics, validate] --> WD[(week dataset)]
 ```
 
+### Workflow assets (Phase 3)
+
+```mermaid
+flowchart LR
+  B[asset batch: week, knownPostRefs, files] --> CF[check files: type, MIME, magic bytes, size, SHA-256, duplicates, explicit postRef]
+  CF --> SN[static JSON parse + sanitize: drop credentials, pinData, staticData, execution data; redact secrets, emails, webhook URLs]
+  SN --> PF[classify nodes, build safe graph, detect capabilities]
+  PF --> AV[assemble manifest + validate schemas] --> OUT[(asset manifest + workflow profiles)]
+```
+
+Uploaded workflows are parsed as data and never executed. Screenshots are validated and hashed only.
+
 ## n8n workflows
 
 | Workflow | Status |
 |---|---|
 | 01 - Yellowdig Fetch Events | **Built** in n8n Cloud (`dHZoXDny6WU1v62y`), export `n8n/workflows/01-fetch-yellowdig-events.json`. Fixture mode tested; Yellowdig branch tested with pinned synthetic HTTP responses only. Not published. |
 | 02 - Yellowdig Normalize and Join | **Built** in n8n Cloud (`ZZoqGbrNSC3nAo3f`), export `n8n/workflows/02-normalize-and-join.json`. 01 → 02 tested in fixture mode. Not published. |
-| 03-parse-workflow-assets | _Planned_ (reuses the tested parser in `n8n/src/parse-workflows.js`) |
+| 03 - Profile Workflow Assets | **Built** in n8n Cloud (`L2fnEPtg0te7KTbG`), export `n8n/workflows/03-profile-workflow-assets.json`. Called by another workflow (no webhook), Code nodes only: no AI, no HTTP, no credentials. Tested with the synthetic batch only; the output matched the local pipeline exactly. Not published. Supersedes the prototype parser `n8n/src/parse-workflows.js`. |
 | 04-editorial-intelligence | _Planned_ (needs an LLM credential) |
 | 05-review-and-publish | _Planned_ (needs GitHub and Gmail credentials) |
 | 99-error-handler | _Planned_ |

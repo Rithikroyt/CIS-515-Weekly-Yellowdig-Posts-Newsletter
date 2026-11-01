@@ -1,7 +1,7 @@
 // Turns an n8n workflow (as returned by the MCP get_workflow_details tool) into a sanitized, importable export.
 // Strips credentials, pinned data, webhook ids and instance metadata, and checks every Code node against the
 // generated bundle in n8n/src/generated/<wf>/ so the repo and n8n cannot drift silently.
-// Usage (from web/): npx tsx scripts/export-n8n.ts <details.json> <wf01|wf02> <out.json>
+// Usage (from web/): npx tsx scripts/export-n8n.ts <details.json> <wf01|wf02|wf03> <out.json>
 //   A jsCode value of "@@generated:<entry>" is filled from n8n/src/generated/<wf>/<entry>.js.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -60,7 +60,7 @@ export function sanitizeWorkflow(details: Record<string, unknown>, wf: string) {
 
 if (require.main === module) {
   const [detailsPath, wf, outPath] = process.argv.slice(2);
-  if (!detailsPath || !/^wf0\d$/.test(wf ?? "") || !outPath) throw new Error("usage: export-n8n.ts <details.json> <wf01|wf02> <out.json>");
+  if (!detailsPath || !/^wf0\d$/.test(wf ?? "") || !outPath) throw new Error("usage: export-n8n.ts <details.json> <wf01|wf02|wf03> <out.json>");
   const { exported, codeReport } = sanitizeWorkflow(JSON.parse(readFileSync(detailsPath, "utf8")), wf);
   writeFileSync(outPath, JSON.stringify(exported, null, 2) + "\n", "utf8");
   console.log("wrote " + outPath);

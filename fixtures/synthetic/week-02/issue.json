@@ -137,7 +137,7 @@
       "testResult": "In one test the judge gave 9 out of 10 to a reply that promised a refund over the limit; the code flag stopped it.",
       "fromTheThread": "Blake asked whether the judge sees the risk flag. Drew said not yet; he wants to see whether it notices on its own first.",
       "worthBorrowing": "Let code flag high-risk items, and keep a person on the final call even when the score passes.",
-      "workflowProfileId": "wf_0167a0951f1e",
+      "workflowProfileId": "wf_dc3ee8e8f7f1",
       "chips": [
         {
           "category": "trigger",
@@ -148,12 +148,12 @@
           "label": "Writer"
         },
         {
-          "category": "validator",
-          "label": "Risk flags"
-        },
-        {
           "category": "judge",
           "label": "Judge"
+        },
+        {
+          "category": "validator",
+          "label": "Risk flags"
         },
         {
           "category": "gate",
@@ -164,8 +164,8 @@
           "label": "Telegram approval"
         },
         {
-          "category": "action",
-          "label": "Send reply"
+          "category": "gate",
+          "label": "Revisions left?"
         }
       ],
       "screenshots": [
@@ -182,7 +182,7 @@
       "commentCount": 3,
       "evidence": [
         "post:syn-w2-p05",
-        "workflow:wf_0167a0951f1e",
+        "workflow:wf_dc3ee8e8f7f1",
         "comment:syn-w2-p05-c1",
         "comment:syn-w2-p05-c2"
       ],
@@ -198,7 +198,7 @@
       "testResult": "Avery raised the threshold to 10 for one run to watch the revision path work.",
       "fromTheThread": "Blake suggested a hard check on units; Avery added one in code.",
       "worthBorrowing": "Test the failure path with real outputs by raising the threshold for one run.",
-      "workflowProfileId": "wf_9377525d31c1",
+      "workflowProfileId": "wf_d1d310e6217a",
       "chips": [
         {
           "category": "trigger",
@@ -209,12 +209,12 @@
           "label": "Draft scaled recipe"
         },
         {
-          "category": "validator",
-          "label": "Check units"
-        },
-        {
           "category": "judge",
           "label": "Judge draft"
+        },
+        {
+          "category": "validator",
+          "label": "Check units and score"
         },
         {
           "category": "gate",
@@ -225,8 +225,8 @@
           "label": "Email recipe"
         },
         {
-          "category": "ai",
-          "label": "Revise draft"
+          "category": "gate",
+          "label": "Revisions left?"
         }
       ],
       "screenshots": [
@@ -239,7 +239,7 @@
       "commentCount": 3,
       "evidence": [
         "post:syn-w2-p01",
-        "workflow:wf_9377525d31c1",
+        "workflow:wf_d1d310e6217a",
         "comment:syn-w2-p01-c1",
         "comment:syn-w2-p01-c2"
       ],
@@ -255,7 +255,7 @@
       "testResult": "The checks caught a $75 grocery receipt the model had dated last year.",
       "fromTheThread": "Drew asked what happens after the third retry; Blake explained the review sheet.",
       "worthBorrowing": "Check dates and amounts in code, not in the prompt.",
-      "workflowProfileId": "wf_54b0cd74b646",
+      "workflowProfileId": "wf_17e0a499e621",
       "chips": [
         {
           "category": "trigger",
@@ -278,8 +278,12 @@
           "label": "Append to sheet"
         },
         {
+          "category": "gate",
+          "label": "Retry allowed?"
+        },
+        {
           "category": "storage",
-          "label": "Flag for review"
+          "label": "Flag invalid receipt"
         }
       ],
       "screenshots": [
@@ -292,7 +296,7 @@
       "commentCount": 4,
       "evidence": [
         "post:syn-w2-p04",
-        "workflow:wf_54b0cd74b646",
+        "workflow:wf_17e0a499e621",
         "comment:syn-w2-p04-c1",
         "comment:syn-w2-p04-c2"
       ],
@@ -322,7 +326,7 @@
       "oneLine": "Scales recipes; a judge scores each draft out of 10 and 8 passes, with at most two revisions.",
       "commentCount": 3,
       "sourceUrl": null,
-      "workflowProfileId": "wf_9377525d31c1",
+      "workflowProfileId": "wf_d1d310e6217a",
       "signals": [
         "codeChecks",
         "boundedRetry",
@@ -342,7 +346,7 @@
       "oneLine": "Drafts a weekly study plan and waits for email approval before writing to the calendar.",
       "commentCount": 1,
       "sourceUrl": null,
-      "workflowProfileId": "wf_9af493586c6d",
+      "workflowProfileId": "wf_f687180eb025",
       "signals": [
         "humanReview",
         "errorHandling"
@@ -360,7 +364,7 @@
       "oneLine": "Sends a daily brief and falls back to a plain headline list when the model times out.",
       "commentCount": 0,
       "sourceUrl": null,
-      "workflowProfileId": "wf_f2a92f1073b1",
+      "workflowProfileId": "wf_1d17780de691",
       "signals": [
         "errorHandling",
         "fallback",
@@ -379,7 +383,7 @@
       "oneLine": "Extracts receipt fields and checks amount and date in code, retrying up to three times.",
       "commentCount": 4,
       "sourceUrl": null,
-      "workflowProfileId": "wf_54b0cd74b646",
+      "workflowProfileId": "wf_17e0a499e621",
       "signals": [
         "codeChecks",
         "boundedRetry",
@@ -398,7 +402,7 @@
       "oneLine": "Drafts support replies; code flags risky tickets and a person approves every reply.",
       "commentCount": 3,
       "sourceUrl": null,
-      "workflowProfileId": "wf_0167a0951f1e",
+      "workflowProfileId": "wf_dc3ee8e8f7f1",
       "signals": [
         "codeChecks",
         "humanReview",
@@ -434,7 +438,7 @@
       "oneLine": "Answers questions about lecture notes from a small vector store.",
       "commentCount": 0,
       "sourceUrl": null,
-      "workflowProfileId": "wf_f7b01a3fb37f",
+      "workflowProfileId": "wf_edfb36f2ca7c",
       "signals": [
         "rag"
       ],
@@ -451,7 +455,7 @@
       "oneLine": "Turns meeting notes into action items with owners and dates.",
       "commentCount": 1,
       "sourceUrl": null,
-      "workflowProfileId": "wf_3333027205c6",
+      "workflowProfileId": "wf_69e9acb823ce",
       "signals": [],
       "isSpotlight": false,
       "evidence": [
@@ -587,8 +591,8 @@
   },
   "provenance": {
     "runId": "run_synthetic-week-02",
-    "inputHash": "e9d4bb57e117ec5cc9aff27f09388dab027c92d769d1c78f50ab5a348aca0dbf",
-    "idempotencyKey": "cis-515:2026-fall-b:week-02:e9d4bb57e117ec5c",
+    "inputHash": "05d84bd863bdbb44242e1aef53da190e1fac4509c698a3103768abe66b982933",
+    "idempotencyKey": "cis-515:2026-fall-b:week-02:05d84bd863bdbb44",
     "labels": [
       "CODE-COUNTED",
       "AI-DRAFTED",

@@ -10,33 +10,35 @@ function sumNullable(values: Array<number | null>): number | null {
   return present.length === 0 ? null : present.reduce((s, v) => s + v, 0);
 }
 
-/** Profiles that belong to one of these posts, keyed by postId. If a post has several, the first by fileName wins. */
+/** Profiles explicitly attached to one of these posts (postRef), keyed by postId. If a post has several, the first by assetId wins. */
 export function profilesByPost(posts: NormalizedPost[], profiles: WorkflowProfile[]): Map<string, WorkflowProfile> {
   const ids = new Set(posts.map((p) => p.postId));
   const map = new Map<string, WorkflowProfile>();
   [...profiles]
-    .sort((a, b) => byText(a.fileName, b.fileName))
+    .sort((a, b) => byText(a.assetId, b.assetId))
     .forEach((prof) => {
-      if (prof.postId && ids.has(prof.postId) && !map.has(prof.postId)) map.set(prof.postId, prof);
+      if (prof.postRef && ids.has(prof.postRef) && !map.has(prof.postRef)) map.set(prof.postRef, prof);
     });
   return map;
 }
 
+/** Issue-level signal ← deterministic profile capability (see docs/workflow-asset-profiling.md). */
+const SIGNAL_FROM_CAPABILITY: Array<[SignalKey, keyof WorkflowProfile["capabilities"]]> = [
+  ["codeChecks", "hasCodeValidation"],
+  ["humanReview", "usesHumanApproval"],
+  ["boundedRetry", "hasBoundedRetry"],
+  ["errorHandling", "hasExplicitFailureHandling"],
+  ["llmJudge", "usesLLMJudge"],
+  ["multiAgent", "usesMultipleAgents"],
+  ["fallback", "hasFallback"],
+  ["rag", "usesRAG"],
+  ["memory", "usesMemory"],
+];
+
 /** The reliability signals a profile shows, in a fixed order. */
 export function profileSignals(profile: WorkflowProfile | undefined | null): SignalKey[] {
   if (!profile) return [];
-  const s = profile.signals;
-  const out: SignalKey[] = [];
-  if (s.codeChecks) out.push("codeChecks");
-  if (s.humanReview) out.push("humanReview");
-  if (s.boundedRetry.present) out.push("boundedRetry");
-  if (s.errorHandling) out.push("errorHandling");
-  if (s.llmJudge) out.push("llmJudge");
-  if (s.multiAgent) out.push("multiAgent");
-  if (s.fallback) out.push("fallback");
-  if (s.rag) out.push("rag");
-  if (s.memory) out.push("memory");
-  return out;
+  return SIGNAL_FROM_CAPABILITY.filter(([, cap]) => profile.capabilities[cap]).map(([signal]) => signal);
 }
 
 export function computeIssueMetrics(posts: NormalizedPost[], profiles: WorkflowProfile[]): IssueMetrics {
@@ -55,7 +57,7 @@ export function computeIssueMetrics(posts: NormalizedPost[], profiles: WorkflowP
   const countSignal = (key: SignalKey) => profiled.filter((prof) => profileSignals(prof).includes(key)).length;
 
   const serviceMap = new Map<string, number>();
-  profiled.forEach((prof) => new Set(prof.externalServices).forEach((svc) => serviceMap.set(svc, (serviceMap.get(svc) ?? 0) + 1)));
+  profiled.forEach((prof) => new Set(prof.integrations).forEach((svc) => serviceMap.set(svc, (serviceMap.get(svc) ?? 0) + 1)));
   const externalServices = [...serviceMap.entries()]
     .map(([name, builds]) => ({ name, builds }))
     .sort((a, b) => b.builds - a.builds || byText(a.name, b.name));

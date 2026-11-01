@@ -1,74 +1,308 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "week": 2,
   "assets": [
     {
-      "postId": "syn-w2-p01",
-      "screenshots": [
-        "recipe-overview.png",
-        "recipe-judge-run.png"
-      ],
-      "workflowJson": "recipe-scaler.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p01",
+        "assetId": "asset_40c419088ba1fa29",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "recipe-scaler.json",
+        "mimeType": "application/json",
+        "sizeBytes": 5748,
+        "sha256": "d1d310e6217a38375fc4be833b8bb8ecc2c28d12db108d83438940f74e29e256",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_d1d310e6217a",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p02",
-      "screenshots": [
-        "planner-approval.png"
-      ],
-      "workflowJson": "study-planner.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p02",
+        "assetId": "asset_90d1016f938f9f9e",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "study-planner.json",
+        "mimeType": "application/json",
+        "sizeBytes": 4063,
+        "sha256": "f687180eb025c789a6a08e17d43c9f189ede94e9ccf0d66373ace9df41b9cdf8",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_f687180eb025",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p03",
-      "screenshots": [],
-      "workflowJson": "news-brief.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p03",
+        "assetId": "asset_7e8b8555b673b802",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "news-brief.json",
+        "mimeType": "application/json",
+        "sizeBytes": 3169,
+        "sha256": "1d17780de691808de59064906f55b3637389784ff6c4a958e18ba6536410e3d2",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_1d17780de691",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p04",
-      "screenshots": [
-        "expense-checks.png"
-      ],
-      "workflowJson": "expense-logger.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p04",
+        "assetId": "asset_cfeae3937c60315e",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "expense-logger.json",
+        "mimeType": "application/json",
+        "sizeBytes": 4701,
+        "sha256": "17e0a499e621a585e7019928d9f4e9e2dc8258dff880683d4535e02258d5d510",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_17e0a499e621",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p05",
-      "screenshots": [
-        "support-desk.png",
-        "support-flag.png"
-      ],
-      "workflowJson": "support-desk.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p05",
+        "assetId": "asset_7c91c2e56efd5c3e",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "support-desk.json",
+        "mimeType": "application/json",
+        "sizeBytes": 5135,
+        "sha256": "dc3ee8e8f7f18172f847f8708f5eb69e21d12e71b6fb11b53bd40066d61ff811",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_dc3ee8e8f7f1",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p07",
-      "screenshots": [],
-      "workflowJson": "notes-qa.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p07",
+        "assetId": "asset_85a8f1363db7479b",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "notes-qa.json",
+        "mimeType": "application/json",
+        "sizeBytes": 1744,
+        "sha256": "edfb36f2ca7c181a955a8b890df4dd06df6bf49437e2bc3b1cd428ec26eb4199",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_edfb36f2ca7c",
       "approval": {
         "status": "pending"
       }
     },
     {
-      "postId": "syn-w2-p08",
-      "screenshots": [
-        "meeting-summary.png"
-      ],
-      "workflowJson": "meeting-summarizer.json",
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p08",
+        "assetId": "asset_2babe5e0003bfe3e",
+        "kind": "n8n_workflow_json",
+        "originalFilename": "meeting-summarizer.json",
+        "mimeType": "application/json",
+        "sizeBytes": 1729,
+        "sha256": "69e9acb823ce6af1a4297fcb0f02a65cfb48ddea0cd73970998424cf3affee2f",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "PROFILED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": "wf_69e9acb823ce",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p01",
+        "assetId": "asset_768195eac9631edc",
+        "kind": "workflow_screenshot",
+        "originalFilename": "recipe-overview.png",
+        "mimeType": "image/png",
+        "sizeBytes": 27,
+        "sha256": "b8e1bcae0cafa6df7691035877e848927127025cbf31c6354ac262e3475d4315",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p01",
+        "assetId": "asset_caf791b7fd3dd7df",
+        "kind": "workflow_screenshot",
+        "originalFilename": "recipe-judge-run.png",
+        "mimeType": "image/png",
+        "sizeBytes": 28,
+        "sha256": "e4b788a30c3794f56eb14683daac17c4461aec3f156ede4852651fef23c2448d",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p02",
+        "assetId": "asset_4b5d1a7279e52ca2",
+        "kind": "workflow_screenshot",
+        "originalFilename": "planner-approval.png",
+        "mimeType": "image/png",
+        "sizeBytes": 28,
+        "sha256": "0e11fe7e176242122a14d5b40b728e79242a7de782f9abbaba40edcfa15d0dc6",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p04",
+        "assetId": "asset_159af56efd6d7f02",
+        "kind": "workflow_screenshot",
+        "originalFilename": "expense-checks.png",
+        "mimeType": "image/png",
+        "sizeBytes": 26,
+        "sha256": "7d5ae665647535596ce10ffcb9317ea92c70e0571e8af65b8fd48e3aabb320d5",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p05",
+        "assetId": "asset_006c2dc1b0c8492e",
+        "kind": "workflow_screenshot",
+        "originalFilename": "support-desk.png",
+        "mimeType": "image/png",
+        "sizeBytes": 24,
+        "sha256": "57bb26187426f47d1e4e47e06ef8948b30d2813341b70069c1fd591c9f484eb4",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p05",
+        "assetId": "asset_64776a88a5fb7034",
+        "kind": "workflow_screenshot",
+        "originalFilename": "support-flag.png",
+        "mimeType": "image/png",
+        "sizeBytes": 24,
+        "sha256": "105076b5e958611e3a7c098efcb45f4082be557486c4a8d16a6d9bd8b77c373e",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "asset": {
+        "schemaVersion": "1.0",
+        "week": 2,
+        "postRef": "syn-w2-p08",
+        "assetId": "asset_df4795ea895595fc",
+        "kind": "workflow_screenshot",
+        "originalFilename": "meeting-summary.png",
+        "mimeType": "image/png",
+        "sizeBytes": 27,
+        "sha256": "3b4bfa304eba41c0fe5ed1a54bbbac118047f2797f757e2eceeec9cf456ae3aa",
+        "uploadedAt": "2026-10-29T14:00:00Z"
+      },
+      "status": "VALIDATED",
+      "reason": null,
+      "duplicateOf": null,
+      "profileRef": null,
       "approval": {
         "status": "pending"
       }
     }
-  ]
+  ],
+  "summary": {
+    "total": 14,
+    "profiled": 7,
+    "validated": 7,
+    "rejected": 0,
+    "duplicates": 0,
+    "unmatched": 0
+  }
 }

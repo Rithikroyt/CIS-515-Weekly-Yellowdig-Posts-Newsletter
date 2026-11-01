@@ -1,0 +1,253 @@
+{
+  "name": "Support Reply Desk",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Ticket form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Writer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "Judge",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "position": [
+        880,
+        0
+      ],
+      "name": "Risk flags",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "parameters": {
+        "jsCode": "const risky = $json.refund > 100;\nconst pass = $json.score >= 8 && !risky;\nreturn [{ json: { ...$json, risky, pass } }];"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "position": [
+        1100,
+        0
+      ],
+      "name": "Pass rule",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.pass }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "position": [
+        1320,
+        0
+      ],
+      "name": "Telegram approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "sendAndWait"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "position": [
+        1540,
+        0
+      ],
+      "name": "Send reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "send"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "position": [
+        1760,
+        0
+      ],
+      "name": "Revisions left?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ticket form": {
+      "main": [
+        [
+          {
+            "node": "Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Writer": {
+      "main": [
+        [
+          {
+            "node": "Judge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge": {
+      "main": [
+        [
+          {
+            "node": "Risk flags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk flags": {
+      "main": [
+        [
+          {
+            "node": "Pass rule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass rule": {
+      "main": [
+        [
+          {
+            "node": "Telegram approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revisions left?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisions left?": {
+      "main": [
+        [
+          {
+            "node": "Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram approval": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Judge",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

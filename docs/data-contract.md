@@ -8,8 +8,9 @@ JSON Schemas (draft 2020-12) in [`/schemas`](../schemas) define every object tha
 | `week-dataset` | 02 - Yellowdig Normalize and Join | Phases 3–4 |
 | `normalized-post` | 02 (inside `week-dataset.posts`) | metrics, editorial pipeline |
 | `metrics` | shared definitions | `issue`, `week-dataset` |
-| `workflow-profile` | 03-parse-workflow-assets | metrics, spotlights, atlas |
-| `asset-manifest` | admin upload | 03, renderer |
+| `workflow-asset` | 03 - Profile Workflow Assets (inside `asset-manifest.assets`) | manifest |
+| `workflow-profile` | 03 - Profile Workflow Assets | metrics, spotlights, atlas |
+| `asset-manifest` | 03 - Profile Workflow Assets | metrics (`applyAssetManifest`), renderer |
 | `issue` | 04 + 05, after human approval | web issue, `newsletter.html` |
 
 All objects use `additionalProperties: false`. A field that isn't listed is rejected rather than ignored.
@@ -26,20 +27,29 @@ One Yellowdig post with its comments joined.
 - **Nullable counts.** `reactionCount` and `viewCount` are `null` when the source doesn't provide them. They are never `0` by default.
 - **Source refs.** `sourceRefs` lists the evidence references this post can support, such as `post:<id>` and `comment:<id>`.
 
-## workflow-profile
+## workflow-asset (version 1.0)
 
-Computed by code from a workflow's JSON. The workflow itself is never executed.
+Metadata for one manually supplied file: `postRef`, `assetId` (`asset_` + 16 hex), `kind` (`n8n_workflow_json` or `workflow_screenshot`), the sanitized `originalFilename`, `mimeType`, `sizeBytes`, `sha256` and `uploadedAt`. It never holds file content, local paths or student identity fields.
 
-- Credentials and `pinData` are removed before profiling. `sanitization` records how many were removed, plus any flags.
-- Node ids are re-labelled `n0…nN` and only `name`, `type`, `category` and `position` are kept. Node parameters, including prompts and code, are not stored.
-- `signals` holds the reliability patterns found: code checks, human review, a bounded retry with its maximum, fallback, error handling, an LLM judge with its score threshold, multiple agents, RAG and memory.
-- `chips` is the main path shown as at most 7 labelled steps.
+## workflow-profile (version 2.0)
 
-## asset-manifest
+Computed by deterministic static analysis of a workflow's JSON. The workflow is never executed (`source.executed` is the constant `false`).
 
-Screenshots and workflow files an admin attaches to posts for one week.
+- **Counts:** nodes, edges, triggers, disabled nodes and dangling edges, plus `nodeTypes` and `nodeCategories` (22 categories; unknown node types are `other`).
+- **`capabilities`:** 16 booleans, such as `usesAI`, `usesMultipleAgents`, `hasValidationGate`, `hasBoundedRetry` and `usesLLMJudge`. Each is detected from graph structure, never from names alone. `retry`, `scoreThreshold`, `integrations` and `aiProviders` add detail.
+- **`graph`:** nodes `{id n0…nN, label, type, category, disabled}` and edges `{source, target, sourceOutput, targetInput, kind main|ai|error}`. Parameters, prompts, code, credentials and emails are not stored.
+- **`security`:** counts and flags only (credential references, pinned/static/execution/binary data, webhook ids and URLs, possible secrets, emails, truncated strings). Detected values are never recorded.
+- `chips` is the main path from the first trigger, at most 7 steps, in the issue's chip vocabulary.
 
-- File names are checked against image and `.json` patterns.
+Rules and examples: [workflow-asset-profiling.md](workflow-asset-profiling.md).
+
+## asset-manifest (version 2.0)
+
+One deterministic manifest per week of the files attached to posts.
+
+- Each entry has an `asset`, a `status` (`PROFILED`, `VALIDATED`, `REJECTED`, `DUPLICATE`, `UNMATCHED_ASSET`), a `reason` code or null, `duplicateOf`, `profileRef` and `approval`.
+- Files are matched to posts only by an explicit `postRef` that exists in the week. Anything else is `UNMATCHED_ASSET` with `postRef: null`. Matches are never guessed.
+- Duplicates are found by SHA-256 of the content. The first copy is kept and later copies point at it.
 - Each asset starts with `approval.status: "pending"`. Only `approved` assets may be copied into a public issue.
 
 ## issue
@@ -85,7 +95,7 @@ Output of workflow 02. It holds:
 - **Diagnostics:** every bundle diagnostic plus the join counts.
 - **inputHash:** SHA-256 over the canonical events, window and topic. `fetchedAt` is excluded so re-runs hash the same.
 
-Reaction and view counts are `null` when the stream has no events of that type at all, and `0` otherwise. Assets stay empty here; Phase 3 joins the asset manifest.
+Reaction and view counts are `null` when the stream has no events of that type at all, and `0` otherwise. Assets stay empty here; `applyAssetManifest` (in `lib/assets/apply.ts`) attaches validated screenshots and the first profiled workflow per post.
 
 ## Validation in n8n
 
@@ -93,7 +103,7 @@ n8n Code nodes cannot load Ajv or Zod, so `lib/contracts/validate-lite.ts` valid
 
 ## Synthetic fixture
 
-`fixtures/synthetic/week-02/` is built by `npm run fixtures:synthetic`. Since Phase 2 its posts come from Yellowdig-shaped synthetic API pages (`lib/source/synthetic-week2.ts`), run through the same pagination, privacy, filter and normalization code as live data, and `week-dataset.json` is committed as the expected output. The generator is [`web/scripts/make-synthetic-week2.ts`](../web/scripts/make-synthetic-week2.ts). The fixture has 8 invented posts, 13 comments and 7 workflow profiles. It deliberately includes:
+`fixtures/synthetic/week-02/` is built by `npm run fixtures:synthetic`. Since Phase 2 its posts come from Yellowdig-shaped synthetic API pages (`lib/source/synthetic-week2.ts`), run through the same pagination, privacy, filter and normalization code as live data, and `week-dataset.json` is committed as the expected output. The generator is [`web/scripts/make-synthetic-week2.ts`](../web/scripts/make-synthetic-week2.ts). The fixture has 8 invented posts, 13 comments and 7 workflow profiles. Since Phase 3 the profiles and `asset-manifest.json` are produced by the real profiler from synthetic workflow files in `fixtures/synthetic/workflows/`. It deliberately includes:
 
 - a post without a workflow file
 - a post with no reactions or views (counted as 0; `null` is reserved for a stream with no reaction or view events)
@@ -108,4 +118,5 @@ Its `issue.json` has `provenance.synthetic: true` and `sourceSummary.verified: f
 | Command (from `web/`) | Checks |
 |---|---|
 | `npm test` | (Phase 1) Ajv and Zod agree on the fixture; both reject 8 kinds of bad issue and personal fields on posts; metrics are deterministic and match the issue; edge cases (no posts, null counts, self-replies, stray profiles); every evidence ref resolves. |
-| `npm run validate` | All schemas compile. Every `issue.json` and fixture validates. Public issues are approved. n8n exports have no credentials or `pinData`. Tracked files contain no secret-shaped strings or non-example email addresses. |
+| `npm run validate` | All schemas compile. Every `issue.json` and fixture validates. Public issues are approved. n8n exports have no credentials, `pinData`, `staticData` or webhook ids, and their Code nodes equal the generated bundles. The 03 export may contain only triggers, Code nodes and notes, and must save no production execution data. Tracked files contain no secret-shaped strings or non-example email addresses. |
+| `npm test` (Phase 3, `lib/assets/assets.test.ts`) | Accept/reject for every file and structure case; stripping and counting of credentials, pinned, static and execution data, secrets, emails and webhooks; exact capabilities for 11 synthetic workflows; bounded vs unbounded retry; no inference from names; determinism; Ajv, Zod and the lite validator agree on manifests and profiles. `bundles.test.ts` runs the 03 bundles and requires the same output as the shared code. |

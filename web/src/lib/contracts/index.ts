@@ -1,9 +1,11 @@
 // Zod validators and TypeScript types that mirror /schemas/*.schema.json.
 // Keep both in sync: tests/contracts.test.ts validates the same fixtures with Ajv (JSON Schema) and Zod.
 import { z } from "zod";
+import { ASSET_KINDS, ASSET_REASONS, ASSET_STATUSES, CAPABILITY_KEYS, CATEGORIES, NODE_CATEGORIES } from "./vocab";
+
+export * from "./vocab";
 
 export const ISSUE_STATUSES = ["draft", "review", "revision_requested", "approved", "published", "failed"] as const;
-export const CATEGORIES = ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] as const;
 export const SIGNAL_KEYS = ["codeChecks", "humanReview", "boundedRetry", "errorHandling", "llmJudge", "multiAgent", "fallback", "rag", "memory"] as const;
 export const PROVENANCE_LABELS = ["CODE-COUNTED", "AI-DRAFTED", "SOURCE-LINKED", "HUMAN-APPROVED"] as const;
 
@@ -67,82 +69,97 @@ export const normalizedPostSchema = z
   })
   .strict();
 
-// ---------- Workflow profile ----------
-export const workflowProfileSchema = z
+// ---------- Workflow asset (Phase 3) ----------
+const assetId = z.string().regex(/^asset_[a-f0-9]{16}$/);
+const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
+
+export const workflowAssetSchema = z
   .object({
     schemaVersion: z.literal("1.0"),
-    profileId,
-    postId: z.string().max(128).nullable(),
-    fileName,
-    workflowName: z.string().max(200),
-    nodeCount: nonNegInt,
-    edgeCount: nonNegInt,
-    sanitization: z
-      .object({ credentialRefsRemoved: nonNegInt, pinDataRemoved: z.boolean(), flags: z.array(z.string().max(200)) })
-      .strict(),
-    nodes: z
-      .array(
-        z
-          .object({
-            id: nodeId,
-            name: z.string().max(200),
-            type: z.string().max(200),
-            category,
-            position: z.tuple([z.number(), z.number()]),
-          })
-          .strict(),
-      )
-      .max(500),
-    edges: z
-      .array(z.object({ source: nodeId, target: nodeId, kind: z.enum(["main", "ai", "error"]) }).strict())
-      .max(2000),
-    categoryCounts: z.object(Object.fromEntries(CATEGORIES.map((c) => [c, nonNegInt])) as Record<(typeof CATEGORIES)[number], typeof nonNegInt>).strict(),
-    signals: z
-      .object({
-        codeChecks: z.boolean(),
-        humanReview: z.boolean(),
-        boundedRetry: z.object({ present: z.boolean(), maxAttempts: z.number().int().min(1).nullable() }).strict(),
-        fallback: z.boolean(),
-        errorHandling: z.boolean(),
-        llmJudge: z.boolean(),
-        scoreThreshold: z.object({ value: z.number(), outOf: z.number().nullable() }).strict().nullable(),
-        multiAgent: z.boolean(),
-        rag: z.boolean(),
-        memory: z.boolean(),
-      })
-      .strict(),
-    aiProviders: z.array(z.string().max(60)),
-    externalServices: z.array(z.string().max(60)),
-    triggerTypes: z.array(z.string().max(60)),
-    mainPath: z.array(nodeId),
-    chips: z.array(z.object({ category, label: z.string().max(40) }).strict()).max(7),
+    week: z.number().int().min(1).max(16),
+    postRef: id.nullable(),
+    assetId,
+    kind: z.enum(ASSET_KINDS),
+    originalFilename: fileName,
+    mimeType: z.string().max(80),
+    sizeBytes: nonNegInt,
+    sha256: sha256.nullable(),
+    uploadedAt: isoDateTime.nullable(),
   })
   .strict();
 
-// ---------- Asset manifest ----------
+// ---------- Workflow profile (v2, Phase 3) ----------
+const nodeCategory = z.enum(NODE_CATEGORIES);
+const nodeType = z.string().max(160);
+
+export const workflowProfileSchema = z
+  .object({
+    schemaVersion: z.literal("2.0"),
+    profileId,
+    assetId,
+    postRef: id.nullable(),
+    workflowName: z.string().max(120),
+    nodeCount: nonNegInt,
+    edgeCount: nonNegInt,
+    triggerCount: nonNegInt,
+    disabledNodeCount: nonNegInt,
+    danglingEdgeCount: nonNegInt,
+    nodeTypes: z.array(z.object({ type: nodeType, count: nonNegInt }).strict()).max(500),
+    nodeCategories: z.array(z.object({ category: nodeCategory, count: nonNegInt }).strict()).max(30),
+    capabilities: z.object(Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, z.boolean()])) as Record<(typeof CAPABILITY_KEYS)[number], z.ZodBoolean>).strict(),
+    retry: z.object({ cycles: nonNegInt, boundedCycles: nonNegInt, nodeRetries: nonNegInt, maxAttempts: z.number().int().min(1).nullable() }).strict(),
+    scoreThreshold: z.object({ value: z.number() }).strict().nullable(),
+    integrations: z.array(z.string().max(60)).max(60),
+    aiProviders: z.array(z.string().max(60)).max(20),
+    graph: z
+      .object({
+        nodes: z.array(z.object({ id: nodeId, label: z.string().max(80), type: nodeType, category: nodeCategory, disabled: z.boolean() }).strict()).max(500),
+        edges: z
+          .array(z.object({ source: nodeId, target: nodeId, sourceOutput: nonNegInt, targetInput: nonNegInt, kind: z.enum(["main", "ai", "error"]) }).strict())
+          .max(2000),
+      })
+      .strict(),
+    chips: z.array(z.object({ category, label: z.string().max(40) }).strict()).max(7),
+    security: z
+      .object({
+        credentialReferencesDetected: nonNegInt,
+        pinnedDataDetected: z.boolean(),
+        executionDataDetected: z.boolean(),
+        staticDataDetected: z.boolean(),
+        binaryDataDetected: z.boolean(),
+        webhookIdsRemoved: nonNegInt,
+        webhookUrlsRedacted: nonNegInt,
+        possibleSecretsDetected: nonNegInt,
+        emailsDetected: nonNegInt,
+        stringsTruncated: nonNegInt,
+      })
+      .strict(),
+    source: z.object({ profileMethod: z.literal("deterministic-static-analysis"), executed: z.literal(false), profilerVersion: z.string().max(20) }).strict(),
+  })
+  .strict();
+
+// ---------- Asset manifest (v2, Phase 3) ----------
 export const assetManifestSchema = z
   .object({
-    schemaVersion: z.literal("1.0").optional(),
+    schemaVersion: z.literal("2.0"),
     week: z.number().int().min(1).max(16),
     assets: z
       .array(
         z
           .object({
-            postId: id,
-            screenshots: z.array(z.string().max(120).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*\.(png|jpe?g|webp|gif)$/)).max(10),
-            workflowJson: z.string().max(120).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*\.json$/).nullable(),
-            approval: z
-              .object({
-                status: z.enum(["pending", "approved", "rejected"]),
-                by: z.string().max(120).optional(),
-                at: isoDateTime.optional(),
-              })
-              .strict()
-              .optional(),
+            asset: workflowAssetSchema,
+            status: z.enum(ASSET_STATUSES),
+            reason: z.enum(ASSET_REASONS).nullable(),
+            duplicateOf: assetId.nullable(),
+            profileRef: profileId.nullable(),
+            approval: z.object({ status: z.enum(["pending", "approved", "rejected"]) }).strict(),
           })
           .strict(),
       )
-      .max(100),
+      .max(1000),
+    summary: z
+      .object({ total: nonNegInt, profiled: nonNegInt, validated: nonNegInt, rejected: nonNegInt, duplicates: nonNegInt, unmatched: nonNegInt })
+      .strict(),
   })
   .strict();
 
@@ -336,6 +353,9 @@ export type Comment = z.infer<typeof commentSchema>;
 export type NormalizedPost = z.infer<typeof normalizedPostSchema>;
 export type WorkflowProfile = z.infer<typeof workflowProfileSchema>;
 export type AssetManifest = z.infer<typeof assetManifestSchema>;
+export type WorkflowAsset = z.infer<typeof workflowAssetSchema>;
+export type NodeCategory = (typeof NODE_CATEGORIES)[number];
+export type CapabilityKey = (typeof CAPABILITY_KEYS)[number];
 export type Issue = z.infer<typeof issueSchema>;
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 export type IssueMetrics = Issue["metrics"];

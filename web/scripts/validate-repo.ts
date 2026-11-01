@@ -52,12 +52,25 @@ walk(join(REPO_ROOT, "web", "public", "issues"), (p) => p.endsWith("issue.json")
 // 3. n8n exports: no credentials, no pinned data.
 const exports = walk(join(REPO_ROOT, "n8n", "workflows"), (p) => p.endsWith(".json"));
 exports.forEach((f) => {
-  const wf = readJson(f) as { nodes?: Array<{ name: string; type: string; credentials?: unknown; webhookId?: unknown; parameters?: { jsCode?: string } }>; pinData?: Record<string, unknown> };
+  const wf = readJson(f) as {
+    nodes?: Array<{ name: string; type: string; credentials?: unknown; webhookId?: unknown; parameters?: { jsCode?: string } }>;
+    pinData?: Record<string, unknown>; staticData?: unknown; settings?: Record<string, unknown>;
+  };
   (wf.nodes ?? []).forEach((n) => {
     if (n.credentials && Object.keys(n.credentials).length) fail(rel(f) + ": node '" + n.name + "' has credentials");
     if (n.webhookId) fail(rel(f) + ": node '" + n.name + "' has a webhookId");
   });
   if (wf.pinData && Object.keys(wf.pinData).length) fail(rel(f) + ": has pinData");
+  if (wf.staticData) fail(rel(f) + ": has staticData");
+  // Workflow 03 profiles untrusted workflow files: only triggers, Code nodes and notes; no AI, HTTP, webhooks or
+  // sub-workflow calls, callable only by the owner's workflows, and no execution data saved.
+  if (/[\\/]03-[^\\/]+$/.test(f)) {
+    const allowed = new Set(["n8n-nodes-base.executeWorkflowTrigger", "n8n-nodes-base.manualTrigger", "n8n-nodes-base.code", "n8n-nodes-base.stickyNote"]);
+    (wf.nodes ?? []).forEach((n) => { if (!allowed.has(n.type)) fail(rel(f) + ": node '" + n.name + "' has disallowed type " + n.type); });
+    const s = wf.settings ?? {};
+    if (s.callerPolicy !== "workflowsFromSameOwner") fail(rel(f) + ": callerPolicy must be workflowsFromSameOwner");
+    if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");
+  }
   // Current exports (NN-*.json, not archive/) must run exactly the generated bundles.
   const m = /^(\d\d)-/.exec(f.split(/[\\/]/).pop() ?? "");
   if (m && !/[\\/]archive[\\/]/.test(f)) {

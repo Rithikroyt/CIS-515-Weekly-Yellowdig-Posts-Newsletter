@@ -2,116 +2,130 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cis515-observatory/schemas/workflow-profile.schema.json",
   "title": "WorkflowProfile",
-  "description": "What a student's n8n workflow contains, computed by code from its JSON. The workflow is never executed.",
+  "description": "Deterministic static analysis of one n8n workflow JSON file. The workflow is never executed. No credentials, prompts, code, emails or parameter payloads.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "profileId", "postId", "fileName", "workflowName", "nodeCount", "edgeCount", "sanitization", "nodes", "edges", "categoryCounts", "signals", "aiProviders", "externalServices", "triggerTypes", "mainPath", "chips"],
+  "required": [
+    "schemaVersion", "profileId", "assetId", "postRef", "workflowName", "nodeCount", "edgeCount", "triggerCount",
+    "disabledNodeCount", "danglingEdgeCount", "nodeTypes", "nodeCategories", "capabilities", "retry", "scoreThreshold",
+    "integrations", "aiProviders", "graph", "chips", "security", "source"
+  ],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "2.0" },
     "profileId": { "type": "string", "pattern": "^wf_[a-f0-9]{12}$" },
-    "postId": { "type": ["string", "null"], "maxLength": 128 },
-    "fileName": { "type": "string", "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
-    "workflowName": { "type": "string", "maxLength": 200 },
-    "nodeCount": { "type": "integer", "minimum": 0 },
-    "edgeCount": { "type": "integer", "minimum": 0 },
-    "sanitization": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["credentialRefsRemoved", "pinDataRemoved", "flags"],
-      "properties": {
-        "credentialRefsRemoved": { "type": "integer", "minimum": 0 },
-        "pinDataRemoved": { "type": "boolean" },
-        "flags": { "type": "array", "items": { "type": "string", "maxLength": 200 } }
-      }
-    },
-    "nodes": {
+    "assetId": { "type": "string", "pattern": "^asset_[a-f0-9]{16}$" },
+    "postRef": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "workflowName": { "type": "string", "maxLength": 120 },
+    "nodeCount": { "$ref": "#/$defs/count" },
+    "edgeCount": { "$ref": "#/$defs/count" },
+    "triggerCount": { "$ref": "#/$defs/count" },
+    "disabledNodeCount": { "$ref": "#/$defs/count" },
+    "danglingEdgeCount": { "$ref": "#/$defs/count" },
+    "nodeTypes": {
       "type": "array",
       "maxItems": 500,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "type", "category", "position"],
-        "properties": {
-          "id": { "type": "string", "pattern": "^n[0-9]+$" },
-          "name": { "type": "string", "maxLength": 200 },
-          "type": { "type": "string", "maxLength": 200 },
-          "category": { "$ref": "#/$defs/category" },
-          "position": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
-        }
+        "required": ["type", "count"],
+        "properties": { "type": { "$ref": "#/$defs/nodeType" }, "count": { "$ref": "#/$defs/count" } }
       }
     },
-    "edges": {
+    "nodeCategories": {
       "type": "array",
-      "maxItems": 2000,
+      "maxItems": 30,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["source", "target", "kind"],
-        "properties": {
-          "source": { "type": "string", "pattern": "^n[0-9]+$" },
-          "target": { "type": "string", "pattern": "^n[0-9]+$" },
-          "kind": { "enum": ["main", "ai", "error"] }
+        "required": ["category", "count"],
+        "properties": { "category": { "$ref": "#/$defs/category" }, "count": { "$ref": "#/$defs/count" } }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "usesAI", "usesMultipleAgents", "usesCode", "usesHumanApproval", "usesExternalAPI", "usesEmail", "usesDataStore",
+        "usesRetry", "hasBoundedRetry", "hasExplicitFailureHandling", "hasValidationGate", "hasCodeValidation",
+        "usesLLMJudge", "hasFallback", "usesRAG", "usesMemory"
+      ],
+      "properties": {
+        "usesAI": { "type": "boolean" },
+        "usesMultipleAgents": { "type": "boolean" },
+        "usesCode": { "type": "boolean" },
+        "usesHumanApproval": { "type": "boolean" },
+        "usesExternalAPI": { "type": "boolean" },
+        "usesEmail": { "type": "boolean" },
+        "usesDataStore": { "type": "boolean" },
+        "usesRetry": { "type": "boolean" },
+        "hasBoundedRetry": { "type": "boolean" },
+        "hasExplicitFailureHandling": { "type": "boolean" },
+        "hasValidationGate": { "type": "boolean" },
+        "hasCodeValidation": { "type": "boolean" },
+        "usesLLMJudge": { "type": "boolean" },
+        "hasFallback": { "type": "boolean" },
+        "usesRAG": { "type": "boolean" },
+        "usesMemory": { "type": "boolean" }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cycles", "boundedCycles", "nodeRetries", "maxAttempts"],
+      "properties": {
+        "cycles": { "$ref": "#/$defs/count" },
+        "boundedCycles": { "$ref": "#/$defs/count" },
+        "nodeRetries": { "$ref": "#/$defs/count" },
+        "maxAttempts": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "scoreThreshold": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["value"], "properties": { "value": { "type": "number" } } },
+        { "type": "null" }
+      ]
+    },
+    "integrations": { "type": "array", "maxItems": 60, "items": { "type": "string", "maxLength": 60 } },
+    "aiProviders": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 60 } },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "type", "category", "disabled"],
+            "properties": {
+              "id": { "$ref": "#/$defs/nodeId" },
+              "label": { "type": "string", "maxLength": 80 },
+              "type": { "$ref": "#/$defs/nodeType" },
+              "category": { "$ref": "#/$defs/category" },
+              "disabled": { "type": "boolean" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "target", "sourceOutput", "targetInput", "kind"],
+            "properties": {
+              "source": { "$ref": "#/$defs/nodeId" },
+              "target": { "$ref": "#/$defs/nodeId" },
+              "sourceOutput": { "$ref": "#/$defs/count" },
+              "targetInput": { "$ref": "#/$defs/count" },
+              "kind": { "enum": ["main", "ai", "error"] }
+            }
+          }
         }
       }
     },
-    "categoryCounts": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"],
-      "properties": {
-        "trigger": { "type": "integer", "minimum": 0 },
-        "ai": { "type": "integer", "minimum": 0 },
-        "judge": { "type": "integer", "minimum": 0 },
-        "code": { "type": "integer", "minimum": 0 },
-        "validator": { "type": "integer", "minimum": 0 },
-        "gate": { "type": "integer", "minimum": 0 },
-        "approval": { "type": "integer", "minimum": 0 },
-        "action": { "type": "integer", "minimum": 0 },
-        "storage": { "type": "integer", "minimum": 0 },
-        "tool": { "type": "integer", "minimum": 0 },
-        "errorPath": { "type": "integer", "minimum": 0 },
-        "other": { "type": "integer", "minimum": 0 }
-      }
-    },
-    "signals": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["codeChecks", "humanReview", "boundedRetry", "fallback", "errorHandling", "llmJudge", "scoreThreshold", "multiAgent", "rag", "memory"],
-      "properties": {
-        "codeChecks": { "type": "boolean" },
-        "humanReview": { "type": "boolean" },
-        "boundedRetry": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["present", "maxAttempts"],
-          "properties": {
-            "present": { "type": "boolean" },
-            "maxAttempts": { "type": ["integer", "null"], "minimum": 1 }
-          }
-        },
-        "fallback": { "type": "boolean" },
-        "errorHandling": { "type": "boolean" },
-        "llmJudge": { "type": "boolean" },
-        "scoreThreshold": {
-          "oneOf": [
-            { "type": "null" },
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["value", "outOf"],
-              "properties": { "value": { "type": "number" }, "outOf": { "type": ["number", "null"] } }
-            }
-          ]
-        },
-        "multiAgent": { "type": "boolean" },
-        "rag": { "type": "boolean" },
-        "memory": { "type": "boolean" }
-      }
-    },
-    "aiProviders": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
-    "externalServices": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
-    "triggerTypes": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
-    "mainPath": { "type": "array", "items": { "type": "string", "pattern": "^n[0-9]+$" } },
     "chips": {
       "type": "array",
       "maxItems": 7,
@@ -120,13 +134,53 @@
         "additionalProperties": false,
         "required": ["category", "label"],
         "properties": {
-          "category": { "$ref": "#/$defs/category" },
+          "category": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] },
           "label": { "type": "string", "maxLength": 40 }
         }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credentialReferencesDetected", "pinnedDataDetected", "executionDataDetected", "staticDataDetected", "binaryDataDetected",
+        "webhookIdsRemoved", "webhookUrlsRedacted", "possibleSecretsDetected", "emailsDetected", "stringsTruncated"
+      ],
+      "properties": {
+        "credentialReferencesDetected": { "$ref": "#/$defs/count" },
+        "pinnedDataDetected": { "type": "boolean" },
+        "executionDataDetected": { "type": "boolean" },
+        "staticDataDetected": { "type": "boolean" },
+        "binaryDataDetected": { "type": "boolean" },
+        "webhookIdsRemoved": { "$ref": "#/$defs/count" },
+        "webhookUrlsRedacted": { "$ref": "#/$defs/count" },
+        "possibleSecretsDetected": { "$ref": "#/$defs/count" },
+        "emailsDetected": { "$ref": "#/$defs/count" },
+        "stringsTruncated": { "$ref": "#/$defs/count" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileMethod", "executed", "profilerVersion"],
+      "properties": {
+        "profileMethod": { "const": "deterministic-static-analysis" },
+        "executed": { "const": false },
+        "profilerVersion": { "type": "string", "maxLength": 20 }
       }
     }
   },
   "$defs": {
-    "category": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] }
+    "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "nodeId": { "type": "string", "pattern": "^n[0-9]+$" },
+    "nodeType": { "type": "string", "maxLength": 160 },
+    "category": {
+      "enum": [
+        "trigger", "ai_model", "ai_agent", "ai_component", "code", "validation", "human_review", "email", "messaging",
+        "http_api", "database", "data_store", "file", "spreadsheet", "calendar", "search_rss", "control_flow", "transform",
+        "merge", "wait", "error_handling", "other"
+      ]
+    }
   }
 }

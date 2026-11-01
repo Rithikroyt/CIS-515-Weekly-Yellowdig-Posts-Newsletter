@@ -6,14 +6,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AssetManifest, Issue, NormalizedPost, WorkflowProfile } from "../src/lib/contracts";
-import { issueSchema, normalizedPostSchema, workflowProfileSchema, assetManifestSchema, CATEGORIES } from "../src/lib/contracts";
+import { issueSchema, normalizedPostSchema, workflowProfileSchema, assetManifestSchema } from "../src/lib/contracts";
+import * as A from "../src/lib/assets";
 import { computeDiscussion, computeIssueMetrics, profileSignals, profilesByPost } from "../src/lib/metrics";
-import { idempotencyKey, inputHash, issueIdFor, sha256Hex } from "../src/lib/ids";
+import { idempotencyKey, inputHash, issueIdFor } from "../src/lib/ids";
 import {
-  SYNTHETIC_SALT, SYNTHETIC_TOPIC, SYNTHETIC_WEEK2_RUN, applyAssetManifest, assessPages, buildSourceBundle,
+  SYNTHETIC_SALT, SYNTHETIC_TOPIC, SYNTHETIC_WEEK2_RUN, assessPages, buildSourceBundle,
   normalizeBundle, syntheticPostId, syntheticWeek2Pages, validateRunConfig,
 } from "../src/lib/source";
 import { assertSourceBundle, assertWeekDataset } from "../src/lib/contracts/registry";
+import { assertAssetManifest, assertWorkflowProfile } from "../src/lib/contracts/assets-registry";
 
 const OUT = join(__dirname, "..", "..", "fixtures", "synthetic", "week-02");
 const FETCHED_AT = "2026-10-29T15:00:00Z";
@@ -32,86 +34,45 @@ assertSourceBundle(bundle);
 const dataset = normalizeBundle(bundle);
 assertWeekDataset(dataset);
 
-// ---- Assets: the API does not provide attachments, so names come from the (admin) asset manifest ----
-const ASSETS: Record<number, { screenshots: string[]; workflowJson: string | null }> = {
-  1: { screenshots: ["recipe-overview.png", "recipe-judge-run.png"], workflowJson: "recipe-scaler.json" },
-  2: { screenshots: ["planner-approval.png"], workflowJson: "study-planner.json" },
-  3: { screenshots: [], workflowJson: "news-brief.json" },
-  4: { screenshots: ["expense-checks.png"], workflowJson: "expense-logger.json" },
-  5: { screenshots: ["support-desk.png", "support-flag.png"], workflowJson: "support-desk.json" },
-  7: { screenshots: [], workflowJson: "notes-qa.json" },
-  8: { screenshots: ["meeting-summary.png"], workflowJson: "meeting-summarizer.json" },
-};
-const manifest: AssetManifest = {
-  schemaVersion: "1.0", week: 2,
-  assets: Object.entries(ASSETS).map(([n, a]) => ({ postId: postId(Number(n)), screenshots: a.screenshots, workflowJson: a.workflowJson, approval: { status: "pending" as const } })),
-};
-const posts: NormalizedPost[] = applyAssetManifest(dataset.posts, manifest);
-
-// ---- Workflow profiles (hand-specified here; Phase 3 generates them from real workflow JSON) ----
-type Cat = (typeof CATEGORIES)[number];
-type ProfileSpec = {
-  post: number; file: string; name: string;
-  nodes: Array<[string, string, Cat]>; edges: Array<[number, number, "main" | "ai" | "error"]>;
-  signals: WorkflowProfile["signals"]; ai: string[]; services: string[]; triggers: string[];
-};
-const S = (o: Partial<WorkflowProfile["signals"]>): WorkflowProfile["signals"] => ({
-  codeChecks: false, humanReview: false, boundedRetry: { present: false, maxAttempts: null }, fallback: false,
-  errorHandling: false, llmJudge: false, scoreThreshold: null, multiAgent: false, rag: false, memory: false, ...o,
-});
-const profileSpecs: ProfileSpec[] = [
-  { post: 1, file: "recipe-scaler.json", name: "Recipe Scaler",
-    nodes: [["Recipe form", "n8n-nodes-base.formTrigger", "trigger"], ["Draft scaled recipe", "@n8n/n8n-nodes-langchain.agent", "ai"], ["Check units", "n8n-nodes-base.code", "validator"], ["Judge draft", "@n8n/n8n-nodes-langchain.agent", "judge"], ["Passed?", "n8n-nodes-base.if", "gate"], ["Revise draft", "@n8n/n8n-nodes-langchain.agent", "ai"], ["Email recipe", "n8n-nodes-base.gmail", "action"]],
-    edges: [[0, 1, "main"], [1, 2, "main"], [2, 3, "main"], [3, 4, "main"], [4, 6, "main"], [4, 5, "main"], [5, 3, "main"]],
-    signals: S({ codeChecks: true, boundedRetry: { present: true, maxAttempts: 2 }, llmJudge: true, scoreThreshold: { value: 8, outOf: 10 }, multiAgent: true }),
-    ai: ["OpenAI"], services: ["Gmail"], triggers: ["form"] },
-  { post: 2, file: "study-planner.json", name: "Study Planner",
-    nodes: [["Every Monday", "n8n-nodes-base.scheduleTrigger", "trigger"], ["Read calendar", "n8n-nodes-base.googleCalendar", "tool"], ["Plan the week", "@n8n/n8n-nodes-langchain.chainLlm", "ai"], ["Ask for approval", "n8n-nodes-base.gmail", "approval"], ["Create events", "n8n-nodes-base.googleCalendar", "action"], ["Notify failure", "n8n-nodes-base.gmail", "errorPath"]],
-    edges: [[0, 1, "main"], [1, 2, "main"], [2, 3, "main"], [3, 4, "main"], [4, 5, "error"]],
-    signals: S({ humanReview: true, errorHandling: true }), ai: ["Anthropic"], services: ["Gmail", "Google Calendar"], triggers: ["schedule"] },
-  { post: 3, file: "news-brief.json", name: "Morning News Brief",
-    nodes: [["Daily 7am", "n8n-nodes-base.scheduleTrigger", "trigger"], ["Read feeds", "n8n-nodes-base.rssFeedRead", "tool"], ["Summarize", "@n8n/n8n-nodes-langchain.agent", "ai"], ["Fallback list", "n8n-nodes-base.set", "other"], ["Send brief", "n8n-nodes-base.telegram", "action"]],
-    edges: [[0, 1, "main"], [1, 2, "main"], [2, 4, "main"], [2, 3, "error"], [3, 4, "main"]],
-    signals: S({ fallback: true, errorHandling: true, memory: true }), ai: ["Google Gemini"], services: ["RSS", "Telegram"], triggers: ["schedule"] },
-  { post: 4, file: "expense-logger.json", name: "Expense Logger",
-    nodes: [["New receipt email", "n8n-nodes-base.gmailTrigger", "trigger"], ["Extract fields", "@n8n/n8n-nodes-langchain.informationExtractor", "ai"], ["Validate amount and date", "n8n-nodes-base.code", "validator"], ["Valid?", "n8n-nodes-base.if", "gate"], ["Append to sheet", "n8n-nodes-base.googleSheets", "storage"], ["Flag for review", "n8n-nodes-base.googleSheets", "storage"]],
-    edges: [[0, 1, "main"], [1, 2, "main"], [2, 3, "main"], [3, 4, "main"], [3, 1, "main"], [3, 5, "main"]],
-    signals: S({ codeChecks: true, boundedRetry: { present: true, maxAttempts: 3 }, errorHandling: true }), ai: ["OpenAI"], services: ["Gmail", "Google Sheets"], triggers: ["gmail"] },
-  { post: 5, file: "support-desk.json", name: "Support Reply Desk",
-    nodes: [["Ticket form", "n8n-nodes-base.formTrigger", "trigger"], ["Writer", "@n8n/n8n-nodes-langchain.agent", "ai"], ["Risk flags", "n8n-nodes-base.code", "validator"], ["Judge", "@n8n/n8n-nodes-langchain.agent", "judge"], ["Pass rule", "n8n-nodes-base.if", "gate"], ["Telegram approval", "n8n-nodes-base.telegram", "approval"], ["Send reply", "n8n-nodes-base.gmail", "action"]],
-    edges: [[0, 1, "main"], [1, 2, "main"], [2, 3, "main"], [3, 4, "main"], [4, 5, "main"], [4, 1, "main"], [5, 6, "main"]],
-    signals: S({ codeChecks: true, humanReview: true, boundedRetry: { present: true, maxAttempts: 2 }, llmJudge: true, scoreThreshold: { value: 8, outOf: 10 }, multiAgent: true }),
-    ai: ["Anthropic"], services: ["Gmail", "Telegram"], triggers: ["form"] },
-  { post: 7, file: "notes-qa.json", name: "Lecture Notes Q&A",
-    nodes: [["Chat", "@n8n/n8n-nodes-langchain.chatTrigger", "trigger"], ["Answer", "@n8n/n8n-nodes-langchain.agent", "ai"], ["Notes store", "@n8n/n8n-nodes-langchain.vectorStoreInMemory", "tool"]],
-    edges: [[0, 1, "main"], [2, 1, "ai"]],
-    signals: S({ rag: true }), ai: ["OpenAI"], services: [], triggers: ["chat"] },
-  { post: 8, file: "meeting-summarizer.json", name: "Meeting Notes Summarizer",
-    nodes: [["Notes form", "n8n-nodes-base.formTrigger", "trigger"], ["Summarize", "@n8n/n8n-nodes-langchain.chainLlm", "ai"], ["Email team", "n8n-nodes-base.gmail", "action"]],
-    edges: [[0, 1, "main"], [1, 2, "main"]],
-    signals: S({}), ai: ["OpenAI"], services: ["Gmail"], triggers: ["form"] },
+// ---- Assets: the API does not provide attachments. Synthetic workflow files and screenshots go through
+// the real Phase 3 pipeline (validate → sanitize → profile → manifest); nothing here is hand-written.
+const json = (o: unknown) => JSON.stringify(o, null, 2);
+const WORKFLOWS: Array<[number, string, () => Record<string, unknown>]> = [
+  [1, "recipe-scaler.json", A.recipeScaler], [2, "study-planner.json", A.studyPlanner], [3, "news-brief.json", A.newsBrief],
+  [4, "expense-logger.json", A.expenseLogger], [5, "support-desk.json", A.supportDesk], [7, "notes-qa.json", A.notesQa],
+  [8, "meeting-summarizer.json", A.meetingSummarizer],
 ];
-
-const profiles: WorkflowProfile[] = profileSpecs.map((p) => {
-  const nodes = p.nodes.map(([name, type, category], i) => ({ id: "n" + i, name, type, category, position: [i * 220, 0] as [number, number] }));
-  const edges = p.edges.map(([a, b, kind]) => ({ source: "n" + a, target: "n" + b, kind }));
-  const categoryCounts = Object.fromEntries(CATEGORIES.map((c) => [c, nodes.filter((n) => n.category === c).length])) as WorkflowProfile["categoryCounts"];
-  const mainPath: string[] = [];
-  const seen = new Set<number>();
-  const queue = [0];
-  while (queue.length) {
-    const v = queue.shift()!;
-    if (seen.has(v)) continue;
-    seen.add(v); mainPath.push("n" + v);
-    p.edges.filter(([a, , k]) => a === v && k === "main").forEach(([, b]) => queue.push(b));
-  }
-  return {
-    schemaVersion: "1.0", profileId: "wf_" + sha256Hex(p.file).slice(0, 12), postId: postId(p.post), fileName: p.file, workflowName: p.name,
-    nodeCount: nodes.length, edgeCount: edges.length, sanitization: { credentialRefsRemoved: 0, pinDataRemoved: false, flags: [] },
-    nodes, edges, categoryCounts, signals: p.signals, aiProviders: p.ai, externalServices: p.services, triggerTypes: p.triggers,
-    mainPath, chips: mainPath.slice(0, 7).map((nid) => { const n = nodes.find((x) => x.id === nid)!; return { category: n.category, label: n.name }; }),
-  };
+const SCREENSHOTS: Array<[number, string]> = [
+  [1, "recipe-overview.png"], [1, "recipe-judge-run.png"], [2, "planner-approval.png"], [4, "expense-checks.png"],
+  [5, "support-desk.png"], [5, "support-flag.png"], [8, "meeting-summary.png"],
+];
+const assetRun = A.processAssetBatch({
+  week: 2,
+  knownPostRefs: dataset.posts.map((p) => p.postId),
+  assets: [
+    ...WORKFLOWS.map(([n, file, build]) => ({ postRef: postId(n), originalFilename: file, mimeType: "application/json", contentText: json(build()), uploadedAt: "2026-10-29T14:00:00Z" })),
+    ...SCREENSHOTS.map(([n, file]) => ({ postRef: postId(n), originalFilename: file, mimeType: "image/png", contentBase64: A.syntheticImageBase64("png", file), uploadedAt: "2026-10-29T14:00:00Z" })),
+  ],
 });
+const manifest: AssetManifest = assetRun.manifest;
+const profiles: WorkflowProfile[] = assetRun.profiles;
+const posts: NormalizedPost[] = A.applyAssetManifest(dataset.posts, manifest);
+
+// Phase 3 synthetic workflow fixtures, written for review (tests build them from the same functions).
+const WF_OUT = join(__dirname, "..", "..", "fixtures", "synthetic", "workflows");
+mkdirSync(WF_OUT, { recursive: true });
+const FIXTURE_FILES: Array<[string, string]> = [
+  ["01-simple-ai.json", json(A.simpleAi())], ["02-ai-validator-email.json", json(A.aiValidatorEmail())],
+  ["03-writer-reviewer-unbounded.json", json(A.writerReviewerUnbounded())], ["04-human-approval.json", json(A.humanApproval())],
+  ["05-bounded-retry.json", json(A.boundedRetry())], ["06-unbounded-loop.json", json(A.unboundedLoop())],
+  ["07-external-api.json", json(A.externalApi())], ["08-gmail.json", json(A.gmailFlow())], ["09-code-validator.json", json(A.codeValidator())],
+  ["10-failure-branch.json", json(A.failureBranch())], ["11-disabled-nodes.json", json(A.disabledNodes())],
+  ["12-malformed.json", A.MALFORMED_JSON], ["13-not-n8n.json", json(A.notN8n())], ["14-credential-references.json", json(A.credentialRefs())],
+  ["15-pinned-data.json", json(A.pinnedData())], ["16-fake-secrets.json", json(A.fakeSecrets())], ["17-fake-email.json", json(A.fakeEmail())],
+  ["19-unknown-custom-node.json", json(A.unknownCustomNode())],
+  ...WORKFLOWS.map(([, file, build]) => ["week2-" + file, json(build())] as [string, string]),
+];
+FIXTURE_FILES.forEach(([f, text]) => writeFileSync(join(WF_OUT, f), text + "\n", "utf8"));
 
 // ---- Issue: code-counted parts from metrics; editorial text written here as a stand-in for the AI stages ----
 const metrics = computeIssueMetrics(posts, profiles);
@@ -226,6 +187,8 @@ const issue: Issue = {
 posts.forEach((p) => normalizedPostSchema.parse(p));
 profiles.forEach((p) => workflowProfileSchema.parse(p));
 assetManifestSchema.parse(manifest);
+assertAssetManifest(manifest);
+profiles.forEach(assertWorkflowProfile);
 issueSchema.parse(issue);
 
 mkdirSync(OUT, { recursive: true });

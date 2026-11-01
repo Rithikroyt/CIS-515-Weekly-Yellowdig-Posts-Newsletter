@@ -1,0 +1,278 @@
+{
+  "name": "Recipe Scaler",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "position": [
+        0,
+        0
+      ],
+      "name": "Recipe form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "position": [
+        220,
+        0
+      ],
+      "name": "Draft scaled recipe",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "position": [
+        440,
+        0
+      ],
+      "name": "Judge draft",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "position": [
+        660,
+        0
+      ],
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "parameters": {
+        "model": "gpt-4o-mini"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "position": [
+        880,
+        0
+      ],
+      "name": "Check units and score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "parameters": {
+        "jsCode": "const pass = $json.score >= 8 && $json.units.every(Boolean);\nreturn [{ json: { ...$json, pass } }];"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "position": [
+        1100,
+        0
+      ],
+      "name": "Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.pass }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "position": [
+        1320,
+        0
+      ],
+      "name": "Email recipe",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "send"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "position": [
+        1540,
+        0
+      ],
+      "name": "Revisions left?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.revision }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "position": [
+        1760,
+        0
+      ],
+      "name": "Revise draft",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "parameters": {}
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "position": [
+        1980,
+        0
+      ],
+      "name": "Email for manual check",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "send"
+      }
+    }
+  ],
+  "connections": {
+    "Recipe form": {
+      "main": [
+        [
+          {
+            "node": "Draft scaled recipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft scaled recipe": {
+      "main": [
+        [
+          {
+            "node": "Judge draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge draft": {
+      "main": [
+        [
+          {
+            "node": "Check units and score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check units and score": {
+      "main": [
+        [
+          {
+            "node": "Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Passed?": {
+      "main": [
+        [
+          {
+            "node": "Email recipe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revisions left?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisions left?": {
+      "main": [
+        [
+          {
+            "node": "Revise draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email for manual check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revise draft": {
+      "main": [
+        [
+          {
+            "node": "Judge draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft scaled recipe",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Judge draft",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Revise draft",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

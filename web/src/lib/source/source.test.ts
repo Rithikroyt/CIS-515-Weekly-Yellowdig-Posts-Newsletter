@@ -1,11 +1,12 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadValidators, readJson, REPO_ROOT } from "../../../scripts/schemas";
+import { applyAssetManifest } from "../assets";
 import { SCHEMA_IDS, assertWeekDataset, bundleLite, datasetLite } from "../contracts/registry";
 import { pseudonymousId } from "../ids";
 import type { NormalizedPost } from "../contracts";
 import {
-  SYNTHETIC_SALT, SYNTHETIC_WEEK2_RUN, SourceError, applyAssetManifest, assessPages, buildSourceBundle, capabilityProbe,
+  SYNTHETIC_SALT, SYNTHETIC_WEEK2_RUN, SourceError, assessPages, buildSourceBundle, capabilityProbe,
   classifyFailure, decideOnFailure, dedupeEvents, eventsUrl, fetchAllPages, filterEvents, htmlToText, minimizeEvent,
   normalizeBundle, resolveSourceMode, syntheticWeek2Events, syntheticWeek2Pages, validateRunConfig, yellowdigPostUrl,
   YELLOWDIG_BASE_URL, type FetchPage, type RunConfig, type SourceEvent, type SourceMeta,

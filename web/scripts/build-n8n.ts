@@ -11,11 +11,13 @@ import { REPO_ROOT } from "./schemas";
 export const ENTRIES = {
   wf01: ["devRunConfig", "validateConfig", "resolveMode", "loadFixture", "checkCapability", "classifyFetchFailure", "collectAndMinimize", "dedupe", "filterDateTopic", "assembleAndValidate"],
   wf02: ["fixtureRunConfig", "validateSourceMetadata", "classifyEvents", "joinToPosts", "computeMetrics", "validateDataset"],
+  wf03: ["syntheticBatch", "checkFiles", "sanitize", "profile", "assembleAndValidate"],
 } as const;
 
 const WORKFLOWS = [
   { key: "wf01", file: "01-fetch-yellowdig-events" },
   { key: "wf02", file: "02-normalize-and-join" },
+  { key: "wf03", file: "03-profile-workflow-assets" },
 ] as const;
 
 // The bundle hands its entry to __obsSet instead of exporting it: the n8n task-runner sandbox drops the
