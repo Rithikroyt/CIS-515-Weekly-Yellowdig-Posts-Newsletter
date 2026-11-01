@@ -1,0 +1,33 @@
+{
+  "week": 2,
+  "title": "ActionReady - Week 2 Review Hub",
+  "source": {
+    "workflow": "ActionReady - Week 2 Yellowdig FINAL",
+    "workflowId": "KTQmpWghSB2jid1T",
+    "executionId": "68",
+    "node": "Render Report"
+  },
+  "generatedAt": "2026-10-28T21:13:00Z",
+  "recordsFrom": "2026-10-27T05:07:00Z",
+  "recordsTo": "2026-10-28T20:26:00Z",
+  "dataSet": "demonstration",
+  "html": "newsletter.html",
+  "summary": {
+    "uniqueCases": 5,
+    "aiReviewed": 3,
+    "needsClarification": 2,
+    "technicalOrManualReview": 0,
+    "versionsRecorded": 6,
+    "casesRevised": 1,
+    "avgOrdinaryScore": 5,
+    "humanApprovalDecisions": 0,
+    "gmailDraftsCreated": 1
+  },
+  "cases": [
+    { "id": "AR2-60", "meeting": "Product Launch Preparation", "status": "NEEDS_CLARIFICATION", "versions": 1, "latestScore": null, "controlledTest": false, "approval": "NOT_REQUESTED" },
+    { "id": "AR2-59", "meeting": "Product Login Bug Review", "status": "NEEDS_CLARIFICATION", "versions": 1, "latestScore": null, "controlledTest": false, "approval": "NOT_REQUESTED" },
+    { "id": "AR2-58", "meeting": "Analytics Project Check-In", "status": "AI_REVIEWED_NOT_HUMAN_APPROVED", "versions": 2, "latestScore": 5, "controlledTest": true, "approval": "NOT_REQUESTED" },
+    { "id": "AR2-57", "meeting": "Analytics Project Check-In", "status": "AI_REVIEWED_NOT_HUMAN_APPROVED", "versions": 1, "latestScore": 5, "controlledTest": false, "approval": "NOT_REQUESTED" },
+    { "id": "AR2-21", "meeting": "Analytics Project Check-In", "status": "AI_REVIEWED_NOT_HUMAN_APPROVED", "versions": 1, "latestScore": 5, "controlledTest": false, "approval": "DRAFT_CREATED" }
+  ]
+}

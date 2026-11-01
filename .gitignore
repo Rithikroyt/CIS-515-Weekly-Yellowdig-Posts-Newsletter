@@ -1,0 +1,31 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Raw Yellowdig exports (student content - keep out of git)
+data/raw/
+*yellowdig*export*.json
+*yellowdig*export*.csv
+
+# n8n local state
+n8n/.n8n/
+*.sqlite
+
+# Next.js
+web/node_modules/
+web/.next/
+web/out/
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Real student posts (keep out of git; synthetic fixtures are fine)
+tests/fixtures/week-*/
+!tests/fixtures/week-*-synthetic/
+
+# Local harness scratch output
+tests/harness/parse-*.json
+tests/harness/parse-escaped.txt

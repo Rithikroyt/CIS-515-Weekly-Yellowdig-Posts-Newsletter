@@ -1,0 +1,160 @@
+{
+  "name": "Recipe Scaler",
+  "nodes": [
+    {
+      "name": "Recipe form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Draft scaled recipe",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "text": "Scale the recipe."
+      }
+    },
+    {
+      "name": "Judge draft",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "text": "Score the draft on a rubric out of 10. 8 or higher passes."
+      }
+    },
+    {
+      "name": "Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 8,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Revise draft",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "text": "Fix the draft using the feedback."
+      }
+    },
+    {
+      "name": "Email recipe",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "operation": "send"
+      }
+    },
+    {
+      "name": "OpenAI model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Recipe form": {
+      "main": [
+        [
+          {
+            "node": "Draft scaled recipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft scaled recipe": {
+      "main": [
+        [
+          {
+            "node": "Judge draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge draft": {
+      "main": [
+        [
+          {
+            "node": "Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Passed?": {
+      "main": [
+        [
+          {
+            "node": "Email recipe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revise draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revise draft": {
+      "main": [
+        [
+          {
+            "node": "Judge draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

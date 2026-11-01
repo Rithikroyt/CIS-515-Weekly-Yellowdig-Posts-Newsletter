@@ -1,0 +1,658 @@
+{
+  "week": 2,
+  "date_range": "Oct 23–28, 2026",
+  "editor": "Test Editor",
+  "posts": [
+    {
+      "id": "syn-001",
+      "title": "Recipe Scaler with a Judge",
+      "author": "Avery Quinn",
+      "posted_at": "2026-10-21",
+      "topic_tag": "WEEK 2",
+      "body": "",
+      "post_url": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-001",
+      "comments": [
+        {
+          "author": "Blake Torres",
+          "body": "x"
+        },
+        {
+          "author": "Avery Quinn",
+          "body": "y"
+        }
+      ],
+      "workflow_file_name": "recipe_scaler_v2.json",
+      "image_count": 2,
+      "class_question": "",
+      "analysis": {
+        "file_name": "recipe_scaler_v2.json",
+        "workflow_name": "Recipe Scaler",
+        "node_count": 6,
+        "trigger": "Recipe form",
+        "trigger_count": 1,
+        "role_counts": {
+          "Trigger": 1,
+          "Model": 2,
+          "Judge": 1,
+          "Logic": 1,
+          "Action": 1
+        },
+        "pipeline": [
+          {
+            "name": "Recipe form",
+            "type": "n8n-nodes-base.formTrigger",
+            "role": "Trigger"
+          },
+          {
+            "name": "Draft scaled recipe",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Model"
+          },
+          {
+            "name": "Judge draft",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Judge"
+          },
+          {
+            "name": "Passed?",
+            "type": "n8n-nodes-base.if",
+            "role": "Logic"
+          },
+          {
+            "name": "Email recipe",
+            "type": "n8n-nodes-base.gmail",
+            "role": "Action"
+          },
+          {
+            "name": "Revise draft",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Model"
+          }
+        ],
+        "chips": [
+          {
+            "role": "Trigger",
+            "label": "Recipe form",
+            "nodes": 1
+          },
+          {
+            "role": "Model",
+            "label": "Draft scaled recipe",
+            "nodes": 1
+          },
+          {
+            "role": "Judge",
+            "label": "Judge draft",
+            "nodes": 1
+          },
+          {
+            "role": "Logic",
+            "label": "Passed",
+            "nodes": 1
+          },
+          {
+            "role": "Action",
+            "label": "Email recipe",
+            "nodes": 1
+          },
+          {
+            "role": "Model",
+            "label": "Revise draft",
+            "nodes": 1
+          }
+        ],
+        "patterns": {
+          "llm_judge": true,
+          "judge_nodes": [
+            "Judge draft"
+          ],
+          "score_threshold": {
+            "value": 8,
+            "out_of": null,
+            "source_node": "Passed?"
+          },
+          "revision_loop": true,
+          "revision_evidence": "graph cycle",
+          "human_in_the_loop": false,
+          "human_nodes": [],
+          "multi_agent": true,
+          "model_count": 3,
+          "rag": false,
+          "memory": false,
+          "error_handling": false
+        },
+        "pattern_list": [
+          "llm_judge",
+          "score_threshold",
+          "revision_loop",
+          "multi_agent"
+        ]
+      }
+    },
+    {
+      "id": "syn-002",
+      "title": "Study Planner with Human Approval",
+      "author": "Jordan Ellis",
+      "posted_at": "2026-10-22",
+      "topic_tag": "WEEK 2",
+      "body": "",
+      "post_url": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-002",
+      "comments": [
+        {
+          "author": "Casey Morgan",
+          "body": "z"
+        }
+      ],
+      "workflow_file_name": "ellis_jordan_planner.json",
+      "image_count": 1,
+      "class_question": "",
+      "analysis": {
+        "file_name": "ellis_jordan_planner.json",
+        "workflow_name": "Planner",
+        "node_count": 5,
+        "trigger": "Every Monday",
+        "trigger_count": 1,
+        "role_counts": {
+          "Trigger": 1,
+          "Tool": 1,
+          "Model": 1,
+          "Human": 1,
+          "Action": 1
+        },
+        "pipeline": [
+          {
+            "name": "Every Monday",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "role": "Trigger"
+          },
+          {
+            "name": "Read Canvas",
+            "type": "n8n-nodes-base.httpRequest",
+            "role": "Tool"
+          },
+          {
+            "name": "Plan the week",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "role": "Model"
+          },
+          {
+            "name": "Ask for approval",
+            "type": "n8n-nodes-base.gmail",
+            "role": "Human"
+          },
+          {
+            "name": "Create events",
+            "type": "n8n-nodes-base.googleCalendar",
+            "role": "Action"
+          }
+        ],
+        "chips": [
+          {
+            "role": "Trigger",
+            "label": "Every Monday",
+            "nodes": 1
+          },
+          {
+            "role": "Tool",
+            "label": "Read Canvas",
+            "nodes": 1
+          },
+          {
+            "role": "Model",
+            "label": "Plan the week",
+            "nodes": 1
+          },
+          {
+            "role": "Human",
+            "label": "Ask for approval",
+            "nodes": 1
+          },
+          {
+            "role": "Action",
+            "label": "Create events",
+            "nodes": 1
+          }
+        ],
+        "patterns": {
+          "llm_judge": false,
+          "judge_nodes": [],
+          "score_threshold": null,
+          "revision_loop": false,
+          "revision_evidence": "",
+          "human_in_the_loop": true,
+          "human_nodes": [
+            "Ask for approval"
+          ],
+          "multi_agent": false,
+          "model_count": 1,
+          "rag": false,
+          "memory": false,
+          "error_handling": true
+        },
+        "pattern_list": [
+          "human_in_the_loop",
+          "error_handling"
+        ]
+      }
+    },
+    {
+      "id": "syn-003",
+      "title": "News Brief Agent",
+      "author": "Casey Morgan",
+      "posted_at": "2026-10-23",
+      "topic_tag": "WEEK 2",
+      "body": "",
+      "post_url": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-003",
+      "comments": [],
+      "workflow_file_name": "casey_news_brief.json",
+      "image_count": 0,
+      "class_question": "",
+      "analysis": {
+        "file_name": "casey_news_brief.json",
+        "workflow_name": "News",
+        "node_count": 6,
+        "trigger": "Daily 7am",
+        "trigger_count": 1,
+        "role_counts": {
+          "Trigger": 1,
+          "Tool": 1,
+          "Logic": 1,
+          "Model": 1,
+          "Memory": 1,
+          "Action": 1
+        },
+        "pipeline": [
+          {
+            "name": "Daily 7am",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "role": "Trigger"
+          },
+          {
+            "name": "Fetch RSS",
+            "type": "n8n-nodes-base.rssFeedRead",
+            "role": "Tool"
+          },
+          {
+            "name": "Keep top 5",
+            "type": "n8n-nodes-base.limit",
+            "role": "Logic"
+          },
+          {
+            "name": "Summarize",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Model"
+          },
+          {
+            "name": "Send to Telegram",
+            "type": "n8n-nodes-base.telegram",
+            "role": "Action"
+          }
+        ],
+        "chips": [
+          {
+            "role": "Trigger",
+            "label": "Daily 7am",
+            "nodes": 1
+          },
+          {
+            "role": "Tool",
+            "label": "Fetch RSS",
+            "nodes": 1
+          },
+          {
+            "role": "Logic",
+            "label": "Keep top 5",
+            "nodes": 1
+          },
+          {
+            "role": "Model",
+            "label": "Summarize",
+            "nodes": 1
+          },
+          {
+            "role": "Action",
+            "label": "Send to Telegram",
+            "nodes": 1
+          }
+        ],
+        "patterns": {
+          "llm_judge": false,
+          "judge_nodes": [],
+          "score_threshold": null,
+          "revision_loop": false,
+          "revision_evidence": "",
+          "human_in_the_loop": false,
+          "human_nodes": [],
+          "multi_agent": false,
+          "model_count": 1,
+          "rag": false,
+          "memory": true,
+          "error_handling": false
+        },
+        "pattern_list": [
+          "memory"
+        ]
+      }
+    },
+    {
+      "id": "syn-005",
+      "title": "ActionReady (real export)",
+      "author": "Rithik Roy Thati",
+      "posted_at": "2026-10-25",
+      "topic_tag": "WEEK 2",
+      "body": "",
+      "post_url": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-005",
+      "comments": [],
+      "workflow_file_name": "newsletter.json",
+      "image_count": 3,
+      "class_question": "",
+      "analysis": {
+        "file_name": "newsletter.json",
+        "workflow_name": "ActionReady - Week 2 Yellowdig FINAL",
+        "node_count": 81,
+        "trigger": "Chat Trigger",
+        "trigger_count": 3,
+        "role_counts": {
+          "Trigger": 3,
+          "Code": 41,
+          "Logic": 9,
+          "Model": 1,
+          "Judge": 1,
+          "Action": 13,
+          "Tool": 12,
+          "Human": 1
+        },
+        "pipeline": [
+          {
+            "name": "Chat Trigger",
+            "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+            "role": "Trigger"
+          },
+          {
+            "name": "Workflow Settings",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Prepare Input",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Input Usable?",
+            "type": "n8n-nodes-base.if",
+            "role": "Logic"
+          },
+          {
+            "name": "Prepare Writer Input",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Validate and Audit",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Agent 1 - Meeting Writer",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Model"
+          },
+          {
+            "name": "Inspect Draft and Snapshot",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Capture Writer Version",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Route Validated Record",
+            "type": "n8n-nodes-base.switch",
+            "role": "Logic"
+          },
+          {
+            "name": "Prepare Reviewer Input",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Set Clarification Outcome",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Set Technical Outcome",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Agent 2 - Evidence Reviewer",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "role": "Judge"
+          },
+          {
+            "name": "Build Evidence and Reply",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Evaluate Reviewer and Gate",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Normalize Persistence Records",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Route Quality Result",
+            "type": "n8n-nodes-base.switch",
+            "role": "Logic"
+          },
+          {
+            "name": "Read Prior Case State",
+            "type": "n8n-nodes-base.dataTable",
+            "role": "Tool"
+          },
+          {
+            "name": "Report Persistence Failure",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Set AI Reviewed Outcome",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Prepare Revision",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Set Stop Outcome",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Protect Approved Records",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Upsert Case Record",
+            "type": "n8n-nodes-base.dataTable",
+            "role": "Action"
+          },
+          {
+            "name": "Expand Version Rows",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Has Version Rows?",
+            "type": "n8n-nodes-base.if",
+            "role": "Logic"
+          },
+          {
+            "name": "Upsert Version Records",
+            "type": "n8n-nodes-base.dataTable",
+            "role": "Action"
+          },
+          {
+            "name": "Read Back Saved Case",
+            "type": "n8n-nodes-base.dataTable",
+            "role": "Tool"
+          },
+          {
+            "name": "Read Back Saved Versions",
+            "type": "n8n-nodes-base.dataTable",
+            "role": "Tool"
+          },
+          {
+            "name": "Verify Saved Records",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          },
+          {
+            "name": "Restore Chat Reply",
+            "type": "n8n-nodes-base.code",
+            "role": "Code"
+          }
+        ],
+        "chips": [
+          {
+            "role": "Trigger",
+            "label": "Chat Trigger",
+            "nodes": 1
+          },
+          {
+            "role": "Model",
+            "label": "Agent 1 - Meeting Writer",
+            "nodes": 1
+          },
+          {
+            "role": "Judge",
+            "label": "Agent 2 - Evidence Reviewer",
+            "nodes": 1
+          },
+          {
+            "role": "Tool",
+            "label": "Read Prior Case State",
+            "nodes": 1
+          },
+          {
+            "role": "Action",
+            "label": "Upsert Case Record",
+            "nodes": 1
+          },
+          {
+            "role": "Action",
+            "label": "Upsert Version Records",
+            "nodes": 1
+          },
+          {
+            "role": "Tool",
+            "label": "Read Back Saved Case ×2",
+            "nodes": 2
+          }
+        ],
+        "patterns": {
+          "llm_judge": true,
+          "judge_nodes": [
+            "Agent 2 - Evidence Reviewer"
+          ],
+          "score_threshold": {
+            "value": 4.5,
+            "out_of": 5,
+            "source_node": "Workflow Settings"
+          },
+          "revision_loop": true,
+          "revision_evidence": "graph cycle",
+          "human_in_the_loop": true,
+          "human_nodes": [
+            "Gmail - Collect Feedback"
+          ],
+          "multi_agent": true,
+          "model_count": 2,
+          "rag": false,
+          "memory": false,
+          "error_handling": true
+        },
+        "pattern_list": [
+          "llm_judge",
+          "score_threshold",
+          "revision_loop",
+          "human_in_the_loop",
+          "multi_agent",
+          "error_handling"
+        ]
+      }
+    }
+  ],
+  "workflow_files": [
+    {
+      "file_name": "casey_news_brief.json",
+      "author": "",
+      "post_id": "x",
+      "match_method": "t",
+      "error": ""
+    },
+    {
+      "file_name": "ellis_jordan_planner.json",
+      "author": "",
+      "post_id": "x",
+      "match_method": "t",
+      "error": ""
+    },
+    {
+      "file_name": "newsletter.json",
+      "author": "",
+      "post_id": "x",
+      "match_method": "t",
+      "error": ""
+    },
+    {
+      "file_name": "recipe_scaler_v2.json",
+      "author": "",
+      "post_id": "x",
+      "match_method": "t",
+      "error": ""
+    }
+  ],
+  "unmatched_file_analyses": [],
+  "stats": {
+    "week": 2,
+    "builds": 4,
+    "comments": 3,
+    "workflow_files": 4,
+    "images": 6,
+    "builds_with_file": 4,
+    "pattern_counts": {
+      "llm_judge": 2,
+      "score_threshold": 2,
+      "revision_loop": 2,
+      "human_in_the_loop": 2,
+      "multi_agent": 2,
+      "rag": 0,
+      "memory": 1,
+      "error_handling": 2
+    },
+    "pattern_summary": [
+      "2 of 4 builds handled errors explicitly",
+      "2 of 4 builds added a human approval step",
+      "2 of 4 builds used an AI judge",
+      "2 of 4 builds used two or more AI models",
+      "2 of 4 builds had a revision loop",
+      "2 of 4 builds set a score threshold",
+      "1 of 4 builds used memory"
+    ]
+  },
+  "ingest_report": {
+    "uploaded_image_count": 4
+  }
+}
