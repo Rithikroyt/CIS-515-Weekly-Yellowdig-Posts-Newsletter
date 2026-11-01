@@ -1,0 +1,613 @@
+{
+  "schemaVersion": "1.0",
+  "issueId": "cis-515-2026-fall-b-week-02",
+  "status": "approved",
+  "course": {
+    "code": "CIS 515",
+    "name": "AI and Data Analytics Strategy"
+  },
+  "term": "2026 Fall B",
+  "week": 2,
+  "dateRange": {
+    "start": "2026-10-23",
+    "end": "2026-10-28",
+    "label": "Oct 23–28, 2026"
+  },
+  "generatedAt": "2026-10-29T15:00:00Z",
+  "approvedAt": "2026-10-29T18:30:00Z",
+  "approvedBy": "Synthetic Reviewer",
+  "hero": {
+    "headline": "Code Gates Catch What Judges Miss",
+    "dek": "Week 2 builds added checks between the first draft and the send. The strongest ones let code, not the model, decide what is risky.",
+    "intro": "Most builds this week put a check between the model's first answer and the action that follows. Drew Patel's support desk showed why: a judge scored a risky reply 9 out of 10, and a code flag stopped it. Blake Torres moved date checks out of the prompt and into code, and Avery Quinn tested the failure path on purpose.",
+    "evidence": [
+      "post:syn-w2-p05",
+      "post:syn-w2-p04",
+      "post:syn-w2-p01",
+      "metric:signals.codeChecks"
+    ],
+    "provenance": "AI-DRAFTED"
+  },
+  "metrics": {
+    "provenance": "CODE-COUNTED",
+    "posts": 8,
+    "comments": 13,
+    "uniqueAuthors": 8,
+    "uniqueCommenters": 8,
+    "reactions": 32,
+    "views": 212,
+    "workflowFiles": 7,
+    "screenshots": 7,
+    "avgCommentsPerPost": 1.63,
+    "topicCounts": [
+      {
+        "topic": "WEEK 2 - WEEKLY WORKFLOW SHOW-AND-TELL ON YELLOWDIG",
+        "count": 8
+      }
+    ],
+    "signals": {
+      "profiledBuilds": 7,
+      "codeChecks": 3,
+      "humanReview": 2,
+      "boundedRetry": 3,
+      "errorHandling": 3,
+      "llmJudge": 2,
+      "multiAgent": 2,
+      "fallback": 1
+    },
+    "externalServices": [
+      {
+        "name": "Gmail",
+        "builds": 5
+      },
+      {
+        "name": "Telegram",
+        "builds": 2
+      },
+      {
+        "name": "Google Calendar",
+        "builds": 1
+      },
+      {
+        "name": "Google Sheets",
+        "builds": 1
+      },
+      {
+        "name": "RSS",
+        "builds": 1
+      }
+    ]
+  },
+  "themes": [
+    {
+      "themeId": "code-gates",
+      "title": "Code decides what is risky",
+      "description": "Builds that check facts such as amounts, dates and units in code instead of asking a model.",
+      "postIds": [
+        "syn-w2-p04",
+        "syn-w2-p05",
+        "syn-w2-p01"
+      ],
+      "evidence": [
+        "post:syn-w2-p04",
+        "post:syn-w2-p05",
+        "post:syn-w2-p01"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "themeId": "people-approve",
+      "title": "A person makes the final call",
+      "description": "Builds that pause for approval before writing to a calendar or sending a reply.",
+      "postIds": [
+        "syn-w2-p02",
+        "syn-w2-p05"
+      ],
+      "evidence": [
+        "post:syn-w2-p02",
+        "post:syn-w2-p05"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "themeId": "plan-for-failure",
+      "title": "Plan for the failure path",
+      "description": "Bounded retries, fallbacks and error branches that keep a failed step from becoming a silent one.",
+      "postIds": [
+        "syn-w2-p03",
+        "syn-w2-p04",
+        "syn-w2-p01"
+      ],
+      "evidence": [
+        "post:syn-w2-p03",
+        "post:syn-w2-p04",
+        "post:syn-w2-p01"
+      ],
+      "provenance": "AI-DRAFTED"
+    }
+  ],
+  "spotlights": [
+    {
+      "postId": "syn-w2-p05",
+      "title": "Support Reply Desk",
+      "author": "Drew Patel",
+      "category": "Support · Risk gates",
+      "summary": "A writer drafts support replies from the policy, a judge scores them, code flags risky tickets, and a person approves every reply in Telegram.",
+      "narrative": "Drew's desk layers three checks. Code sets the risk flag for refunds over $100, so risk never depends on the model. The judge scores tone and accuracy, and a person approves the final reply.",
+      "testResult": "In one test the judge gave 9 out of 10 to a reply that promised a refund over the limit; the code flag stopped it.",
+      "fromTheThread": "Blake asked whether the judge sees the risk flag. Drew said not yet; he wants to see whether it notices on its own first.",
+      "worthBorrowing": "Let code flag high-risk items, and keep a person on the final call even when the score passes.",
+      "workflowProfileId": "wf_0167a0951f1e",
+      "chips": [
+        {
+          "category": "trigger",
+          "label": "Ticket form"
+        },
+        {
+          "category": "ai",
+          "label": "Writer"
+        },
+        {
+          "category": "validator",
+          "label": "Risk flags"
+        },
+        {
+          "category": "judge",
+          "label": "Judge"
+        },
+        {
+          "category": "gate",
+          "label": "Pass rule"
+        },
+        {
+          "category": "approval",
+          "label": "Telegram approval"
+        },
+        {
+          "category": "action",
+          "label": "Send reply"
+        }
+      ],
+      "screenshots": [
+        {
+          "src": "assets/support-desk.png",
+          "alt": "Support Reply Desk workflow on the n8n canvas"
+        },
+        {
+          "src": "assets/support-flag.png",
+          "alt": "Risk flag output for a refund ticket"
+        }
+      ],
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p05",
+      "commentCount": 3,
+      "evidence": [
+        "post:syn-w2-p05",
+        "workflow:wf_0167a0951f1e",
+        "comment:syn-w2-p05-c1",
+        "comment:syn-w2-p05-c2"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "postId": "syn-w2-p01",
+      "title": "Recipe Scaler with a Judge",
+      "author": "Avery Quinn",
+      "category": "Food · Quality control",
+      "summary": "Scales a recipe to a new serving size; a judge scores each draft out of 10 and 8 passes.",
+      "narrative": "Below 8, one revision runs with the judge's notes, at most twice, then the draft goes to Avery. A code node now rejects any ingredient without a unit.",
+      "testResult": "Avery raised the threshold to 10 for one run to watch the revision path work.",
+      "fromTheThread": "Blake suggested a hard check on units; Avery added one in code.",
+      "worthBorrowing": "Test the failure path with real outputs by raising the threshold for one run.",
+      "workflowProfileId": "wf_9377525d31c1",
+      "chips": [
+        {
+          "category": "trigger",
+          "label": "Recipe form"
+        },
+        {
+          "category": "ai",
+          "label": "Draft scaled recipe"
+        },
+        {
+          "category": "validator",
+          "label": "Check units"
+        },
+        {
+          "category": "judge",
+          "label": "Judge draft"
+        },
+        {
+          "category": "gate",
+          "label": "Passed?"
+        },
+        {
+          "category": "action",
+          "label": "Email recipe"
+        },
+        {
+          "category": "ai",
+          "label": "Revise draft"
+        }
+      ],
+      "screenshots": [
+        {
+          "src": "assets/recipe-overview.png",
+          "alt": "Recipe Scaler workflow overview"
+        }
+      ],
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p01",
+      "commentCount": 3,
+      "evidence": [
+        "post:syn-w2-p01",
+        "workflow:wf_9377525d31c1",
+        "comment:syn-w2-p01-c1",
+        "comment:syn-w2-p01-c2"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "postId": "syn-w2-p04",
+      "title": "Expense Logger with Code Checks",
+      "author": "Blake Torres",
+      "category": "Money · Code checks",
+      "summary": "Extracts amount, date and category from emailed receipts and checks them in code before logging.",
+      "narrative": "Failed checks retry up to three times. After that, the receipt lands in a review sheet with the reason.",
+      "testResult": "The checks caught a $75 grocery receipt the model had dated last year.",
+      "fromTheThread": "Drew asked what happens after the third retry; Blake explained the review sheet.",
+      "worthBorrowing": "Check dates and amounts in code, not in the prompt.",
+      "workflowProfileId": "wf_54b0cd74b646",
+      "chips": [
+        {
+          "category": "trigger",
+          "label": "New receipt email"
+        },
+        {
+          "category": "ai",
+          "label": "Extract fields"
+        },
+        {
+          "category": "validator",
+          "label": "Validate amount and date"
+        },
+        {
+          "category": "gate",
+          "label": "Valid?"
+        },
+        {
+          "category": "storage",
+          "label": "Append to sheet"
+        },
+        {
+          "category": "storage",
+          "label": "Flag for review"
+        }
+      ],
+      "screenshots": [
+        {
+          "src": "assets/expense-checks.png",
+          "alt": "Expense Logger validation step"
+        }
+      ],
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p04",
+      "commentCount": 4,
+      "evidence": [
+        "post:syn-w2-p04",
+        "workflow:wf_54b0cd74b646",
+        "comment:syn-w2-p04-c1",
+        "comment:syn-w2-p04-c2"
+      ],
+      "provenance": "AI-DRAFTED"
+    }
+  ],
+  "failurePath": {
+    "postId": "syn-w2-p05",
+    "title": "Support Reply Desk",
+    "author": "Drew Patel",
+    "whatFailed": "The judge scored a reply 9 out of 10 even though it promised a refund over the $100 limit.",
+    "whatCaughtIt": "A code rule that flags refunds over $100 routed the reply to a person.",
+    "lesson": "A high judge score is not proof. Put hard rules in code.",
+    "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p05",
+    "evidence": [
+      "post:syn-w2-p05",
+      "comment:syn-w2-p05-c1"
+    ],
+    "provenance": "AI-DRAFTED"
+  },
+  "allBuilds": [
+    {
+      "postId": "syn-w2-p01",
+      "title": "Recipe Scaler with a Judge",
+      "author": "Avery Quinn",
+      "category": "Food · Quality control",
+      "oneLine": "Scales recipes; a judge scores each draft out of 10 and 8 passes, with at most two revisions.",
+      "commentCount": 3,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p01",
+      "workflowProfileId": "wf_9377525d31c1",
+      "signals": [
+        "codeChecks",
+        "boundedRetry",
+        "llmJudge",
+        "multiAgent"
+      ],
+      "isSpotlight": true,
+      "evidence": [
+        "post:syn-w2-p01"
+      ]
+    },
+    {
+      "postId": "syn-w2-p02",
+      "title": "Study Planner with Human Approval",
+      "author": "Jordan Ellis",
+      "category": "Planning · Human approval",
+      "oneLine": "Drafts a weekly study plan and waits for email approval before writing to the calendar.",
+      "commentCount": 1,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p02",
+      "workflowProfileId": "wf_9af493586c6d",
+      "signals": [
+        "humanReview",
+        "errorHandling"
+      ],
+      "isSpotlight": false,
+      "evidence": [
+        "post:syn-w2-p02"
+      ]
+    },
+    {
+      "postId": "syn-w2-p03",
+      "title": "Morning News Brief",
+      "author": "Casey Morgan",
+      "category": "News · Fallbacks",
+      "oneLine": "Sends a daily brief and falls back to a plain headline list when the model times out.",
+      "commentCount": 0,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p03",
+      "workflowProfileId": "wf_f2a92f1073b1",
+      "signals": [
+        "errorHandling",
+        "fallback",
+        "memory"
+      ],
+      "isSpotlight": false,
+      "evidence": [
+        "post:syn-w2-p03"
+      ]
+    },
+    {
+      "postId": "syn-w2-p04",
+      "title": "Expense Logger with Code Checks",
+      "author": "Blake Torres",
+      "category": "Money · Code checks",
+      "oneLine": "Extracts receipt fields and checks amount and date in code, retrying up to three times.",
+      "commentCount": 4,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p04",
+      "workflowProfileId": "wf_54b0cd74b646",
+      "signals": [
+        "codeChecks",
+        "boundedRetry",
+        "errorHandling"
+      ],
+      "isSpotlight": true,
+      "evidence": [
+        "post:syn-w2-p04"
+      ]
+    },
+    {
+      "postId": "syn-w2-p05",
+      "title": "Support Reply Desk",
+      "author": "Drew Patel",
+      "category": "Support · Risk gates",
+      "oneLine": "Drafts support replies; code flags risky tickets and a person approves every reply.",
+      "commentCount": 3,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p05",
+      "workflowProfileId": "wf_0167a0951f1e",
+      "signals": [
+        "codeChecks",
+        "humanReview",
+        "boundedRetry",
+        "llmJudge",
+        "multiAgent"
+      ],
+      "isSpotlight": true,
+      "evidence": [
+        "post:syn-w2-p05"
+      ]
+    },
+    {
+      "postId": "syn-w2-p06",
+      "title": "Flight Deal Finder",
+      "author": "Morgan Lee",
+      "category": "Travel",
+      "oneLine": "Finds round trips under $500; the workflow file was not attached this week.",
+      "commentCount": 1,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p06",
+      "workflowProfileId": null,
+      "signals": [],
+      "isSpotlight": false,
+      "evidence": [
+        "post:syn-w2-p06"
+      ]
+    },
+    {
+      "postId": "syn-w2-p07",
+      "title": "Lecture Notes Q&A",
+      "author": "Sam Rivera",
+      "category": "Study · Retrieval",
+      "oneLine": "Answers questions about lecture notes from a small vector store.",
+      "commentCount": 0,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p07",
+      "workflowProfileId": "wf_f7b01a3fb37f",
+      "signals": [
+        "rag"
+      ],
+      "isSpotlight": false,
+      "evidence": [
+        "post:syn-w2-p07"
+      ]
+    },
+    {
+      "postId": "syn-w2-p08",
+      "title": "Meeting Notes Summarizer",
+      "author": "Riley Chen",
+      "category": "Work · Summaries",
+      "oneLine": "Turns meeting notes into action items with owners and dates.",
+      "commentCount": 1,
+      "sourceUrl": "https://yellowdig.app/n/carey-school-of-business/community/6acd2896-76e7-400f-9a00-cfd657470859?postId=syn-w2-p08",
+      "workflowProfileId": "wf_3333027205c6",
+      "signals": [],
+      "isSpotlight": false,
+      "evidence": [
+        "post:syn-w2-p08"
+      ]
+    }
+  ],
+  "discussionHighlights": {
+    "mostDiscussed": [
+      {
+        "postId": "syn-w2-p04",
+        "title": "Expense Logger with Code Checks",
+        "author": "Blake Torres",
+        "commentCount": 4
+      },
+      {
+        "postId": "syn-w2-p01",
+        "title": "Recipe Scaler with a Judge",
+        "author": "Avery Quinn",
+        "commentCount": 3
+      },
+      {
+        "postId": "syn-w2-p05",
+        "title": "Support Reply Desk",
+        "author": "Drew Patel",
+        "commentCount": 3
+      },
+      {
+        "postId": "syn-w2-p02",
+        "title": "Study Planner with Human Approval",
+        "author": "Jordan Ellis",
+        "commentCount": 1
+      },
+      {
+        "postId": "syn-w2-p06",
+        "title": "Flight Deal Finder",
+        "author": "Morgan Lee",
+        "commentCount": 1
+      }
+    ],
+    "generousCommenters": [
+      {
+        "name": "Blake Torres",
+        "commentsOnOthers": 2
+      },
+      {
+        "name": "Jordan Ellis",
+        "commentsOnOthers": 2
+      },
+      {
+        "name": "Avery Quinn",
+        "commentsOnOthers": 1
+      },
+      {
+        "name": "Casey Morgan",
+        "commentsOnOthers": 1
+      },
+      {
+        "name": "Drew Patel",
+        "commentsOnOthers": 1
+      }
+    ],
+    "synthesis": [
+      {
+        "text": "Classmates kept asking what happens after the last retry, which pushed authors to describe their fallback paths.",
+        "evidence": [
+          "comment:syn-w2-p04-c2",
+          "comment:syn-w2-p04-c4"
+        ],
+        "provenance": "AI-DRAFTED"
+      },
+      {
+        "text": "Several replies pointed to checks that belong in code rather than in a judge's prompt.",
+        "evidence": [
+          "comment:syn-w2-p01-c1",
+          "comment:syn-w2-p05-c1"
+        ],
+        "provenance": "AI-DRAFTED"
+      }
+    ]
+  },
+  "takeaways": [
+    {
+      "title": "A high score isn't proof",
+      "text": "A judge passed a reply that broke policy. Hard rules belong in code or with a person.",
+      "evidence": [
+        "post:syn-w2-p05"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "title": "Cap the loop, then hand off",
+      "text": "Give every retry loop a maximum and a place to go when it runs out.",
+      "evidence": [
+        "post:syn-w2-p01",
+        "post:syn-w2-p04"
+      ],
+      "provenance": "AI-DRAFTED"
+    },
+    {
+      "title": "Test the failure path on purpose",
+      "text": "Raise the threshold or feed a known-bad input to see what your safeguards catch.",
+      "evidence": [
+        "post:syn-w2-p01"
+      ],
+      "provenance": "AI-DRAFTED"
+    }
+  ],
+  "methodology": {
+    "pipelineVersion": "0.1.0",
+    "promptVersion": "synthetic",
+    "llmProvider": "none (synthetic fixture)",
+    "reviewerScore": null,
+    "revisionCount": 0,
+    "codeChecks": [
+      {
+        "name": "issue.json validates against issue.schema.json",
+        "passed": true
+      },
+      {
+        "name": "metrics recomputed from normalized posts",
+        "passed": true
+      },
+      {
+        "name": "every evidence reference resolves to a source",
+        "passed": true
+      }
+    ],
+    "notes": [
+      "Synthetic fixture. Every name and post is invented for testing.",
+      "Prompt-injection text in post syn-w2-p07 is kept as data and never followed."
+    ]
+  },
+  "provenance": {
+    "runId": "run_synthetic-week-02",
+    "inputHash": "d92c0213f74d2303532e68bb964a2bdf062350a8b02e7cc39e3edd0b7a644ffd",
+    "idempotencyKey": "cis-515:2026-fall-b:week-02:d92c0213f74d2303",
+    "labels": [
+      "CODE-COUNTED",
+      "AI-DRAFTED",
+      "SOURCE-LINKED",
+      "HUMAN-APPROVED"
+    ],
+    "synthetic": true,
+    "githubCommitSha": null,
+    "publicUrl": null
+  },
+  "downloads": {
+    "json": "/issues/week-02/issue.json",
+    "html": "/issues/week-02/newsletter.html"
+  },
+  "sourceSummary": {
+    "provider": "synthetic-fixture",
+    "verified": false,
+    "eventCount": 21,
+    "fetchedAt": "2026-10-29T15:00:00Z",
+    "topic": "WEEK 2 - WEEKLY WORKFLOW SHOW-AND-TELL ON YELLOWDIG"
+  }
+}

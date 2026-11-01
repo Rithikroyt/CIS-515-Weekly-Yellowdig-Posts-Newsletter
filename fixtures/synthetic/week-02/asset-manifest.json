@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0",
+  "week": 2,
+  "assets": [
+    {
+      "postId": "syn-w2-p01",
+      "screenshots": [
+        "recipe-overview.png",
+        "recipe-judge-run.png"
+      ],
+      "workflowJson": "recipe-scaler.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p02",
+      "screenshots": [
+        "planner-approval.png"
+      ],
+      "workflowJson": "study-planner.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p03",
+      "screenshots": [],
+      "workflowJson": "news-brief.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p04",
+      "screenshots": [
+        "expense-checks.png"
+      ],
+      "workflowJson": "expense-logger.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p05",
+      "screenshots": [
+        "support-desk.png",
+        "support-flag.png"
+      ],
+      "workflowJson": "support-desk.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p07",
+      "screenshots": [],
+      "workflowJson": "notes-qa.json",
+      "approval": {
+        "status": "pending"
+      }
+    },
+    {
+      "postId": "syn-w2-p08",
+      "screenshots": [
+        "meeting-summary.png"
+      ],
+      "workflowJson": "meeting-summarizer.json",
+      "approval": {
+        "status": "pending"
+      }
+    }
+  ]
+}

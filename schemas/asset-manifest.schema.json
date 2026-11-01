@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/asset-manifest.schema.json",
+  "title": "AssetManifest",
+  "description": "Screenshots and workflow JSON uploaded by an admin for selected posts in one week. Nothing here is public until approved.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["week", "assets"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "assets": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postId", "screenshots", "workflowJson"],
+        "properties": {
+          "postId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+          "screenshots": {
+            "type": "array",
+            "maxItems": 10,
+            "items": { "type": "string", "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.(png|jpe?g|webp|gif)$" }
+          },
+          "workflowJson": {
+            "oneOf": [
+              { "type": "string", "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.json$" },
+              { "type": "null" }
+            ]
+          },
+          "approval": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": {
+              "status": { "enum": ["pending", "approved", "rejected"] },
+              "by": { "type": "string", "maxLength": 120 },
+              "at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

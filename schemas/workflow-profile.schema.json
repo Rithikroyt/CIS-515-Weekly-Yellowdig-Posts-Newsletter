@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/workflow-profile.schema.json",
+  "title": "WorkflowProfile",
+  "description": "What a student's n8n workflow contains, computed by code from its JSON. The workflow is never executed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profileId", "postId", "fileName", "workflowName", "nodeCount", "edgeCount", "sanitization", "nodes", "edges", "categoryCounts", "signals", "aiProviders", "externalServices", "triggerTypes", "mainPath", "chips"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "profileId": { "type": "string", "pattern": "^wf_[a-f0-9]{12}$" },
+    "postId": { "type": ["string", "null"], "maxLength": 128 },
+    "fileName": { "type": "string", "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "workflowName": { "type": "string", "maxLength": 200 },
+    "nodeCount": { "type": "integer", "minimum": 0 },
+    "edgeCount": { "type": "integer", "minimum": 0 },
+    "sanitization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["credentialRefsRemoved", "pinDataRemoved", "flags"],
+      "properties": {
+        "credentialRefsRemoved": { "type": "integer", "minimum": 0 },
+        "pinDataRemoved": { "type": "boolean" },
+        "flags": { "type": "array", "items": { "type": "string", "maxLength": 200 } }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "type", "category", "position"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^n[0-9]+$" },
+          "name": { "type": "string", "maxLength": 200 },
+          "type": { "type": "string", "maxLength": 200 },
+          "category": { "$ref": "#/$defs/category" },
+          "position": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "target", "kind"],
+        "properties": {
+          "source": { "type": "string", "pattern": "^n[0-9]+$" },
+          "target": { "type": "string", "pattern": "^n[0-9]+$" },
+          "kind": { "enum": ["main", "ai", "error"] }
+        }
+      }
+    },
+    "categoryCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"],
+      "properties": {
+        "trigger": { "type": "integer", "minimum": 0 },
+        "ai": { "type": "integer", "minimum": 0 },
+        "judge": { "type": "integer", "minimum": 0 },
+        "code": { "type": "integer", "minimum": 0 },
+        "validator": { "type": "integer", "minimum": 0 },
+        "gate": { "type": "integer", "minimum": 0 },
+        "approval": { "type": "integer", "minimum": 0 },
+        "action": { "type": "integer", "minimum": 0 },
+        "storage": { "type": "integer", "minimum": 0 },
+        "tool": { "type": "integer", "minimum": 0 },
+        "errorPath": { "type": "integer", "minimum": 0 },
+        "other": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codeChecks", "humanReview", "boundedRetry", "fallback", "errorHandling", "llmJudge", "scoreThreshold", "multiAgent", "rag", "memory"],
+      "properties": {
+        "codeChecks": { "type": "boolean" },
+        "humanReview": { "type": "boolean" },
+        "boundedRetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["present", "maxAttempts"],
+          "properties": {
+            "present": { "type": "boolean" },
+            "maxAttempts": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        },
+        "fallback": { "type": "boolean" },
+        "errorHandling": { "type": "boolean" },
+        "llmJudge": { "type": "boolean" },
+        "scoreThreshold": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["value", "outOf"],
+              "properties": { "value": { "type": "number" }, "outOf": { "type": ["number", "null"] } }
+            }
+          ]
+        },
+        "multiAgent": { "type": "boolean" },
+        "rag": { "type": "boolean" },
+        "memory": { "type": "boolean" }
+      }
+    },
+    "aiProviders": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
+    "externalServices": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
+    "triggerTypes": { "type": "array", "items": { "type": "string", "maxLength": 60 } },
+    "mainPath": { "type": "array", "items": { "type": "string", "pattern": "^n[0-9]+$" } },
+    "chips": {
+      "type": "array",
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "label"],
+        "properties": {
+          "category": { "$ref": "#/$defs/category" },
+          "label": { "type": "string", "maxLength": 40 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "category": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] }
+  }
+}

@@ -1,0 +1,1140 @@
+[
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_9377525d31c1",
+    "postId": "syn-w2-p01",
+    "fileName": "recipe-scaler.json",
+    "workflowName": "Recipe Scaler",
+    "nodeCount": 7,
+    "edgeCount": 7,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Recipe form",
+        "type": "n8n-nodes-base.formTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Draft scaled recipe",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "ai",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Check units",
+        "type": "n8n-nodes-base.code",
+        "category": "validator",
+        "position": [
+          440,
+          0
+        ]
+      },
+      {
+        "id": "n3",
+        "name": "Judge draft",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "judge",
+        "position": [
+          660,
+          0
+        ]
+      },
+      {
+        "id": "n4",
+        "name": "Passed?",
+        "type": "n8n-nodes-base.if",
+        "category": "gate",
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "id": "n5",
+        "name": "Revise draft",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "ai",
+        "position": [
+          1100,
+          0
+        ]
+      },
+      {
+        "id": "n6",
+        "name": "Email recipe",
+        "type": "n8n-nodes-base.gmail",
+        "category": "action",
+        "position": [
+          1320,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n3",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n4",
+        "kind": "main"
+      },
+      {
+        "source": "n4",
+        "target": "n6",
+        "kind": "main"
+      },
+      {
+        "source": "n4",
+        "target": "n5",
+        "kind": "main"
+      },
+      {
+        "source": "n5",
+        "target": "n3",
+        "kind": "main"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 2,
+      "judge": 1,
+      "code": 0,
+      "validator": 1,
+      "gate": 1,
+      "approval": 0,
+      "action": 1,
+      "storage": 0,
+      "tool": 0,
+      "errorPath": 0,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": true,
+      "humanReview": false,
+      "boundedRetry": {
+        "present": true,
+        "maxAttempts": 2
+      },
+      "fallback": false,
+      "errorHandling": false,
+      "llmJudge": true,
+      "scoreThreshold": {
+        "value": 8,
+        "outOf": 10
+      },
+      "multiAgent": true,
+      "rag": false,
+      "memory": false
+    },
+    "aiProviders": [
+      "OpenAI"
+    ],
+    "externalServices": [
+      "Gmail"
+    ],
+    "triggerTypes": [
+      "form"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n6",
+      "n5"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Recipe form"
+      },
+      {
+        "category": "ai",
+        "label": "Draft scaled recipe"
+      },
+      {
+        "category": "validator",
+        "label": "Check units"
+      },
+      {
+        "category": "judge",
+        "label": "Judge draft"
+      },
+      {
+        "category": "gate",
+        "label": "Passed?"
+      },
+      {
+        "category": "action",
+        "label": "Email recipe"
+      },
+      {
+        "category": "ai",
+        "label": "Revise draft"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_9af493586c6d",
+    "postId": "syn-w2-p02",
+    "fileName": "study-planner.json",
+    "workflowName": "Study Planner",
+    "nodeCount": 6,
+    "edgeCount": 5,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Every Monday",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Read calendar",
+        "type": "n8n-nodes-base.googleCalendar",
+        "category": "tool",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Plan the week",
+        "type": "@n8n/n8n-nodes-langchain.chainLlm",
+        "category": "ai",
+        "position": [
+          440,
+          0
+        ]
+      },
+      {
+        "id": "n3",
+        "name": "Ask for approval",
+        "type": "n8n-nodes-base.gmail",
+        "category": "approval",
+        "position": [
+          660,
+          0
+        ]
+      },
+      {
+        "id": "n4",
+        "name": "Create events",
+        "type": "n8n-nodes-base.googleCalendar",
+        "category": "action",
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "id": "n5",
+        "name": "Notify failure",
+        "type": "n8n-nodes-base.gmail",
+        "category": "errorPath",
+        "position": [
+          1100,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n3",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n4",
+        "kind": "main"
+      },
+      {
+        "source": "n4",
+        "target": "n5",
+        "kind": "error"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 0,
+      "code": 0,
+      "validator": 0,
+      "gate": 0,
+      "approval": 1,
+      "action": 1,
+      "storage": 0,
+      "tool": 1,
+      "errorPath": 1,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": false,
+      "humanReview": true,
+      "boundedRetry": {
+        "present": false,
+        "maxAttempts": null
+      },
+      "fallback": false,
+      "errorHandling": true,
+      "llmJudge": false,
+      "scoreThreshold": null,
+      "multiAgent": false,
+      "rag": false,
+      "memory": false
+    },
+    "aiProviders": [
+      "Anthropic"
+    ],
+    "externalServices": [
+      "Gmail",
+      "Google Calendar"
+    ],
+    "triggerTypes": [
+      "schedule"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2",
+      "n3",
+      "n4"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Every Monday"
+      },
+      {
+        "category": "tool",
+        "label": "Read calendar"
+      },
+      {
+        "category": "ai",
+        "label": "Plan the week"
+      },
+      {
+        "category": "approval",
+        "label": "Ask for approval"
+      },
+      {
+        "category": "action",
+        "label": "Create events"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_f2a92f1073b1",
+    "postId": "syn-w2-p03",
+    "fileName": "news-brief.json",
+    "workflowName": "Morning News Brief",
+    "nodeCount": 5,
+    "edgeCount": 5,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Daily 7am",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Read feeds",
+        "type": "n8n-nodes-base.rssFeedRead",
+        "category": "tool",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Summarize",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "ai",
+        "position": [
+          440,
+          0
+        ]
+      },
+      {
+        "id": "n3",
+        "name": "Fallback list",
+        "type": "n8n-nodes-base.set",
+        "category": "other",
+        "position": [
+          660,
+          0
+        ]
+      },
+      {
+        "id": "n4",
+        "name": "Send brief",
+        "type": "n8n-nodes-base.telegram",
+        "category": "action",
+        "position": [
+          880,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n4",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n3",
+        "kind": "error"
+      },
+      {
+        "source": "n3",
+        "target": "n4",
+        "kind": "main"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 0,
+      "code": 0,
+      "validator": 0,
+      "gate": 0,
+      "approval": 0,
+      "action": 1,
+      "storage": 0,
+      "tool": 1,
+      "errorPath": 0,
+      "other": 1
+    },
+    "signals": {
+      "codeChecks": false,
+      "humanReview": false,
+      "boundedRetry": {
+        "present": false,
+        "maxAttempts": null
+      },
+      "fallback": true,
+      "errorHandling": true,
+      "llmJudge": false,
+      "scoreThreshold": null,
+      "multiAgent": false,
+      "rag": false,
+      "memory": true
+    },
+    "aiProviders": [
+      "Google Gemini"
+    ],
+    "externalServices": [
+      "RSS",
+      "Telegram"
+    ],
+    "triggerTypes": [
+      "schedule"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2",
+      "n4"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Daily 7am"
+      },
+      {
+        "category": "tool",
+        "label": "Read feeds"
+      },
+      {
+        "category": "ai",
+        "label": "Summarize"
+      },
+      {
+        "category": "action",
+        "label": "Send brief"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_54b0cd74b646",
+    "postId": "syn-w2-p04",
+    "fileName": "expense-logger.json",
+    "workflowName": "Expense Logger",
+    "nodeCount": 6,
+    "edgeCount": 6,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "New receipt email",
+        "type": "n8n-nodes-base.gmailTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Extract fields",
+        "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+        "category": "ai",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Validate amount and date",
+        "type": "n8n-nodes-base.code",
+        "category": "validator",
+        "position": [
+          440,
+          0
+        ]
+      },
+      {
+        "id": "n3",
+        "name": "Valid?",
+        "type": "n8n-nodes-base.if",
+        "category": "gate",
+        "position": [
+          660,
+          0
+        ]
+      },
+      {
+        "id": "n4",
+        "name": "Append to sheet",
+        "type": "n8n-nodes-base.googleSheets",
+        "category": "storage",
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "id": "n5",
+        "name": "Flag for review",
+        "type": "n8n-nodes-base.googleSheets",
+        "category": "storage",
+        "position": [
+          1100,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n3",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n4",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n5",
+        "kind": "main"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 0,
+      "code": 0,
+      "validator": 1,
+      "gate": 1,
+      "approval": 0,
+      "action": 0,
+      "storage": 2,
+      "tool": 0,
+      "errorPath": 0,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": true,
+      "humanReview": false,
+      "boundedRetry": {
+        "present": true,
+        "maxAttempts": 3
+      },
+      "fallback": false,
+      "errorHandling": true,
+      "llmJudge": false,
+      "scoreThreshold": null,
+      "multiAgent": false,
+      "rag": false,
+      "memory": false
+    },
+    "aiProviders": [
+      "OpenAI"
+    ],
+    "externalServices": [
+      "Gmail",
+      "Google Sheets"
+    ],
+    "triggerTypes": [
+      "gmail"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n5"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "New receipt email"
+      },
+      {
+        "category": "ai",
+        "label": "Extract fields"
+      },
+      {
+        "category": "validator",
+        "label": "Validate amount and date"
+      },
+      {
+        "category": "gate",
+        "label": "Valid?"
+      },
+      {
+        "category": "storage",
+        "label": "Append to sheet"
+      },
+      {
+        "category": "storage",
+        "label": "Flag for review"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_0167a0951f1e",
+    "postId": "syn-w2-p05",
+    "fileName": "support-desk.json",
+    "workflowName": "Support Reply Desk",
+    "nodeCount": 7,
+    "edgeCount": 7,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Ticket form",
+        "type": "n8n-nodes-base.formTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Writer",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "ai",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Risk flags",
+        "type": "n8n-nodes-base.code",
+        "category": "validator",
+        "position": [
+          440,
+          0
+        ]
+      },
+      {
+        "id": "n3",
+        "name": "Judge",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "judge",
+        "position": [
+          660,
+          0
+        ]
+      },
+      {
+        "id": "n4",
+        "name": "Pass rule",
+        "type": "n8n-nodes-base.if",
+        "category": "gate",
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "id": "n5",
+        "name": "Telegram approval",
+        "type": "n8n-nodes-base.telegram",
+        "category": "approval",
+        "position": [
+          1100,
+          0
+        ]
+      },
+      {
+        "id": "n6",
+        "name": "Send reply",
+        "type": "n8n-nodes-base.gmail",
+        "category": "action",
+        "position": [
+          1320,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n3",
+        "kind": "main"
+      },
+      {
+        "source": "n3",
+        "target": "n4",
+        "kind": "main"
+      },
+      {
+        "source": "n4",
+        "target": "n5",
+        "kind": "main"
+      },
+      {
+        "source": "n4",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n5",
+        "target": "n6",
+        "kind": "main"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 1,
+      "code": 0,
+      "validator": 1,
+      "gate": 1,
+      "approval": 1,
+      "action": 1,
+      "storage": 0,
+      "tool": 0,
+      "errorPath": 0,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": true,
+      "humanReview": true,
+      "boundedRetry": {
+        "present": true,
+        "maxAttempts": 2
+      },
+      "fallback": false,
+      "errorHandling": false,
+      "llmJudge": true,
+      "scoreThreshold": {
+        "value": 8,
+        "outOf": 10
+      },
+      "multiAgent": true,
+      "rag": false,
+      "memory": false
+    },
+    "aiProviders": [
+      "Anthropic"
+    ],
+    "externalServices": [
+      "Gmail",
+      "Telegram"
+    ],
+    "triggerTypes": [
+      "form"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n5",
+      "n6"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Ticket form"
+      },
+      {
+        "category": "ai",
+        "label": "Writer"
+      },
+      {
+        "category": "validator",
+        "label": "Risk flags"
+      },
+      {
+        "category": "judge",
+        "label": "Judge"
+      },
+      {
+        "category": "gate",
+        "label": "Pass rule"
+      },
+      {
+        "category": "approval",
+        "label": "Telegram approval"
+      },
+      {
+        "category": "action",
+        "label": "Send reply"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_f7b01a3fb37f",
+    "postId": "syn-w2-p07",
+    "fileName": "notes-qa.json",
+    "workflowName": "Lecture Notes Q&A",
+    "nodeCount": 3,
+    "edgeCount": 2,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Chat",
+        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Answer",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "category": "ai",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Notes store",
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+        "category": "tool",
+        "position": [
+          440,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n2",
+        "target": "n1",
+        "kind": "ai"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 0,
+      "code": 0,
+      "validator": 0,
+      "gate": 0,
+      "approval": 0,
+      "action": 0,
+      "storage": 0,
+      "tool": 1,
+      "errorPath": 0,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": false,
+      "humanReview": false,
+      "boundedRetry": {
+        "present": false,
+        "maxAttempts": null
+      },
+      "fallback": false,
+      "errorHandling": false,
+      "llmJudge": false,
+      "scoreThreshold": null,
+      "multiAgent": false,
+      "rag": true,
+      "memory": false
+    },
+    "aiProviders": [
+      "OpenAI"
+    ],
+    "externalServices": [],
+    "triggerTypes": [
+      "chat"
+    ],
+    "mainPath": [
+      "n0",
+      "n1"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Chat"
+      },
+      {
+        "category": "ai",
+        "label": "Answer"
+      }
+    ]
+  },
+  {
+    "schemaVersion": "1.0",
+    "profileId": "wf_3333027205c6",
+    "postId": "syn-w2-p08",
+    "fileName": "meeting-summarizer.json",
+    "workflowName": "Meeting Notes Summarizer",
+    "nodeCount": 3,
+    "edgeCount": 2,
+    "sanitization": {
+      "credentialRefsRemoved": 0,
+      "pinDataRemoved": false,
+      "flags": []
+    },
+    "nodes": [
+      {
+        "id": "n0",
+        "name": "Notes form",
+        "type": "n8n-nodes-base.formTrigger",
+        "category": "trigger",
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "n1",
+        "name": "Summarize",
+        "type": "@n8n/n8n-nodes-langchain.chainLlm",
+        "category": "ai",
+        "position": [
+          220,
+          0
+        ]
+      },
+      {
+        "id": "n2",
+        "name": "Email team",
+        "type": "n8n-nodes-base.gmail",
+        "category": "action",
+        "position": [
+          440,
+          0
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "n0",
+        "target": "n1",
+        "kind": "main"
+      },
+      {
+        "source": "n1",
+        "target": "n2",
+        "kind": "main"
+      }
+    ],
+    "categoryCounts": {
+      "trigger": 1,
+      "ai": 1,
+      "judge": 0,
+      "code": 0,
+      "validator": 0,
+      "gate": 0,
+      "approval": 0,
+      "action": 1,
+      "storage": 0,
+      "tool": 0,
+      "errorPath": 0,
+      "other": 0
+    },
+    "signals": {
+      "codeChecks": false,
+      "humanReview": false,
+      "boundedRetry": {
+        "present": false,
+        "maxAttempts": null
+      },
+      "fallback": false,
+      "errorHandling": false,
+      "llmJudge": false,
+      "scoreThreshold": null,
+      "multiAgent": false,
+      "rag": false,
+      "memory": false
+    },
+    "aiProviders": [
+      "OpenAI"
+    ],
+    "externalServices": [
+      "Gmail"
+    ],
+    "triggerTypes": [
+      "form"
+    ],
+    "mainPath": [
+      "n0",
+      "n1",
+      "n2"
+    ],
+    "chips": [
+      {
+        "category": "trigger",
+        "label": "Notes form"
+      },
+      {
+        "category": "ai",
+        "label": "Summarize"
+      },
+      {
+        "category": "action",
+        "label": "Email team"
+      }
+    ]
+  }
+]

@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/issue.schema.json",
+  "title": "Issue",
+  "description": "One CIS 515 Community Dispatch issue. The single source of truth for the web issue and the standalone HTML newsletter.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "issueId", "status", "course", "term", "week", "dateRange", "generatedAt", "approvedAt", "approvedBy", "hero", "metrics", "themes", "spotlights", "failurePath", "allBuilds", "discussionHighlights", "takeaways", "methodology", "provenance", "downloads", "sourceSummary"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "issueId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-week-[0-9]{2}$" },
+    "status": { "enum": ["draft", "review", "revision_requested", "approved", "published", "failed"] },
+    "course": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": { "code": { "type": "string", "maxLength": 20 }, "name": { "type": "string", "maxLength": 120 } }
+    },
+    "term": { "type": "string", "maxLength": 40 },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "dateRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "label"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" },
+        "label": { "type": "string", "maxLength": 60 }
+      }
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "approvedAt": { "type": ["string", "null"], "format": "date-time" },
+    "approvedBy": { "type": ["string", "null"], "maxLength": 120 },
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headline", "dek", "intro", "evidence", "provenance"],
+      "properties": {
+        "headline": { "type": "string", "minLength": 3, "maxLength": 90 },
+        "dek": { "type": "string", "maxLength": 300 },
+        "intro": { "type": "string", "maxLength": 1500 },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "provenance": { "const": "AI-DRAFTED" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance", "posts", "comments", "uniqueAuthors", "uniqueCommenters", "reactions", "views", "workflowFiles", "screenshots", "avgCommentsPerPost", "topicCounts", "signals", "externalServices"],
+      "properties": {
+        "provenance": { "const": "CODE-COUNTED" },
+        "posts": { "type": "integer", "minimum": 0 },
+        "comments": { "type": "integer", "minimum": 0 },
+        "uniqueAuthors": { "type": "integer", "minimum": 0 },
+        "uniqueCommenters": { "type": "integer", "minimum": 0 },
+        "reactions": { "type": ["integer", "null"], "minimum": 0 },
+        "views": { "type": ["integer", "null"], "minimum": 0 },
+        "workflowFiles": { "type": "integer", "minimum": 0 },
+        "screenshots": { "type": "integer", "minimum": 0 },
+        "avgCommentsPerPost": { "type": "number", "minimum": 0 },
+        "topicCounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["topic", "count"],
+            "properties": { "topic": { "type": "string", "maxLength": 200 }, "count": { "type": "integer", "minimum": 0 } }
+          }
+        },
+        "signals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["profiledBuilds", "codeChecks", "humanReview", "boundedRetry", "errorHandling", "llmJudge", "multiAgent", "fallback"],
+          "properties": {
+            "profiledBuilds": { "type": "integer", "minimum": 0 },
+            "codeChecks": { "type": "integer", "minimum": 0 },
+            "humanReview": { "type": "integer", "minimum": 0 },
+            "boundedRetry": { "type": "integer", "minimum": 0 },
+            "errorHandling": { "type": "integer", "minimum": 0 },
+            "llmJudge": { "type": "integer", "minimum": 0 },
+            "multiAgent": { "type": "integer", "minimum": 0 },
+            "fallback": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "externalServices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "builds"],
+            "properties": { "name": { "type": "string", "maxLength": 60 }, "builds": { "type": "integer", "minimum": 0 } }
+          }
+        }
+      }
+    },
+    "themes": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["themeId", "title", "description", "postIds", "evidence", "provenance"],
+        "properties": {
+          "themeId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "title": { "type": "string", "maxLength": 80 },
+          "description": { "type": "string", "maxLength": 600 },
+          "postIds": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 },
+          "evidence": { "$ref": "#/$defs/evidence" },
+          "provenance": { "const": "AI-DRAFTED" }
+        }
+      }
+    },
+    "spotlights": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postId", "title", "author", "category", "summary", "narrative", "testResult", "fromTheThread", "worthBorrowing", "workflowProfileId", "chips", "screenshots", "sourceUrl", "commentCount", "evidence", "provenance"],
+        "properties": {
+          "postId": { "$ref": "#/$defs/id" },
+          "title": { "type": "string", "maxLength": 300 },
+          "author": { "type": "string", "maxLength": 120 },
+          "category": { "type": "string", "maxLength": 80 },
+          "summary": { "type": "string", "maxLength": 800 },
+          "narrative": { "type": "string", "maxLength": 1500 },
+          "testResult": { "type": ["string", "null"], "maxLength": 800 },
+          "fromTheThread": { "type": ["string", "null"], "maxLength": 800 },
+          "worthBorrowing": { "type": "string", "maxLength": 400 },
+          "workflowProfileId": { "type": ["string", "null"], "pattern": "^wf_[a-f0-9]{12}$" },
+          "chips": {
+            "type": "array",
+            "maxItems": 7,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["category", "label"],
+              "properties": { "category": { "type": "string", "maxLength": 20 }, "label": { "type": "string", "maxLength": 40 } }
+            }
+          },
+          "screenshots": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["src", "alt"],
+              "properties": {
+                "src": { "type": "string", "pattern": "^assets/[A-Za-z0-9][A-Za-z0-9._-]*\\.(png|jpe?g|webp|gif)$" },
+                "alt": { "type": "string", "minLength": 3, "maxLength": 200 }
+              }
+            }
+          },
+          "sourceUrl": { "$ref": "#/$defs/sourceUrl" },
+          "commentCount": { "type": "integer", "minimum": 0 },
+          "evidence": { "$ref": "#/$defs/evidence" },
+          "provenance": { "const": "AI-DRAFTED" }
+        }
+      }
+    },
+    "failurePath": {
+      "description": "Failure Path of the Week: a build that showed what its safeguards catch.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["postId", "title", "author", "whatFailed", "whatCaughtIt", "lesson", "sourceUrl", "evidence", "provenance"],
+          "properties": {
+            "postId": { "$ref": "#/$defs/id" },
+            "title": { "type": "string", "maxLength": 300 },
+            "author": { "type": "string", "maxLength": 120 },
+            "whatFailed": { "type": "string", "maxLength": 600 },
+            "whatCaughtIt": { "type": "string", "maxLength": 600 },
+            "lesson": { "type": "string", "maxLength": 400 },
+            "sourceUrl": { "$ref": "#/$defs/sourceUrl" },
+            "evidence": { "$ref": "#/$defs/evidence" },
+            "provenance": { "const": "AI-DRAFTED" }
+          }
+        }
+      ]
+    },
+    "allBuilds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postId", "title", "author", "category", "oneLine", "commentCount", "sourceUrl", "workflowProfileId", "signals", "isSpotlight", "evidence"],
+        "properties": {
+          "postId": { "$ref": "#/$defs/id" },
+          "title": { "type": "string", "maxLength": 300 },
+          "author": { "type": "string", "maxLength": 120 },
+          "category": { "type": "string", "maxLength": 80 },
+          "oneLine": { "type": "string", "maxLength": 400 },
+          "commentCount": { "type": "integer", "minimum": 0 },
+          "sourceUrl": { "$ref": "#/$defs/sourceUrl" },
+          "workflowProfileId": { "type": ["string", "null"], "pattern": "^wf_[a-f0-9]{12}$" },
+          "signals": { "type": "array", "items": { "enum": ["codeChecks", "humanReview", "boundedRetry", "errorHandling", "llmJudge", "multiAgent", "fallback", "rag", "memory"] } },
+          "isSpotlight": { "type": "boolean" },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "discussionHighlights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mostDiscussed", "generousCommenters", "synthesis"],
+      "properties": {
+        "mostDiscussed": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["postId", "title", "author", "commentCount"],
+            "properties": {
+              "postId": { "$ref": "#/$defs/id" },
+              "title": { "type": "string", "maxLength": 300 },
+              "author": { "type": "string", "maxLength": 120 },
+              "commentCount": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "generousCommenters": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "commentsOnOthers"],
+            "properties": { "name": { "type": "string", "maxLength": 120 }, "commentsOnOthers": { "type": "integer", "minimum": 1 } }
+          }
+        },
+        "synthesis": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "evidence", "provenance"],
+            "properties": {
+              "text": { "type": "string", "maxLength": 600 },
+              "evidence": { "$ref": "#/$defs/evidence" },
+              "provenance": { "const": "AI-DRAFTED" }
+            }
+          }
+        }
+      }
+    },
+    "takeaways": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "text", "evidence", "provenance"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 80 },
+          "text": { "type": "string", "maxLength": 500 },
+          "evidence": { "$ref": "#/$defs/evidence" },
+          "provenance": { "const": "AI-DRAFTED" }
+        }
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pipelineVersion", "promptVersion", "llmProvider", "reviewerScore", "revisionCount", "codeChecks", "notes"],
+      "properties": {
+        "pipelineVersion": { "type": "string", "maxLength": 40 },
+        "promptVersion": { "type": "string", "maxLength": 40 },
+        "llmProvider": { "type": "string", "maxLength": 80 },
+        "reviewerScore": { "type": ["number", "null"], "minimum": 0, "maximum": 10 },
+        "revisionCount": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "codeChecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed"],
+            "properties": { "name": { "type": "string", "maxLength": 120 }, "passed": { "type": "boolean" }, "detail": { "type": "string", "maxLength": 400 } }
+          }
+        },
+        "notes": { "type": "array", "items": { "type": "string", "maxLength": 400 } }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "inputHash", "idempotencyKey", "labels", "synthetic"],
+      "properties": {
+        "runId": { "type": "string", "pattern": "^run_[A-Za-z0-9-]+$" },
+        "inputHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "idempotencyKey": { "type": "string", "maxLength": 200 },
+        "labels": { "type": "array", "items": { "enum": ["CODE-COUNTED", "AI-DRAFTED", "SOURCE-LINKED", "HUMAN-APPROVED"] }, "uniqueItems": true },
+        "synthetic": { "type": "boolean", "description": "true for test fixtures. Synthetic issues must never be presented as real class data." },
+        "githubCommitSha": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40}$" },
+        "publicUrl": { "type": ["string", "null"], "format": "uri" }
+      }
+    },
+    "downloads": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["json", "html"],
+      "properties": {
+        "json": { "type": "string", "pattern": "^/issues/week-[0-9]{2}/issue\\.json$" },
+        "html": { "type": "string", "pattern": "^/issues/week-[0-9]{2}/newsletter\\.html$" }
+      }
+    },
+    "sourceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "verified", "eventCount", "fetchedAt", "topic"],
+      "properties": {
+        "provider": { "enum": ["yellowdig-api", "manual-export", "synthetic-fixture"] },
+        "verified": { "type": "boolean", "description": "true only when the data came from a real, authorized source request." },
+        "eventCount": { "type": "integer", "minimum": 0 },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "topic": { "type": "string", "maxLength": 200 }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "sourceUrl": { "type": ["string", "null"], "format": "uri", "pattern": "^https://yellowdig\\.app/" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^(post|comment|workflow|metric):[A-Za-z0-9._:-]+$" }
+    }
+  }
+}

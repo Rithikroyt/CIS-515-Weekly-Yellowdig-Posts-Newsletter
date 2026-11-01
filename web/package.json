@@ -6,20 +6,28 @@
     "dev": "next dev -p 3515",
     "build": "next build",
     "start": "next start -p 3515",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "validate": "tsx scripts/validate-repo.ts",
+    "fixtures:synthetic": "tsx scripts/make-synthetic-week2.ts"
   },
   "dependencies": {
+    "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "@eslint/eslintrc": "^3"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }
