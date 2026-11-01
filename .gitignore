@@ -29,3 +29,13 @@ tests/fixtures/week-*/
 # Local harness scratch output
 tests/harness/parse-*.json
 tests/harness/parse-escaped.txt
+
+# Private course data and uploads (never commit; only approved assets under web/public/issues/*/assets)
+data/
+uploads/
+*.raw.json
+yellowdig-events*.json
+n8n/executions/
+.env.local
+.vercel/
+coverage/

@@ -1,24 +1,12 @@
 {
   "inputs": [
-    { "type": "promptString", "id": "n8n-mcp-token", "description": "n8n MCP token", "password": true },
-    { "type": "promptString", "id": "n8n-api-key", "description": "n8n API key", "password": true }
+    { "type": "promptString", "id": "n8n-mcp-token", "description": "n8n Cloud MCP access token (Settings > Instance-level MCP)", "password": true }
   ],
   "servers": {
     "n8n": {
       "type": "http",
       "url": "https://rithikroy18.app.n8n.cloud/mcp-server/http",
       "headers": { "Authorization": "Bearer ${input:n8n-mcp-token}" }
-    },
-    "n8n-mcp": {
-      "command": "npx",
-      "args": ["-y", "n8n-mcp"],
-      "env": {
-        "MCP_MODE": "stdio",
-        "LOG_LEVEL": "error",
-        "DISABLE_CONSOLE_OUTPUT": "true",
-        "N8N_API_URL": "https://rithikroy18.app.n8n.cloud",
-        "N8N_API_KEY": "${input:n8n-api-key}"
-      }
     }
   }
 }
