@@ -78,6 +78,9 @@ const geminiCall = node({
     name: 'Gemini generateContent',
     position: [1000, 320],
     onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 5000,
     parameters: {
       method: 'POST',
       url: expr('{{ $json.gemini.url }}'),
@@ -87,7 +90,8 @@ const geminiCall = node({
       contentType: 'json',
       specifyBody: 'json',
       jsonBody: expr('{{ JSON.stringify($json.gemini.body) }}'),
-      options: { timeout: 120000, response: { response: { neverError: true } } }
+      // HTTP errors must throw so retryOnFail can retry them; the final failure becomes an error item for Attach Gemini State.
+      options: { timeout: 120000 }
     }
   },
   output: [{ candidates: [] }]

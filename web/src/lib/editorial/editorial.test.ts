@@ -58,6 +58,15 @@ describe("1–3, 25–30: generation, structure and provenance", () => {
       expect(d.run.statusHistory).not.toContain("approved");
     }
   });
+  it("re-asks once after a malformed response and continues when the retry is valid", async () => {
+    const { draft, provider } = await run({ "theme-analyst": [{ raw: "Here are the themes: {oops" }, E.NAMED_SCENARIOS.clean["theme-analyst"]![0]] });
+    expect(draft.status).toBe("human_review");
+    const themeCalls = provider.calls.filter((c) => c.promptId === "theme-analyst");
+    expect(themeCalls).toHaveLength(2);
+    expect(themeCalls[1].user).toContain("Your previous response was rejected (MODEL_INVALID_JSON");
+    expect(provider.calls.filter((c) => c.promptId === "discussion-analyst")[0].user).not.toContain("previous response was rejected");
+    expect(draft.run.modelCalls.filter((c) => c.promptId === "theme-analyst").map((c) => c.ok)).toEqual([false, true]);
+  });
   it("2: invalid JSON fails the run with MODEL_INVALID_JSON", async () => {
     const { draft } = await run({ "theme-analyst": [{ raw: "Here are the themes: {oops" }] });
     expect(draft).toMatchObject({ status: "failed", newsletter: null, run: { errorCode: "MODEL_INVALID_JSON", outputHash: null } });

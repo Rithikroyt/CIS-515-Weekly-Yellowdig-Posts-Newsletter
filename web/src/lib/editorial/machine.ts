@@ -14,6 +14,8 @@ import { EditorialError } from "./types";
 
 export const MAX_REVISIONS = 2;
 export const MAX_STEPS = 30;
+/** A response that is not valid JSON or breaks its output schema is re-requested this many times per call. */
+export const MAX_FORMAT_RETRIES = 1;
 /** Characters of post content per extractor call; larger weeks are split into batches. */
 export const EXTRACT_BATCH_CHARS = 24_000;
 
@@ -58,6 +60,9 @@ export type RunState = {
   errorCode: EditorialCode | null;
   errorSummary: string | null;
   pending: ModelRequest | null;
+  /** Format retries used for the current call, and the correction sent with the retry. */
+  formatRetries: number;
+  retryNote: string | null;
 };
 
 export type StartOptions = {
@@ -106,6 +111,7 @@ export function startRun(o: StartOptions): RunState {
     discussion: { insights: [] }, newsletter: null, review: [], reviewedByModel: false, revisionCount: 0, stageIssues: [], modelCalls: [],
     statusHistory: ["draft"], status: "draft", steps: 0, errorCode: null,
     errorSummary: batches.length ? null : "No eligible posts in this week; nothing to draft.", pending: null,
+    formatRetries: 0, retryNote: null,
   };
 }
 
@@ -181,6 +187,7 @@ export function nextRequest(state: RunState, now: string): RunState {
       break;
     }
   }
+  if (s.pending && s.retryNote) s.pending.user += "\n\n" + s.retryNote;
   s.steps += 1;
   return s;
 }
@@ -218,7 +225,18 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
   const log = (ok: boolean, code: EditorialCode | null) => s.modelCalls.push({ stage: req.stage, promptId: req.promptId, promptVersion: req.promptVersion, ok, errorCode: code });
   if (!response.ok) { log(false, response.code); return fail(s, now, response.code, req.stage + ": " + response.detail); }
   const parsed = parseModelJson<Record<string, unknown>>(response.text, req.outputDef);
-  if (!parsed.ok) { log(false, parsed.code); return fail(s, now, parsed.code, req.stage + ": " + parsed.detail); }
+  if (!parsed.ok) {
+    log(false, parsed.code);
+    // The phase is unchanged, so nextRequest() re-issues the same call, this time with the correction attached.
+    if (s.formatRetries < MAX_FORMAT_RETRIES) {
+      s.formatRetries += 1;
+      s.retryNote = "Your previous response was rejected (" + parsed.code + ": " + parsed.detail.slice(0, 300) + "). Return exactly one JSON object that matches the required output format.";
+      return s;
+    }
+    return fail(s, now, parsed.code, req.stage + ": " + parsed.detail);
+  }
+  s.formatRetries = 0;
+  s.retryNote = null;
   log(true, null);
   const idx = indexInput(s.input);
   const v = parsed.value;

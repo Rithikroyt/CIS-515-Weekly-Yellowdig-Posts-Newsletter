@@ -178,7 +178,12 @@ describe("generated n8n bundles", () => {
     const fakeGemini = { candidates: [{ content: { parts: [{ text: "not json" }] } }] };
     const attached = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": first })[0];
     expect(attached.modelResponse).toEqual({ ok: true, text: "not json" });
-    const next = runNode("wf04", "editorialStep", [attached])[0];
+    // One format retry re-asks the same stage with the correction attached; a second bad response fails the run.
+    const retry = runNode("wf04", "editorialStep", [attached])[0];
+    expect(retry.done).toBe(false);
+    expect(JSON.stringify((retry.gemini as { body: J }).body)).toContain("Your previous response was rejected (MODEL_INVALID_JSON");
+    const again = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": retry })[0];
+    const next = runNode("wf04", "editorialStep", [again])[0];
     expect(next).toMatchObject({ done: true, status: "failed" });
     expect((next.runRow as J).error_code).toBe("MODEL_INVALID_JSON");
     const failed = runNode("wf04", "attachGeminiState", [{ error: "timeout of 120000ms exceeded" }], { "Use Mock Model?": first })[0];

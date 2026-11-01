@@ -78,7 +78,7 @@ The idempotency key is `course:term:week-NN:inputHash16`. `startRun` refuses a s
 
 | Value | Behaviour |
 |---|---|
-| `gemini` | Requires `GEMINI_API_KEY` (server-side only). Model from `EDITORIAL_AI_MODEL`, default `gemini-2.5-flash`. JSON response mode. **Not live verified:** no key is configured. |
+| `gemini` | Requires `GEMINI_API_KEY` (server-side only). Model from `EDITORIAL_AI_MODEL`, default `gemini-3.5-flash-lite` with low thinking (`gemini-2.5-flash` now returns 404 for new keys; `gemini-3.5-flash` allows only 20 free-tier requests a day, and a newsletter needs 6-10). JSON response mode. In n8n the call retries up to 3 times, 5 s apart, on HTTP errors such as 503 "high demand". A response that is not valid JSON or breaks its schema is re-requested once with the error attached. Live verified on synthetic input only (2026-11-01). |
 | `mock` | Synthetic fixture responses (`fixtures/synthetic/editorial/week-02/mock-responses.json`). Refused in production. In n8n it runs only on input whose source is `synthetic-fixture`. |
 | `openai`, `anthropic` | Reserved; `PROVIDER_NOT_IMPLEMENTED`. |
 | unset / other | `PROVIDER_NOT_CONFIGURED` |

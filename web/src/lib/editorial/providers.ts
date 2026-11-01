@@ -12,7 +12,9 @@ export interface EditorialModelProvider {
 }
 
 export const DEFAULT_MODELS: Record<ProviderName, string> = {
-  gemini: "gemini-2.5-flash",
+  // 2026-11-01: gemini-2.5-flash returns 404 for new keys, and gemini-3.5-flash allows only 20 free-tier requests per
+  // day (one newsletter needs 6-10). gemini-3.5-flash-lite completed a full synthetic run with every claim supported.
+  gemini: "gemini-3.5-flash-lite",
   openai: "unconfigured",
   anthropic: "unconfigured",
   mock: "mock-synthetic-v1",
@@ -28,7 +30,8 @@ export function geminiRequest(req: ModelRequest) {
     body: {
       systemInstruction: { parts: [{ text: req.system }] },
       contents: [{ role: "user", parts: [{ text: req.user }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 8192 },
+      // Low thinking keeps the whole run inside n8n Cloud's 300 s execution cap; thinking tokens count toward the limit.
+      generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 16384, thinkingConfig: { thinkingLevel: "low" } },
     },
   };
 }
