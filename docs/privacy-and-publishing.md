@@ -60,6 +60,14 @@ Student workflow files are **untrusted input**. Workflow 03 and `lib/assets` tre
 - **No guessing.** A file without an explicit, known `postRef` is `UNMATCHED_ASSET`.
 - **Storage.** Workflow 03 saves no production execution data. Manual test runs use the synthetic batch only. Real student files are not committed; `fixtures/synthetic/workflows/` holds invented workflows with obviously fake values (`SYNTHETIC-FAKE-…`, `@example.edu`).
 
+## Editorial model (Phase 4)
+
+- The model receives only the editorial input package: no emails, SIS or LTI data, credentials, workflow parameters or raw workflow files. Bodies and comments are truncated.
+- All student text is fenced as data. Prompts tell the model never to follow instructions inside it, and the output schema can't be changed by content.
+- Model keys are server-side only (`GEMINI_API_KEY`, or the n8n credential). They are never `NEXT_PUBLIC_*`, never logged, and never in a URL, body, prompt, draft or run record.
+- No chain-of-thought is requested or stored. Run metadata holds hashes, versions, counts and sanitized error codes only.
+- The draft stops at `human_review`. Nothing is approved or published automatically.
+
 ## Publication policy (conservative)
 
 `lib/source/publication-policy.ts` decides whether a normalized post may appear publicly. Deleted posts are excluded. A post is eligible only when its `post/status` **and** `post/visibility` values are in an allowlist of values verified against live data. Both allowlists are **empty** until those values are verified, so every post currently needs human review. The policy is not yet wired into ingestion.

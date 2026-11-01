@@ -1,3 +1,5 @@
+// LEGACY (superseded in Phase 3 by web/src/lib/assets, bundled into n8n workflow 03). Kept for reference only;
+// nothing imports it. Remove during cleanup after confirming no workflow still uses it.
 // Dispatch · Parse — body of the "Parse · Extract pipelines and patterns" Code node.
 // Pure code, no AI. Reads the canonical ingest payload and adds, per post, the workflow pipeline,
 // node roles, detected patterns and newsletter chips, plus the week's stats.

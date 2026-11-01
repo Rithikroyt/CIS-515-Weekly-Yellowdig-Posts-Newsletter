@@ -5,7 +5,7 @@ import Ajv2020, { type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 
 export const REPO_ROOT = join(__dirname, "..", "..");
-export const SCHEMA_NAMES = ["normalized-post", "workflow-profile", "workflow-asset", "asset-manifest", "metrics", "issue", "source-bundle", "week-dataset"] as const;
+export const SCHEMA_NAMES = ["normalized-post", "workflow-profile", "workflow-asset", "asset-manifest", "metrics", "issue", "source-bundle", "week-dataset", "editorial-input", "editorial-draft"] as const;
 export type SchemaName = (typeof SCHEMA_NAMES)[number];
 
 export function loadValidators(): Record<SchemaName, ValidateFunction> {

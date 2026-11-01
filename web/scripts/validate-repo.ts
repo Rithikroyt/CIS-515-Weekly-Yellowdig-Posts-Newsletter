@@ -62,11 +62,31 @@ exports.forEach((f) => {
   });
   if (wf.pinData && Object.keys(wf.pinData).length) fail(rel(f) + ": has pinData");
   if (wf.staticData) fail(rel(f) + ": has staticData");
+  // A node wired to itself re-fires without progress (seen once in workflow 04's first build).
+  Object.entries((wf as { connections?: Record<string, Record<string, Array<Array<{ node: string }> | null>>> }).connections ?? {}).forEach(([src, outs]) =>
+    Object.values(outs).flat().forEach((arr) => (arr ?? []).forEach((c) => { if (c.node === src) fail(rel(f) + ": node '" + src + "' is connected to itself"); })));
   // Workflow 03 profiles untrusted workflow files: only triggers, Code nodes and notes; no AI, HTTP, webhooks or
   // sub-workflow calls, callable only by the owner's workflows, and no execution data saved.
   if (/[\\/]03-[^\\/]+$/.test(f)) {
     const allowed = new Set(["n8n-nodes-base.executeWorkflowTrigger", "n8n-nodes-base.manualTrigger", "n8n-nodes-base.code", "n8n-nodes-base.stickyNote"]);
     (wf.nodes ?? []).forEach((n) => { if (!allowed.has(n.type)) fail(rel(f) + ": node '" + n.name + "' has disallowed type " + n.type); });
+    const s = wf.settings ?? {};
+    if (s.callerPolicy !== "workflowsFromSameOwner") fail(rel(f) + ": callerPolicy must be workflowsFromSameOwner");
+    if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");
+  }
+  // Workflow 04 drafts editorial copy: no AI/LangChain nodes (the model is reached only through one HTTP Request
+  // node using an n8n credential), no webhooks, no publishing nodes, owner-only callers, no saved execution data.
+  if (/[\\/]04-[^\\/]+$/.test(f)) {
+    const allowed = new Set(["n8n-nodes-base.executeWorkflowTrigger", "n8n-nodes-base.manualTrigger", "n8n-nodes-base.code", "n8n-nodes-base.if",
+      "n8n-nodes-base.noOp", "n8n-nodes-base.httpRequest", "n8n-nodes-base.stopAndError", "n8n-nodes-base.stickyNote"]);
+    (wf.nodes ?? []).forEach((n) => { if (!allowed.has(n.type)) fail(rel(f) + ": node '" + n.name + "' has disallowed type " + n.type); });
+    const http = (wf.nodes ?? []).filter((n) => n.type === "n8n-nodes-base.httpRequest") as Array<{ name: string; parameters?: Record<string, unknown> }>;
+    if (http.length > 1) fail(rel(f) + ": only one model HTTP Request node is allowed");
+    http.forEach((n) => {
+      const p = n.parameters ?? {};
+      if (p.authentication !== "predefinedCredentialType" || p.nodeCredentialType !== "googlePalmApi") fail(rel(f) + ": '" + n.name + "' must authenticate with the n8n Gemini credential");
+      if (/key=|apikey|x-goog-api-key/i.test(JSON.stringify(p))) fail(rel(f) + ": '" + n.name + "' contains a key-like parameter");
+    });
     const s = wf.settings ?? {};
     if (s.callerPolicy !== "workflowsFromSameOwner") fail(rel(f) + ": callerPolicy must be workflowsFromSameOwner");
     if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");

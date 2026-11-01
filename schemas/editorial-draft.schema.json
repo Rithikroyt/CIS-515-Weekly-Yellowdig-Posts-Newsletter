@@ -1,0 +1,351 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/editorial-draft.schema.json",
+  "title": "EditorialDraft",
+  "description": "Phase 4 output: a structured, evidence-reviewed editorial draft ready for human review. $defs also define each model stage's output. No HTML, no metrics written by AI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "issueId", "week", "status", "inputHash", "idempotencyKey", "metrics", "postNotes", "capabilityChecks", "themes", "selection", "discussion", "newsletter", "review", "run"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "issueId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-week-[0-9]{2}$" },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "status": { "$ref": "#/$defs/status" },
+    "inputHash": { "$ref": "#/$defs/hash" },
+    "idempotencyKey": { "type": "string", "maxLength": 200 },
+    "metrics": { "$ref": "editorial-input.schema.json#/properties/metrics" },
+    "postNotes": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/postNote" } },
+    "capabilityChecks": {
+      "type": "array",
+      "maxItems": 3200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postRef", "capability", "claimSource", "deterministicStatus"],
+        "properties": {
+          "postRef": { "$ref": "#/$defs/postRef" },
+          "capability": { "$ref": "#/$defs/capability" },
+          "claimSource": { "enum": ["student-description", "workflow-profile"] },
+          "deterministicStatus": { "enum": ["confirmed", "not-confirmed", "no-workflow-file"] }
+        }
+      }
+    },
+    "themes": { "type": "array", "maxItems": 7, "items": { "$ref": "#/$defs/theme" } },
+    "selection": { "$ref": "#/$defs/selectionOutput" },
+    "discussion": { "$ref": "#/$defs/discussionOutput" },
+    "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "claims", "unresolved", "stageIssues"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "claims": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claimId", "method", "evidenceRefs", "reviewStatus", "codes"],
+            "properties": {
+              "claimId": { "$ref": "#/$defs/claimId" },
+              "method": { "const": "ai-drafted" },
+              "evidenceRefs": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/evidenceRef" } },
+              "reviewStatus": { "enum": ["supported", "partially-supported", "unsupported", "conflict"] },
+              "codes": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/code" } }
+            }
+          }
+        },
+        "unresolved": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claimId", "originalText", "reviewStatus", "codes"],
+            "properties": {
+              "claimId": { "$ref": "#/$defs/claimId" },
+              "originalText": { "type": "string", "maxLength": 700 },
+              "reviewStatus": { "enum": ["partially-supported", "unsupported", "conflict"] },
+              "codes": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/code" } }
+            }
+          }
+        },
+        "stageIssues": {
+          "type": "array",
+          "maxItems": 400,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stage", "code", "detail"],
+            "properties": { "stage": { "type": "string", "maxLength": 40 }, "code": { "$ref": "#/$defs/code" }, "detail": { "type": "string", "maxLength": 300 } }
+          }
+        }
+      }
+    },
+    "run": { "$ref": "#/$defs/run" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "postRef": { "type": "string", "pattern": "^post:[A-Za-z0-9._:-]+$" },
+    "workflowRef": { "type": "string", "pattern": "^workflow:wf_[a-f0-9]{12}$" },
+    "evidenceRef": { "type": "string", "pattern": "^(post|comment|workflow|metric):[A-Za-z0-9._:-]+$" },
+    "claimId": { "type": "string", "pattern": "^[a-zA-Z0-9_.\\[\\]-]{1,120}$" },
+    "capability": { "enum": ["usesAI", "usesMultipleAgents", "usesCode", "usesHumanApproval", "usesExternalAPI", "usesEmail", "usesDataStore", "usesRetry", "hasBoundedRetry", "hasExplicitFailureHandling", "hasValidationGate", "hasCodeValidation", "usesLLMJudge", "hasFallback", "usesRAG", "usesMemory"] },
+    "stepCategory": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] },
+    "status": { "enum": ["draft", "evidence_review", "revision_requested", "human_review", "approved", "rejected", "failed"] },
+    "code": {
+      "enum": [
+        "INPUT_INVALID", "DUPLICATE_RUN", "PROVIDER_NOT_CONFIGURED", "PROVIDER_NOT_IMPLEMENTED",
+        "MODEL_INVALID_JSON", "MODEL_SCHEMA_INVALID", "MODEL_OUTPUT_TOO_LARGE", "MODEL_UNKNOWN_REFERENCE", "MODEL_NUMERIC_CONFLICT",
+        "MODEL_UNSUPPORTED_CLAIM", "MODEL_CAPABILITY_CONFLICT", "MODEL_ATTRIBUTION_CONFLICT", "MODEL_TREND_UNSUPPORTED",
+        "MODEL_OVERBROAD_CLAIM", "MODEL_STYLE_VIOLATION", "MODEL_TIMEOUT", "MODEL_PROVIDER_ERROR",
+        "THEME_SUPPORT_TOO_LOW", "SPOTLIGHT_UNSUPPORTED", "FAILURE_PATH_UNSUPPORTED", "PATTERN_STRUCTURE_MISMATCH",
+        "REVIEWER_FLAGGED", "REVISION_LIMIT_REACHED", "STEP_BUDGET_EXCEEDED"
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "evidenceRefs"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 700 },
+        "evidenceRefs": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "$ref": "#/$defs/evidenceRef" } }
+      }
+    },
+    "optionalClaim": { "oneOf": [{ "$ref": "#/$defs/claim" }, { "type": "null" }] },
+    "title": { "type": "string", "minLength": 3, "maxLength": 90 },
+    "postNote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["postRef", "summary", "workflowPurpose", "testPerformed", "interestingPattern", "failureOrLimitation", "humanControl", "reusableLesson", "capabilityClaims"],
+      "properties": {
+        "postRef": { "$ref": "#/$defs/postRef" },
+        "summary": { "$ref": "#/$defs/claim" },
+        "workflowPurpose": { "$ref": "#/$defs/optionalClaim" },
+        "testPerformed": { "$ref": "#/$defs/optionalClaim" },
+        "interestingPattern": { "$ref": "#/$defs/optionalClaim" },
+        "failureOrLimitation": { "$ref": "#/$defs/optionalClaim" },
+        "humanControl": { "$ref": "#/$defs/optionalClaim" },
+        "reusableLesson": { "$ref": "#/$defs/optionalClaim" },
+        "capabilityClaims": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["capability", "claimSource"],
+            "properties": { "capability": { "$ref": "#/$defs/capability" }, "claimSource": { "enum": ["student-description", "workflow-profile"] } }
+          }
+        }
+      }
+    },
+    "postNotesOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["notes"],
+      "properties": { "notes": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/postNote" } } }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["themeId", "title", "summary", "supportingPostRefs", "supportingWorkflowRefs", "support", "confidence"],
+      "properties": {
+        "themeId": { "type": "string", "pattern": "^[a-z0-9-]{3,60}$" },
+        "title": { "$ref": "#/$defs/title" },
+        "summary": { "$ref": "#/$defs/claim" },
+        "supportingPostRefs": { "type": "array", "minItems": 1, "maxItems": 40, "uniqueItems": true, "items": { "$ref": "#/$defs/postRef" } },
+        "supportingWorkflowRefs": { "type": "array", "maxItems": 40, "uniqueItems": true, "items": { "$ref": "#/$defs/workflowRef" } },
+        "support": { "enum": ["multi-source", "notable-single-example"] },
+        "confidence": { "enum": ["high", "medium", "low"] }
+      }
+    },
+    "themesOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["themes"],
+      "properties": { "themes": { "type": "array", "maxItems": 7, "items": { "$ref": "#/$defs/theme" } } }
+    },
+    "spotlightLabel": { "enum": ["Strong Human Control", "Interesting Failure Recovery", "Reusable Validation Pattern", "Creative Integration", "Clear Multi-Agent Design", "Thoughtful Fallback", "Useful Testing Pattern"] },
+    "failurePath": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["postRef", "workflowProfileRef", "failure", "control", "recovery", "lesson"],
+          "properties": {
+            "postRef": { "$ref": "#/$defs/postRef" },
+            "workflowProfileRef": { "$ref": "#/$defs/workflowRef" },
+            "failure": { "$ref": "#/$defs/claim" },
+            "control": { "$ref": "#/$defs/claim" },
+            "recovery": { "$ref": "#/$defs/claim" },
+            "lesson": { "$ref": "#/$defs/claim" }
+          }
+        }
+      ]
+    },
+    "selectionOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spotlights", "failurePath", "patterns"],
+      "properties": {
+        "spotlights": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["postRef", "label", "reason"],
+            "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "label": { "$ref": "#/$defs/spotlightLabel" }, "reason": { "$ref": "#/$defs/claim" } }
+          }
+        },
+        "failurePath": { "$ref": "#/$defs/failurePath" },
+        "patterns": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["patternId", "title", "workflowProfileRefs", "steps", "why"],
+            "properties": {
+              "patternId": { "type": "string", "pattern": "^[a-z0-9-]{3,60}$" },
+              "title": { "$ref": "#/$defs/title" },
+              "workflowProfileRefs": { "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": { "$ref": "#/$defs/workflowRef" } },
+              "steps": { "type": "array", "minItems": 2, "maxItems": 7, "items": { "$ref": "#/$defs/stepCategory" } },
+              "why": { "$ref": "#/$defs/claim" }
+            }
+          }
+        }
+      }
+    },
+    "discussionOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insights"],
+      "properties": {
+        "insights": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "insight"],
+            "properties": {
+              "kind": { "enum": ["recurring-question", "peer-suggestion", "unresolved-concern", "testing-idea", "insight"] },
+              "insight": { "$ref": "#/$defs/claim" }
+            }
+          }
+        }
+      }
+    },
+    "newsletterOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hero", "executiveSummary", "themes", "spotlights", "failurePath", "borrowThisPattern", "discussionHighlights", "takeaways"],
+      "properties": {
+        "hero": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "dek"],
+          "properties": { "title": { "$ref": "#/$defs/claim" }, "dek": { "$ref": "#/$defs/claim" } }
+        },
+        "executiveSummary": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "$ref": "#/$defs/claim" } },
+        "themes": {
+          "type": "array",
+          "maxItems": 7,
+          "items": { "type": "object", "additionalProperties": false, "required": ["themeId", "title", "text"], "properties": { "themeId": { "type": "string", "pattern": "^[a-z0-9-]{3,60}$" }, "title": { "$ref": "#/$defs/title" }, "text": { "$ref": "#/$defs/claim" } } }
+        },
+        "spotlights": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["postRef", "label", "text", "worthBorrowing"],
+            "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "label": { "$ref": "#/$defs/spotlightLabel" }, "text": { "$ref": "#/$defs/claim" }, "worthBorrowing": { "$ref": "#/$defs/claim" } }
+          }
+        },
+        "failurePath": { "$ref": "#/$defs/failurePath" },
+        "borrowThisPattern": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "type": "object", "additionalProperties": false, "required": ["patternId", "title", "why"], "properties": { "patternId": { "type": "string", "pattern": "^[a-z0-9-]{3,60}$" }, "title": { "$ref": "#/$defs/title" }, "why": { "$ref": "#/$defs/claim" } } }
+        },
+        "discussionHighlights": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/claim" } },
+        "takeaways": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "type": "object", "additionalProperties": false, "required": ["title", "text"], "properties": { "title": { "$ref": "#/$defs/title" }, "text": { "$ref": "#/$defs/claim" } } }
+        }
+      }
+    },
+    "reviewOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdicts"],
+      "properties": {
+        "verdicts": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claimId", "verdict", "reason"],
+            "properties": {
+              "claimId": { "$ref": "#/$defs/claimId" },
+              "verdict": { "enum": ["SUPPORTED", "PARTIALLY_SUPPORTED", "UNSUPPORTED", "CONFLICT"] },
+              "reason": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "parentRunId", "idempotencyKey", "week", "status", "statusHistory", "provider", "model", "promptVersions", "inputHash", "outputHash", "startedAt", "completedAt", "revisionCount", "postCount", "workflowProfileCount", "modelCalls", "evidenceFailures", "errorCode", "errorSummary"],
+      "properties": {
+        "runId": { "type": "string", "pattern": "^run_ed-[a-f0-9]{16}$" },
+        "parentRunId": { "oneOf": [{ "type": "string", "pattern": "^run_ed-[a-f0-9]{16}$" }, { "type": "null" }] },
+        "idempotencyKey": { "type": "string", "maxLength": 200 },
+        "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "status": { "$ref": "#/$defs/status" },
+        "statusHistory": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/status" } },
+        "provider": { "enum": ["gemini", "openai", "anthropic", "mock"] },
+        "model": { "type": "string", "maxLength": 80 },
+        "promptVersions": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "type": "object", "additionalProperties": false, "required": ["promptId", "promptVersion"], "properties": { "promptId": { "type": "string", "maxLength": 60 }, "promptVersion": { "type": "string", "maxLength": 20 } } }
+        },
+        "inputHash": { "$ref": "#/$defs/hash" },
+        "outputHash": { "oneOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": ["string", "null"], "format": "date-time" },
+        "revisionCount": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "postCount": { "type": "integer", "minimum": 0 },
+        "workflowProfileCount": { "type": "integer", "minimum": 0 },
+        "modelCalls": {
+          "type": "array",
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stage", "promptId", "promptVersion", "ok", "errorCode"],
+            "properties": {
+              "stage": { "type": "string", "maxLength": 40 },
+              "promptId": { "type": "string", "maxLength": 60 },
+              "promptVersion": { "type": "string", "maxLength": 20 },
+              "ok": { "type": "boolean" },
+              "errorCode": { "oneOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] }
+            }
+          }
+        },
+        "evidenceFailures": { "type": "integer", "minimum": 0 },
+        "errorCode": { "oneOf": [{ "$ref": "#/$defs/code" }, { "type": "null" }] },
+        "errorSummary": { "type": ["string", "null"], "maxLength": 300 }
+      }
+    }
+  }
+}

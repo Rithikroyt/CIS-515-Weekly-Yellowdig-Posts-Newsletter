@@ -9,6 +9,7 @@ import { REPO_ROOT, readJson } from "../../scripts/schemas";
 import { SYNTHETIC_WEEK2_RUN, syntheticWeek2Pages } from "../lib/source";
 import { processAssetBatch, simpleAi, syntheticAssetBatch } from "../lib/assets";
 import { NODE } from "./runtime";
+import { NAMED_SCENARIOS, createMockProvider, runEditorial, syntheticEditorialInput } from "../lib/editorial";
 
 type J = Record<string, unknown>;
 type WF = keyof typeof ENTRIES;
@@ -143,6 +144,45 @@ describe("generated n8n bundles", () => {
   it("03: rejects anything but exactly one batch item", () => {
     expect(() => runNode("wf03", "checkFiles", [{}, {}])).toThrow(/CONTRACT_VIOLATION/);
     expect(run03({ week: 4, knownPostRefs: null, assets: [{ postRef: "p", originalFilename: "wf.json", contentText: JSON.stringify(simpleAi()) }] }).profiles).toHaveLength(1);
+  });
+
+  it("04: the editorial loop through the bundles equals the local runner (mock, synthetic input)", async () => {
+    for (const scenario of ["clean", "revise-once", "revision-limit"]) {
+      let item = runNode("wf04", "editorialStep", [{ input: syntheticEditorialInput(), options: { provider: "mock", scenario } }])[0];
+      let loops = 0;
+      while (!item.done && loops++ < 40) {
+        const answered = runNode("wf04", "mockModel", [item])[0];
+        item = runNode("wf04", "editorialStep", [answered])[0];
+      }
+      const local = await runEditorial({ input: syntheticEditorialInput(), provider: createMockProvider(NAMED_SCENARIOS[scenario]), now: () => "2026-11-01T00:00:00Z" });
+      const strip = (d: J) => JSON.parse(JSON.stringify(d, (k, v) => (k === "startedAt" || k === "completedAt" ? "T" : v)));
+      expect(strip(item.draft as J)).toEqual(strip(local as unknown as J));
+      expect(item.runRow).toMatchObject({ status: "human_review", provider: "mock" });
+    }
+  });
+
+  it("04: the mock is refused for non-synthetic input, and unknown providers are rejected", () => {
+    const real = syntheticEditorialInput();
+    real.sourceStatus.provider = "yellowdig-api";
+    expect(() => runNode("wf04", "editorialStep", [{ input: real, options: { provider: "mock" } }])).toThrow(/only runs on synthetic input/);
+    expect(() => runNode("wf04", "editorialStep", [{ input: syntheticEditorialInput(), options: { provider: "openai" } }])).toThrow(/PROVIDER_NOT_IMPLEMENTED/);
+    expect(() => runNode("wf04", "editorialStep", [{ input: syntheticEditorialInput(), options: {} }])).toThrow(/PROVIDER_NOT_CONFIGURED/);
+  });
+
+  it("04: the Gemini path builds a keyless request and reattaches state to the response", () => {
+    const first = runNode("wf04", "editorialStep", [{ input: syntheticEditorialInput(), options: { provider: "gemini", model: "gemini-2.5-flash" } }])[0];
+    const g = first.gemini as { url: string; body: J };
+    expect(first.useMock).toBe(false);
+    expect(g.url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+    expect(JSON.stringify(first)).not.toMatch(/key=|x-goog-api-key|apikey/i);
+    const fakeGemini = { candidates: [{ content: { parts: [{ text: "not json" }] } }] };
+    const attached = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": first })[0];
+    expect(attached.modelResponse).toEqual({ ok: true, text: "not json" });
+    const next = runNode("wf04", "editorialStep", [attached])[0];
+    expect(next).toMatchObject({ done: true, status: "failed" });
+    expect((next.runRow as J).error_code).toBe("MODEL_INVALID_JSON");
+    const failed = runNode("wf04", "attachGeminiState", [{ error: "timeout of 120000ms exceeded" }], { "Use Mock Model?": first })[0];
+    expect(failed.modelResponse).toMatchObject({ ok: false, code: "MODEL_TIMEOUT" });
   });
 
   it("committed generated files match a fresh build", () => {

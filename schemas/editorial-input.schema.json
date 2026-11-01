@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/editorial-input.schema.json",
+  "title": "EditorialInput",
+  "description": "Deterministic package sent to the editorial model stages. Built by code from the week dataset, asset manifest and workflow profiles. Contains no emails, SIS/LTI ids, credentials, parameters or raw workflow content. All text fields are untrusted source data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "issueId", "course", "week", "dateRange", "topic", "sourceStatus", "metrics", "posts", "workflowProfiles", "discussionSignals", "methodology"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "issueId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-week-[0-9]{2}$" },
+    "course": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name", "term"],
+      "properties": { "code": { "type": "string", "maxLength": 20 }, "name": { "type": "string", "maxLength": 120 }, "term": { "type": "string", "maxLength": 40 } }
+    },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "dateRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "timezone"],
+      "properties": { "start": { "type": "string", "format": "date" }, "end": { "type": "string", "format": "date" }, "timezone": { "type": "string", "maxLength": 64 } }
+    },
+    "topic": { "type": "string", "maxLength": 200 },
+    "sourceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "liveSourceVerified", "fallbackReason", "commentsLiveVerified", "reactionsLiveVerified"],
+      "properties": {
+        "provider": { "enum": ["yellowdig-api", "synthetic-fixture"] },
+        "liveSourceVerified": { "type": "boolean" },
+        "fallbackReason": { "type": "string", "maxLength": 60 },
+        "commentsLiveVerified": { "type": "boolean" },
+        "reactionsLiveVerified": { "type": "boolean" }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "label", "value"],
+        "properties": {
+          "ref": { "type": "string", "pattern": "^metric:[A-Za-z0-9._:-]+$" },
+          "label": { "type": "string", "maxLength": 120 },
+          "value": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "posts": {
+      "type": "array",
+      "maxItems": 400,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postRef", "title", "authorRef", "authorName", "createdAt", "body", "bodyTruncated", "commentCount", "workflowProfileRef", "comments"],
+        "properties": {
+          "postRef": { "$ref": "#/$defs/postRef" },
+          "title": { "type": "string", "maxLength": 300 },
+          "authorRef": { "$ref": "#/$defs/personRef" },
+          "authorName": { "type": "string", "maxLength": 120 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "body": { "type": "string", "maxLength": 2600 },
+          "bodyTruncated": { "type": "boolean" },
+          "commentCount": { "type": "integer", "minimum": 0 },
+          "workflowProfileRef": { "oneOf": [{ "$ref": "#/$defs/workflowRef" }, { "type": "null" }] },
+          "comments": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["commentRef", "authorRef", "authorName", "body", "bodyTruncated"],
+              "properties": {
+                "commentRef": { "type": "string", "pattern": "^comment:[A-Za-z0-9._:-]+$" },
+                "authorRef": { "$ref": "#/$defs/personRef" },
+                "authorName": { "type": "string", "maxLength": 120 },
+                "body": { "type": "string", "maxLength": 700 },
+                "bodyTruncated": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "workflowProfiles": {
+      "type": "array",
+      "maxItems": 400,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workflowProfileRef", "postRef", "workflowName", "nodeCount", "edgeCount", "capabilities", "mainPath", "integrations", "aiProviders", "retry", "scoreThreshold"],
+        "properties": {
+          "workflowProfileRef": { "$ref": "#/$defs/workflowRef" },
+          "postRef": { "oneOf": [{ "$ref": "#/$defs/postRef" }, { "type": "null" }] },
+          "workflowName": { "type": "string", "maxLength": 120 },
+          "nodeCount": { "type": "integer", "minimum": 0 },
+          "edgeCount": { "type": "integer", "minimum": 0 },
+          "capabilities": { "$ref": "workflow-profile.schema.json#/properties/capabilities" },
+          "mainPath": {
+            "type": "array",
+            "maxItems": 7,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["category", "label"],
+              "properties": { "category": { "$ref": "#/$defs/stepCategory" }, "label": { "type": "string", "maxLength": 40 } }
+            }
+          },
+          "integrations": { "type": "array", "maxItems": 60, "items": { "type": "string", "maxLength": 60 } },
+          "aiProviders": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 60 } },
+          "retry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cycles", "boundedCycles", "maxAttempts"],
+            "properties": { "cycles": { "type": "integer", "minimum": 0 }, "boundedCycles": { "type": "integer", "minimum": 0 }, "maxAttempts": { "type": ["integer", "null"], "minimum": 1 } }
+          },
+          "scoreThreshold": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "discussionSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mostDiscussed", "generousCommenters"],
+      "properties": {
+        "mostDiscussed": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "object", "additionalProperties": false, "required": ["postRef", "commentCount"], "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "commentCount": { "type": "integer", "minimum": 0 } } }
+        },
+        "generousCommenters": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "object", "additionalProperties": false, "required": ["personRef", "name", "commentsOnOthers"], "properties": { "personRef": { "$ref": "#/$defs/personRef" }, "name": { "type": "string", "maxLength": 120 }, "commentsOnOthers": { "type": "integer", "minimum": 1 } } }
+        }
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["builderVersion", "limits", "notes"],
+      "properties": {
+        "builderVersion": { "type": "string", "maxLength": 20 },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["postBodyChars", "commentBodyChars", "commentsPerPost"],
+          "properties": { "postBodyChars": { "type": "integer" }, "commentBodyChars": { "type": "integer" }, "commentsPerPost": { "type": "integer" } }
+        },
+        "notes": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 300 } }
+      }
+    }
+  },
+  "$defs": {
+    "postRef": { "type": "string", "pattern": "^post:[A-Za-z0-9._:-]+$" },
+    "workflowRef": { "type": "string", "pattern": "^workflow:wf_[a-f0-9]{12}$" },
+    "personRef": { "type": "string", "pattern": "^person:u_[a-f0-9]{12}$" },
+    "stepCategory": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] }
+  }
+}

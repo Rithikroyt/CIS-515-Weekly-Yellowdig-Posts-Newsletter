@@ -1,0 +1,226 @@
+{
+  "_comment": "Synthetic mock model responses for the Week 2 synthetic fixture. Invented data; used only by the mock provider in tests and n8n test runs.",
+  "postNotes": {
+    "notes": [
+      {
+        "postRef": "post:syn-w2-p01",
+        "summary": { "text": "A recipe scaler where a second model scores each draft and a capped revision loop handles low scores.", "evidenceRefs": ["post:syn-w2-p01", "workflow:wf_d1d310e6217a"] },
+        "workflowPurpose": { "text": "Scale a recipe to a new serving size.", "evidenceRefs": ["post:syn-w2-p01"] },
+        "testPerformed": { "text": "The author raised the pass mark to 10 for one run to exercise the failure path.", "evidenceRefs": ["post:syn-w2-p01"] },
+        "interestingPattern": { "text": "A judge model, a code check on units and a revision counter work together.", "evidenceRefs": ["workflow:wf_d1d310e6217a", "comment:syn-w2-p01-c3"] },
+        "failureOrLimitation": { "text": "The author asked how to keep a judge from being too generous.", "evidenceRefs": ["post:syn-w2-p01"] },
+        "humanControl": { "text": "After the last revision the draft goes to the author.", "evidenceRefs": ["post:syn-w2-p01"] },
+        "reusableLesson": { "text": "Test the failure path on purpose by raising the threshold for one run.", "evidenceRefs": ["post:syn-w2-p01"] },
+        "capabilityClaims": [
+          { "capability": "usesLLMJudge", "claimSource": "workflow-profile" },
+          { "capability": "hasBoundedRetry", "claimSource": "workflow-profile" },
+          { "capability": "hasCodeValidation", "claimSource": "workflow-profile" },
+          { "capability": "usesHumanApproval", "claimSource": "student-description" }
+        ]
+      },
+      {
+        "postRef": "post:syn-w2-p02",
+        "summary": { "text": "A weekly study planner that waits for the author's approval by email before writing to the calendar.", "evidenceRefs": ["post:syn-w2-p02", "workflow:wf_f687180eb025"] },
+        "workflowPurpose": { "text": "Draft a weekly study plan from the course calendar.", "evidenceRefs": ["post:syn-w2-p02"] },
+        "testPerformed": null,
+        "interestingPattern": { "text": "An approval step sits directly before the calendar write.", "evidenceRefs": ["workflow:wf_f687180eb025"] },
+        "failureOrLimitation": { "text": "If the calendar call fails, an error branch sends a short notice.", "evidenceRefs": ["post:syn-w2-p02", "workflow:wf_f687180eb025"] },
+        "humanControl": { "text": "Nothing is added to the calendar until the author approves it.", "evidenceRefs": ["post:syn-w2-p02", "workflow:wf_f687180eb025"] },
+        "reusableLesson": { "text": "Put approval right before any step that writes to a personal system.", "evidenceRefs": ["comment:syn-w2-p02-c1"] },
+        "capabilityClaims": [
+          { "capability": "usesHumanApproval", "claimSource": "workflow-profile" },
+          { "capability": "hasExplicitFailureHandling", "claimSource": "workflow-profile" }
+        ]
+      },
+      {
+        "postRef": "post:syn-w2-p03",
+        "summary": { "text": "A daily news brief that remembers recent headlines and falls back to a plain list if the model times out.", "evidenceRefs": ["post:syn-w2-p03", "workflow:wf_1d17780de691"] },
+        "workflowPurpose": { "text": "Send a daily brief from news feeds.", "evidenceRefs": ["post:syn-w2-p03"] },
+        "testPerformed": null,
+        "interestingPattern": { "text": "Memory prevents repeating yesterday's headlines.", "evidenceRefs": ["post:syn-w2-p03", "workflow:wf_1d17780de691"] },
+        "failureOrLimitation": { "text": "A model timeout triggers the fallback.", "evidenceRefs": ["post:syn-w2-p03"] },
+        "humanControl": null,
+        "reusableLesson": { "text": "Give an AI step a simple non-AI fallback.", "evidenceRefs": ["workflow:wf_1d17780de691"] },
+        "capabilityClaims": [
+          { "capability": "hasFallback", "claimSource": "workflow-profile" },
+          { "capability": "usesMemory", "claimSource": "workflow-profile" }
+        ]
+      },
+      {
+        "postRef": "post:syn-w2-p04",
+        "summary": { "text": "An expense logger that checks extracted amounts and dates in code and retries before flagging a receipt.", "evidenceRefs": ["post:syn-w2-p04", "workflow:wf_17e0a499e621"] },
+        "workflowPurpose": { "text": "Log receipts that arrive by email.", "evidenceRefs": ["post:syn-w2-p04"] },
+        "testPerformed": { "text": "The checks caught a receipt the model had dated to the previous year.", "evidenceRefs": ["post:syn-w2-p04"] },
+        "interestingPattern": { "text": "Code, not the model, decides whether the amount and date are valid.", "evidenceRefs": ["workflow:wf_17e0a499e621", "comment:syn-w2-p04-c1"] },
+        "failureOrLimitation": { "text": "After the last retry the receipt lands in a review sheet.", "evidenceRefs": ["comment:syn-w2-p04-c4"] },
+        "humanControl": { "text": "The author fixes flagged receipts by hand.", "evidenceRefs": ["comment:syn-w2-p04-c4"] },
+        "reusableLesson": { "text": "Check dates and amounts in code, not in the prompt.", "evidenceRefs": ["post:syn-w2-p04", "comment:syn-w2-p04-c1"] },
+        "capabilityClaims": [
+          { "capability": "hasCodeValidation", "claimSource": "workflow-profile" },
+          { "capability": "hasBoundedRetry", "claimSource": "workflow-profile" }
+        ]
+      },
+      {
+        "postRef": "post:syn-w2-p05",
+        "summary": { "text": "A support desk where a writer drafts, a judge scores, code flags risky tickets and a person approves every reply.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+        "workflowPurpose": { "text": "Draft support replies from a policy.", "evidenceRefs": ["post:syn-w2-p05"] },
+        "testPerformed": { "text": "A judge scored a policy-breaking reply highly, and the code flag caught it.", "evidenceRefs": ["post:syn-w2-p05"] },
+        "interestingPattern": { "text": "A judge, a code rule and a person check the same reply.", "evidenceRefs": ["workflow:wf_dc3ee8e8f7f1"] },
+        "failureOrLimitation": { "text": "The judge does not yet see the risk flag.", "evidenceRefs": ["comment:syn-w2-p05-c3"] },
+        "humanControl": { "text": "A person approves every reply in Telegram before it is sent.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+        "reusableLesson": { "text": "A high judge score is not proof; hard rules belong in code.", "evidenceRefs": ["post:syn-w2-p05"] },
+        "capabilityClaims": [
+          { "capability": "usesHumanApproval", "claimSource": "workflow-profile" },
+          { "capability": "usesLLMJudge", "claimSource": "workflow-profile" },
+          { "capability": "hasCodeValidation", "claimSource": "workflow-profile" }
+        ]
+      },
+      {
+        "postRef": "post:syn-w2-p06",
+        "summary": { "text": "A flight deal finder; the workflow file was not attached.", "evidenceRefs": ["post:syn-w2-p06"] },
+        "workflowPurpose": { "text": "Find round trips under a price limit and email the best ones.", "evidenceRefs": ["post:syn-w2-p06"] },
+        "testPerformed": null,
+        "interestingPattern": null,
+        "failureOrLimitation": { "text": "Without the workflow file, its design cannot be confirmed.", "evidenceRefs": ["post:syn-w2-p06"] },
+        "humanControl": null,
+        "reusableLesson": null,
+        "capabilityClaims": [{ "capability": "usesEmail", "claimSource": "student-description" }]
+      },
+      {
+        "postRef": "post:syn-w2-p07",
+        "summary": { "text": "A question-answering workflow over lecture notes using a small vector store.", "evidenceRefs": ["post:syn-w2-p07", "workflow:wf_edfb36f2ca7c"] },
+        "workflowPurpose": { "text": "Answer questions about lecture notes.", "evidenceRefs": ["post:syn-w2-p07"] },
+        "testPerformed": null,
+        "interestingPattern": { "text": "Retrieval supplies the context for each answer.", "evidenceRefs": ["workflow:wf_edfb36f2ca7c"] },
+        "failureOrLimitation": { "text": "The post contains text addressed to the editor; it was treated as source text and ignored.", "evidenceRefs": ["post:syn-w2-p07"] },
+        "humanControl": null,
+        "reusableLesson": null,
+        "capabilityClaims": [{ "capability": "usesRAG", "claimSource": "workflow-profile" }]
+      },
+      {
+        "postRef": "post:syn-w2-p08",
+        "summary": { "text": "A summarizer that turns meeting notes into action items and emails them to the team.", "evidenceRefs": ["post:syn-w2-p08", "workflow:wf_69e9acb823ce"] },
+        "workflowPurpose": { "text": "Turn rough meeting notes into action items with owners and dates.", "evidenceRefs": ["post:syn-w2-p08"] },
+        "testPerformed": null,
+        "interestingPattern": null,
+        "failureOrLimitation": { "text": "A classmate asked whether every action item is checked for an owner.", "evidenceRefs": ["comment:syn-w2-p08-c1"] },
+        "humanControl": null,
+        "reusableLesson": null,
+        "capabilityClaims": [{ "capability": "usesEmail", "claimSource": "workflow-profile" }]
+      }
+    ]
+  },
+  "themes": {
+    "themes": [
+      {
+        "themeId": "code-decides-risk", "title": "Code decides what is risky",
+        "summary": { "text": "Expense, recipe and support builds check amounts, dates and units in code instead of asking a model.", "evidenceRefs": ["post:syn-w2-p04", "post:syn-w2-p05", "post:syn-w2-p01", "workflow:wf_17e0a499e621", "workflow:wf_dc3ee8e8f7f1", "workflow:wf_d1d310e6217a"] },
+        "supportingPostRefs": ["post:syn-w2-p04", "post:syn-w2-p05", "post:syn-w2-p01"],
+        "supportingWorkflowRefs": ["workflow:wf_17e0a499e621", "workflow:wf_dc3ee8e8f7f1", "workflow:wf_d1d310e6217a"],
+        "support": "multi-source", "confidence": "high"
+      },
+      {
+        "themeId": "person-final-call", "title": "A person makes the final call",
+        "summary": { "text": "The study planner and the support desk pause for a person's approval before writing to a calendar or sending a reply.", "evidenceRefs": ["post:syn-w2-p02", "post:syn-w2-p05", "workflow:wf_f687180eb025", "workflow:wf_dc3ee8e8f7f1"] },
+        "supportingPostRefs": ["post:syn-w2-p02", "post:syn-w2-p05"],
+        "supportingWorkflowRefs": ["workflow:wf_f687180eb025", "workflow:wf_dc3ee8e8f7f1"],
+        "support": "multi-source", "confidence": "high"
+      },
+      {
+        "themeId": "plan-for-failure", "title": "Plan for the failure path",
+        "summary": { "text": "Bounded retries, a fallback and error branches keep a failed step from becoming a silent one.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p03", "post:syn-w2-p04", "post:syn-w2-p02", "workflow:wf_d1d310e6217a", "workflow:wf_1d17780de691", "workflow:wf_17e0a499e621", "workflow:wf_f687180eb025"] },
+        "supportingPostRefs": ["post:syn-w2-p01", "post:syn-w2-p03", "post:syn-w2-p04", "post:syn-w2-p02"],
+        "supportingWorkflowRefs": ["workflow:wf_d1d310e6217a", "workflow:wf_1d17780de691", "workflow:wf_17e0a499e621", "workflow:wf_f687180eb025"],
+        "support": "multi-source", "confidence": "medium"
+      }
+    ]
+  },
+  "selection": {
+    "spotlights": [
+      { "postRef": "post:syn-w2-p05", "label": "Reusable Validation Pattern", "reason": { "text": "Three independent checks on one reply, with the code rule catching what the judge missed.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] } },
+      { "postRef": "post:syn-w2-p01", "label": "Useful Testing Pattern", "reason": { "text": "The author forced the failure path by raising the threshold for one run.", "evidenceRefs": ["post:syn-w2-p01"] } },
+      { "postRef": "post:syn-w2-p04", "label": "Reusable Validation Pattern", "reason": { "text": "Extracted fields are validated in code before anything is written.", "evidenceRefs": ["post:syn-w2-p04", "workflow:wf_17e0a499e621"] } },
+      { "postRef": "post:syn-w2-p02", "label": "Strong Human Control", "reason": { "text": "Approval sits directly before the calendar write.", "evidenceRefs": ["post:syn-w2-p02", "workflow:wf_f687180eb025"] } }
+    ],
+    "failurePath": {
+      "postRef": "post:syn-w2-p05", "workflowProfileRef": "workflow:wf_dc3ee8e8f7f1",
+      "failure": { "text": "In a test, the judge scored a reply 9/10 even though it promised a refund over the $100 limit.", "evidenceRefs": ["post:syn-w2-p05"] },
+      "control": { "text": "A code rule that flags refunds over $100 caught the reply.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      "recovery": { "text": "A person approves every reply in Telegram before it is sent, so the flagged reply could be stopped.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      "lesson": { "text": "A high judge score is not proof; put hard rules in code.", "evidenceRefs": ["post:syn-w2-p05"] }
+    },
+    "patterns": [
+      {
+        "patternId": "judge-gate-approve", "title": "Judge, then code gate, then a person",
+        "workflowProfileRefs": ["workflow:wf_dc3ee8e8f7f1"], "steps": ["ai", "judge", "validator", "gate", "approval"],
+        "why": { "text": "The code gate enforces the hard rules a judge can miss, and the final send still waits for a person.", "evidenceRefs": ["workflow:wf_dc3ee8e8f7f1", "post:syn-w2-p05"] }
+      },
+      {
+        "patternId": "extract-validate-store", "title": "Extract, validate in code, then store",
+        "workflowProfileRefs": ["workflow:wf_17e0a499e621"], "steps": ["ai", "validator", "gate", "storage"],
+        "why": { "text": "Fields the model extracts are checked in code before they reach the sheet, and failures land in a review sheet.", "evidenceRefs": ["workflow:wf_17e0a499e621", "post:syn-w2-p04", "comment:syn-w2-p04-c4"] }
+      }
+    ]
+  },
+  "discussion": {
+    "insights": [
+      { "kind": "recurring-question", "insight": { "text": "Classmates asked what happens after the last retry; the answer was a review sheet handled by hand.", "evidenceRefs": ["comment:syn-w2-p04-c2", "comment:syn-w2-p04-c4"] } },
+      { "kind": "peer-suggestion", "insight": { "text": "Several replies pointed to checks that belong in code rather than in a judge's prompt.", "evidenceRefs": ["comment:syn-w2-p01-c1", "comment:syn-w2-p05-c1"] } },
+      { "kind": "unresolved-concern", "insight": { "text": "Whether the judge should see the risk flag is still open.", "evidenceRefs": ["comment:syn-w2-p05-c2", "comment:syn-w2-p05-c3"] } }
+    ]
+  },
+  "newsletterClean": {
+    "hero": {
+      "title": { "text": "Code Gates Catch What Judges Miss", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      "dek": { "text": "Several builds put a code check between a model's draft and the action that follows, and one tested its failure path on purpose.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p04", "post:syn-w2-p05", "workflow:wf_d1d310e6217a", "workflow:wf_17e0a499e621", "workflow:wf_dc3ee8e8f7f1"] }
+    },
+    "executiveSummary": [
+      { "text": "Drew Patel's support desk shows why code checks matter: a judge scored a policy-breaking reply 9/10, and a code flag stopped it.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      { "text": "Blake Torres moved date and amount checks out of the prompt and into code, retrying up to three times before a receipt is flagged.", "evidenceRefs": ["post:syn-w2-p04", "workflow:wf_17e0a499e621"] },
+      { "text": "Avery Quinn raised the judge's pass mark for one run to watch the revision path work.", "evidenceRefs": ["post:syn-w2-p01", "workflow:wf_d1d310e6217a"] }
+    ],
+    "themes": [
+      { "themeId": "code-decides-risk", "title": "Code decides what is risky", "text": { "text": "Expense, recipe and support builds check amounts, dates and units in code instead of asking a model.", "evidenceRefs": ["post:syn-w2-p04", "post:syn-w2-p05", "post:syn-w2-p01", "workflow:wf_17e0a499e621", "workflow:wf_dc3ee8e8f7f1", "workflow:wf_d1d310e6217a"] } },
+      { "themeId": "person-final-call", "title": "A person makes the final call", "text": { "text": "The study planner and the support desk pause for a person's approval before writing to a calendar or sending a reply.", "evidenceRefs": ["post:syn-w2-p02", "post:syn-w2-p05", "workflow:wf_f687180eb025", "workflow:wf_dc3ee8e8f7f1"] } },
+      { "themeId": "plan-for-failure", "title": "Plan for the failure path", "text": { "text": "Bounded retries, a fallback and error branches keep a failed step from becoming a silent one.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p03", "post:syn-w2-p04", "post:syn-w2-p02", "workflow:wf_d1d310e6217a", "workflow:wf_1d17780de691", "workflow:wf_17e0a499e621", "workflow:wf_f687180eb025"] } }
+    ],
+    "spotlights": [
+      {
+        "postRef": "post:syn-w2-p05", "label": "Reusable Validation Pattern",
+        "text": { "text": "A writer drafts, a judge scores, code flags risky refunds, and a person approves every reply in Telegram.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+        "worthBorrowing": { "text": "Let code flag high-risk items, and keep a person on the final call even when the score passes.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] }
+      },
+      {
+        "postRef": "post:syn-w2-p01", "label": "Useful Testing Pattern",
+        "text": { "text": "Avery raised the bar to 10 for one run to watch the capped revision loop hand the draft back for a manual check.", "evidenceRefs": ["post:syn-w2-p01", "workflow:wf_d1d310e6217a"] },
+        "worthBorrowing": { "text": "Test the failure path on purpose by raising the threshold for one run.", "evidenceRefs": ["post:syn-w2-p01"] }
+      },
+      {
+        "postRef": "post:syn-w2-p04", "label": "Reusable Validation Pattern",
+        "text": { "text": "Blake checks the extracted amount and date in code and retries up to three times before flagging the receipt.", "evidenceRefs": ["post:syn-w2-p04", "workflow:wf_17e0a499e621"] },
+        "worthBorrowing": { "text": "Check dates and amounts in code, not in the prompt.", "evidenceRefs": ["post:syn-w2-p04", "comment:syn-w2-p04-c1"] }
+      }
+    ],
+    "failurePath": {
+      "postRef": "post:syn-w2-p05", "workflowProfileRef": "workflow:wf_dc3ee8e8f7f1",
+      "failure": { "text": "In a test, the judge scored a reply 9/10 even though it promised a refund over the $100 limit.", "evidenceRefs": ["post:syn-w2-p05"] },
+      "control": { "text": "A code rule that flags refunds over $100 caught the reply.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      "recovery": { "text": "A person approves every reply in Telegram before it is sent, so the flagged reply could be stopped.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] },
+      "lesson": { "text": "A high judge score is not proof; put hard rules in code.", "evidenceRefs": ["post:syn-w2-p05"] }
+    },
+    "borrowThisPattern": [
+      { "patternId": "judge-gate-approve", "title": "Judge, then code gate, then a person", "why": { "text": "The code gate enforces the hard rules a judge can miss, and the final send still waits for a person.", "evidenceRefs": ["workflow:wf_dc3ee8e8f7f1", "post:syn-w2-p05"] } },
+      { "patternId": "extract-validate-store", "title": "Extract, validate in code, then store", "why": { "text": "Fields the model extracts are checked in code before they reach the sheet, and failures land in a review sheet.", "evidenceRefs": ["workflow:wf_17e0a499e621", "post:syn-w2-p04", "comment:syn-w2-p04-c4"] } }
+    ],
+    "discussionHighlights": [
+      { "text": "Classmates asked what happens after the last retry; the answer was a review sheet handled by hand.", "evidenceRefs": ["comment:syn-w2-p04-c2", "comment:syn-w2-p04-c4"] },
+      { "text": "Several replies pointed to checks that belong in code rather than in a judge's prompt.", "evidenceRefs": ["comment:syn-w2-p01-c1", "comment:syn-w2-p05-c1"] }
+    ],
+    "takeaways": [
+      { "title": "A high score isn't proof", "text": { "text": "A judge passed a reply that broke policy; hard rules belong in code or with a person.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] } },
+      { "title": "Cap the loop, then hand off", "text": { "text": "Give every retry loop a maximum and a place to go when it runs out.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p04", "workflow:wf_d1d310e6217a", "workflow:wf_17e0a499e621"] } },
+      { "title": "Test the failure path on purpose", "text": { "text": "Raise the threshold or feed a known-bad input to see what your safeguards catch.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p05"] } }
+    ]
+  },
+  "inventedCountClaim": { "text": "13 workflows used human approval this week.", "evidenceRefs": ["metric:capabilities.usesHumanApproval"] }
+}

@@ -11,6 +11,8 @@ JSON Schemas (draft 2020-12) in [`/schemas`](../schemas) define every object tha
 | `workflow-asset` | 03 - Profile Workflow Assets (inside `asset-manifest.assets`) | manifest |
 | `workflow-profile` | 03 - Profile Workflow Assets | metrics, spotlights, atlas |
 | `asset-manifest` | 03 - Profile Workflow Assets | metrics (`applyAssetManifest`), renderer |
+| `editorial-input` | `lib/editorial/input.ts` (from week dataset + manifest + profiles) | workflow 04 |
+| `editorial-draft` | 04 - Editorial Intelligence (status `human_review`) | Phase 5 human review |
 | `issue` | 04 + 05, after human approval | web issue, `newsletter.html` |
 
 All objects use `additionalProperties: false`. A field that isn't listed is rejected rather than ignored.
