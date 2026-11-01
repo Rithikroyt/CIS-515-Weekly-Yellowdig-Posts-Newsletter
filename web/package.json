@@ -10,13 +10,14 @@
     "test": "vitest run",
     "validate": "tsx scripts/validate-repo.ts",
     "fixtures:synthetic": "tsx scripts/make-synthetic-week2.ts",
-    "build:n8n": "tsx scripts/build-n8n.ts"
+    "build:n8n": "tsx scripts/build-n8n.ts",
+    "env:check": "tsx scripts/env-config.ts"
   },
   "dependencies": {
-    "next": "15.5.4",
+    "next": "15.5.28",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

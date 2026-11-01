@@ -10,13 +10,13 @@ n8n/docker-compose.yml            # local n8n
 n8n/workflows/newsletter.json     # exported workflow, credentials stripped
 web/                              # Next.js app
 web/public/issues/week-N/         # newsletter.html + issue.json per week
-.env.example                      # copy to .env
+.env.example                      # variable names only; copy to .env.local (git-ignored)
 ```
 
 ## Run n8n
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local   # fill secrets locally; never commit; check with: cd web && npm run env:check
 docker volume create n8n_data
 docker compose -f n8n/docker-compose.yml up -d
 ```

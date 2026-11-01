@@ -158,7 +158,7 @@
         "method": "GET",
         "url": "={{ $('Resolve Source Mode').first().json.request.url }}",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpTemplatedCustomAuth",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "specifyQuery": "keypair",
         "queryParameters": {
@@ -224,7 +224,7 @@
         "method": "GET",
         "url": "={{ $('Resolve Source Mode').first().json.request.url }}",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpTemplatedCustomAuth",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "specifyQuery": "keypair",
         "queryParameters": {
@@ -411,7 +411,7 @@
         -96
       ],
       "parameters": {
-        "content": "## 01 · Yellowdig Fetch Events\nReturns one **source bundle** (schemas/source-bundle.schema.json).\n\n- **fixture**: synthetic Week 2, no credential.\n- **yellowdig**: official API, needs the `Yellowdig API key` credential (templated header {\"headers\":{\"apikey\":\"{{api_key}}\"}}). Fails on 401/403.\n- **auto**: Yellowdig when `yellowdigCredentialConfigured` is true, otherwise fixture with `fallbackReason`.\n\nCode nodes are generated from `web/src/n8n/nodes/wf01.ts`. Do not edit them here.\nLive Yellowdig access is **not verified** yet.",
+        "content": "## 01 · Yellowdig Fetch Events\nReturns one **source bundle** (schemas/source-bundle.schema.json).\n\n- **fixture**: synthetic Week 2, no credential.\n- **yellowdig**: official API. Attach the n8n credential **Yellowdig CIS 515** (Header Auth, header name `apikey`) to Capability Probe and Fetch Event Pages. Never put the key in a node parameter. Fails on 401/403.\n- **auto**: Yellowdig when `yellowdigCredentialConfigured` is true, otherwise fixture with `fallbackReason`.\n\nCode nodes are generated from `web/src/n8n/nodes/wf01.ts`. Do not edit them here.\nLive Yellowdig access is **not verified** yet.",
         "color": 4,
         "width": 384,
         "height": 448
@@ -694,7 +694,7 @@
   "meta": {
     "observatory": {
       "workflowId": "dHZoXDny6WU1v62y",
-      "versionId": "22155f7d-f3e6-4ac3-9f32-f721064f5e7b",
+      "versionId": "2213285a-057a-4789-b98e-9838aca3b1b5",
       "sanitized": true,
       "note": "Credentials, pinned data, webhook ids and instance metadata removed. Code nodes are generated; see web/scripts/build-n8n.ts."
     }

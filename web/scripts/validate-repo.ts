@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadValidators, readJson, REPO_ROOT, type SchemaName } from "./schemas";
 import { generatedBundles } from "./export-n8n";
+import { ENV_KEYS, SECRET_KEYS, parseEnvFile, readLocalEnv } from "./env-config";
 
 const failures: string[] = [];
 const fail = (msg: string) => failures.push(msg);
@@ -83,6 +84,24 @@ tracked.forEach((f) => {
   (text.match(EMAIL) ?? []).filter((e) => !ALLOWED_EMAIL.test(e) && !/\.(png|svg|jpg)$/.test(e)).forEach((e) => fail(f + ": email address " + e.replace(/^(.).*@/, "$1***@")));
 });
 console.log("files scanned for secrets and emails:", tracked.length);
+
+// 5. Environment safety. Values are never printed; only key names and file paths are reported.
+const git = (args: string) => execSync("git " + args, { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+if (git("ls-files --cached -- .env.local .env .env.production")) fail(".env.local / .env is tracked or staged");
+try { git("check-ignore -q .env.local"); } catch { fail(".env.local is not ignored by .gitignore"); }
+const example = parseEnvFile(readFileSync(join(REPO_ROOT, ".env.example"), "utf8"));
+ENV_KEYS.forEach((k) => { if (!(k in example)) fail(".env.example is missing " + k); });
+SECRET_KEYS.forEach((k) => { if (example[k]) fail(".env.example has a value for secret " + k); });
+const publicSecret = new RegExp("NEXT_PUBLIC_\\w*(" + SECRET_KEYS.join("|") + "|API_KEY|TOKEN|SECRET|SALT)");
+tracked.forEach((f) => { if (publicSecret.test(readFileSync(join(REPO_ROOT, f), "utf8"))) fail(f + ": a secret is exposed through a NEXT_PUBLIC_ name"); });
+// Any secret pasted into .env.local must not appear verbatim in a tracked file.
+const local = readLocalEnv();
+const localSecrets = local ? SECRET_KEYS.filter((k) => (local[k] ?? "").length >= 8) : [];
+tracked.forEach((f) => {
+  const text = readFileSync(join(REPO_ROOT, f), "utf8");
+  localSecrets.forEach((k) => { if (text.includes(local![k])) fail(f + ": contains the value of " + k + " from .env.local"); });
+});
+console.log("env checks: .env.local ignored, .env.example complete, " + localSecrets.length + " local secret value(s) checked against tracked files");
 
 if (failures.length) {
   console.error("\nFAILED (" + failures.length + "):\n- " + failures.join("\n- "));

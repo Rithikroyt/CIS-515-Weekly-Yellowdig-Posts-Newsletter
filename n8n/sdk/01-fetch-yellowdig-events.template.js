@@ -70,13 +70,13 @@ const capabilityProbe = node({
       method: 'GET',
       url: expr("{{ $('Resolve Source Mode').first().json.request.url }}"),
       authentication: 'genericCredentialType',
-      genericAuthType: 'httpTemplatedCustomAuth',
+      genericAuthType: 'httpHeaderAuth',
       sendQuery: true,
       specifyQuery: 'keypair',
       queryParameters: { parameters: [{ name: 'limit', value: expr("{{ $('Resolve Source Mode').first().json.request.probeLimit }}") }] },
       options: { timeout: 30000, response: { response: { responseFormat: 'json' } } }
     },
-    credentials: { httpTemplatedCustomAuth: newCredential('Yellowdig API key') },
+    credentials: { httpHeaderAuth: newCredential('Yellowdig CIS 515') },
     position: [1100, 220]
   },
   output: [{ data: [], limit: 10, 'record-count': 0, cursor: 'c1', 'at-end': false }]
@@ -100,7 +100,7 @@ const fetchEventPages = node({
       method: 'GET',
       url: expr("{{ $('Resolve Source Mode').first().json.request.url }}"),
       authentication: 'genericCredentialType',
-      genericAuthType: 'httpTemplatedCustomAuth',
+      genericAuthType: 'httpHeaderAuth',
       sendQuery: true,
       specifyQuery: 'keypair',
       queryParameters: { parameters: [{ name: 'limit', value: expr("{{ $('Resolve Source Mode').first().json.request.pageSize }}") }] },
@@ -120,7 +120,7 @@ const fetchEventPages = node({
         }
       }
     },
-    credentials: { httpTemplatedCustomAuth: newCredential('Yellowdig API key') },
+    credentials: { httpHeaderAuth: newCredential('Yellowdig CIS 515') },
     position: [1540, 140]
   },
   output: [{ data: [], limit: 250, 'record-count': 0, cursor: null, 'at-end': true }]
@@ -189,7 +189,7 @@ const overview = sticky(
   '## 01 · Yellowdig Fetch Events\n' +
   'Returns one **source bundle** (schemas/source-bundle.schema.json).\n\n' +
   '- **fixture**: synthetic Week 2, no credential.\n' +
-  '- **yellowdig**: official API, needs the `Yellowdig API key` credential (templated header {"headers":{"apikey":"{{api_key}}"}}). Fails on 401/403.\n' +
+  '- **yellowdig**: official API. Attach the n8n credential **Yellowdig CIS 515** (Header Auth, header name `apikey`) to Capability Probe and Fetch Event Pages. Never put the key in a node parameter. Fails on 401/403.\n' +
   '- **auto**: Yellowdig when `yellowdigCredentialConfigured` is true, otherwise fixture with `fallbackReason`.\n\n' +
   'Code nodes are generated from `web/src/n8n/nodes/wf01.ts`. Do not edit them here.\n' +
   'Live Yellowdig access is **not verified** yet.',

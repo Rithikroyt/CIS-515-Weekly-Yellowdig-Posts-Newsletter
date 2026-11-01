@@ -14,6 +14,30 @@ The repository is **public**. Anything committed is published.
 | n8n credentials and pinned execution data | **Enforced:** `npm run validate` fails on any export with `credentials` or `pinData`. |
 | Unapproved drafts, comments and assets | Drafts stay in n8n data tables until approved. **Enforced:** `npm run validate` fails if a public `issue.json` isn't approved. |
 
+## Secrets and environments
+
+| Where | What it holds | Rules |
+|---|---|---|
+| `.env.local` (repo root) | Local development and local probe secrets | Git-ignored. `npm run validate` fails if it is tracked or staged, or if any of its secret values appear in a tracked file. |
+| `.env.example` | Variable **names** and safe defaults only | Committed. `npm run validate` fails if a secret key has a value or a known name is missing. |
+| n8n Credentials | Production secrets for workflows, e.g. `Yellowdig CIS 515` (Header Auth, `apikey`) | Never copied into node parameters, workflow JSON, exports or pinned data. |
+| Deployment secret store (future Vercel) | Webhook secret and server-only settings | Never `NEXT_PUBLIC_*`. `npm run validate` rejects any `NEXT_PUBLIC_` name that looks like a secret. |
+
+**Never exposed.** These values are never sent to the browser, React props, JSON responses, logs, tests, fixtures, docs, generated newsletters or terminal output:
+
+- `YELLOWDIG_API_KEY`, `N8N_API_KEY`
+- the LLM keys and `GITHUB_TOKEN`
+- `N8N_WEBHOOK_SECRET`, `PSEUDONYMIZATION_SALT`
+
+`npm run env:check` reports each key as `configured` or `missing`, never its value.
+
+**n8n access.**
+
+- **Development:** n8n is managed through the n8n MCP server (instance token entered through a VS Code prompt, not stored in files).
+- **REST API key:** the n8n REST API key (`N8N_API_KEY`) is private, for local scripts only. The website will never use it or `X-N8N-API-KEY`.
+- **Website-triggered runs (future):** professor browser → Next.js server route → private webhook authentication (`N8N_WEBHOOK_SECRET`) → n8n production webhook.
+- **Week selector:** the professor's week selector only loads already-approved issues. It never calls Yellowdig, n8n or an LLM.
+
 ## Source privacy boundary (Phase 2)
 
 - **Allowlist only.** Raw Yellowdig events are mapped through an allowlist in `lib/source/fields.ts`. Everything else is dropped in the first n8n Code node after the HTTP request: SIS ids, LTI fields, emails, receiver data, community and network data, and profile fields.
@@ -46,3 +70,15 @@ The repository is **public**. Anything committed is published.
 5. Both files are committed through the GitHub Contents API, with the file SHA to prevent overwriting newer content. A fine-grained token with Contents permission on this repository only is kept in n8n.
 6. A Gmail draft, not a sent message, is created for the instructor to send.
 7. The idempotency key prevents a second publish of the same input.
+
+## Dependency advisories (security checkpoint, 2026-11-01)
+
+| Package | Status |
+|---|---|
+| `next` | Upgraded 15.5.4 → 15.5.28. The critical React-flight RCE and Server Actions source-exposure advisories are fixed. |
+| `zod` | Upgraded 3.25.76 → 4.6.7, which fixes the memory-exhaustion advisory. Only `web/src/lib/contracts` uses Zod. The n8n bundles use the schema-file validator, not Zod. All tests pass unchanged. |
+| `sharp` | Updated to 0.35.5, inside Next's own declared range (`^0.34.3 \|\| ^0.35.5`). The libvips and libheif advisories are fixed. The app does not use `next/image`. |
+| `postcss` (bundled by Next, pinned at 8.4.31) | **HIGH, still open.** The only fix offered is Next 16, a major upgrade, so nothing was forced. Exposure is limited: Next runs this copy only to compile the project's own CSS at build time, and student content never reaches CSS. Decide on Next 16 before any public deployment. |
+| `vitest`, `tinypool` | **Critical, dev-only.** The fix is vitest 5 (major). They never ship in the app. Run tests only on trusted code. |
+
+`npm audit fix --force` was not used.
