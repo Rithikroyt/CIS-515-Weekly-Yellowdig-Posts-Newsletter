@@ -1,0 +1,6 @@
+# Generated n8n code and exports are compared byte-for-byte by tests and npm run validate.
+n8n/src/generated/** text eol=lf
+n8n/workflows/** text eol=lf
+n8n/sdk/** text eol=lf
+schemas/** text eol=lf
+fixtures/** text eol=lf
