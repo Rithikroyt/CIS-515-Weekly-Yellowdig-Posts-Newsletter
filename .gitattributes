@@ -4,3 +4,5 @@ n8n/workflows/** text eol=lf
 n8n/sdk/** text eol=lf
 schemas/** text eol=lf
 fixtures/** text eol=lf
+web/public/issues/** text eol=lf
+web/content/** text eol=lf

@@ -11,6 +11,7 @@
     "validate": "tsx scripts/validate-repo.ts",
     "fixtures:synthetic": "tsx scripts/make-synthetic-week2.ts",
     "build:n8n": "tsx scripts/build-n8n.ts",
+    "issues:render": "tsx scripts/render-issues.ts",
     "env:check": "tsx scripts/env-config.ts"
   },
   "dependencies": {
