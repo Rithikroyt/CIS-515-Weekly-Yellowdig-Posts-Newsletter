@@ -143,6 +143,11 @@ tracked.forEach((f) => {
 });
 console.log("files scanned for secrets and emails:", tracked.length);
 
+// 4b. Class images stay on the user's computer: no image files and no HTML with embedded images in the repository.
+const allFiles = execSync("git ls-files --cached --others --exclude-standard", { cwd: REPO_ROOT, encoding: "utf8" }).split("\n").filter(Boolean);
+allFiles.filter((f) => /\.(png|jpe?g|webp|gif|heic|bmp|tiff?)$/i.test(f) && !/^web\/(public|src\/app)\/[^/]*\.(png|ico)$/i.test(f)).forEach((f) => fail(f + ": image files must not be committed (class images stay local)"));
+tracked.filter((f) => /\.html?$/i.test(f)).forEach((f) => { if (/data:image\/[a-z]+;base64,/.test(readFileSync(join(REPO_ROOT, f), "utf8"))) fail(f + ": HTML with embedded images must not be committed"); });
+
 // 5. Environment safety. Values are never printed; only key names and file paths are reported.
 const git = (args: string) => execSync("git " + args, { cwd: REPO_ROOT, encoding: "utf8" }).trim();
 if (git("ls-files --cached -- .env.local .env .env.production")) fail(".env.local / .env is tracked or staged");

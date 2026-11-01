@@ -1,6 +1,33 @@
 # Yellowdig attachment source: decision record
 
-**Status: open.** We do not yet know how the instructor's n8n workflow obtained the post images and workflow files
+**Status: decided (2026-11-01). Class images are inserted locally into the finished HTML.**
+
+## Professor's method — VERIFIED FROM PROFESSOR
+
+Professor Stone, on how the Week 2 reference issue was made:
+
+- The majority of the newsletter was automated in an n8n workflow.
+- He originally planned to automate image handling as well.
+- He was concerned about uploading class photos to external software, so he added the class images to the HTML
+  manually at the final stage.
+- He said not everything needs to be built in n8n.
+
+**Decision.**
+
+| Option | Status |
+|---|---|
+| Yellowdig internal GraphQL attachment automation (`FetchBoardPostDetail`) | **RESEARCHED BUT NOT REQUIRED.** Investigation stopped; no 01A workflow, no session handling. The temporary test workflow is archived. |
+| Local image insertion into the generated HTML (`npm run newsletter:finalize-images`) | **SELECTED IMPLEMENTATION.** |
+
+This choice is about privacy and matching the professor's method, not about technical inability. Class images are
+chosen by a person and embedded on their own computer; they are never sent to an AI model, n8n, Vercel, cloud
+storage or GitHub. How it works is in `docs/newsletter-generator.md` (*Images*).
+
+---
+
+## Earlier analysis (kept for the record)
+
+**Status before the decision: open.** We do not yet know how the instructor's n8n workflow obtained the post images and workflow files
 embedded in the Week 2 reference issue (27 posts, 21 workflow files, 115 images, images inlined as Base64). This
 document lists the candidate sources so the choice can be made once that is known.
 

@@ -97,6 +97,30 @@ const imgTag = (i: { src: string; alt: string }, maxH: number) =>
   '<div style="text-align:center;background:#F7F7F7;border:1px solid ' + RULE + '"><img src="' + i.src + '" alt="' + esc(i.alt) +
   '" style="display:inline-block;max-width:100%;max-height:' + maxH + 'px;width:auto;height:auto;border:0;vertical-align:top"></div>';
 
+/** The hero image with its credit line; shared with the local image finalizer so both produce identical markup. */
+export function heroBlock(img: { src: string; alt: string }, credit: string | null, href: string | null): string {
+  return '<div class="keep" style="margin:6px 0 18px">' + (href ? '<a href="' + href + '" style="text-decoration:none">' + imgTag(img, 360) + "</a>" : imgTag(img, 360)) +
+    (credit ? '<div style="font-family:' + SANS + ";font-size:11px;color:" + MUTED + ';padding-top:6px">' + credit + "</div>" : "") + "</div>";
+}
+
+/** A spotlight's image, linked to its post when the link is verified; shared with the local image finalizer. */
+export function spotlightImageBlock(img: { src: string; alt: string }, href: string | null): string {
+  return '<div style="margin:0 0 16px">' + (href ? '<a href="' + href + '" style="text-decoration:none">' + imgTag(img, 340) + "</a>" : imgTag(img, 340)) + "</div>";
+}
+
+/** Credit line under the hero: "From <author>'s post, <title>". Inputs are plain text and escaped here. */
+export const heroCredit = (author: string, title: string) => "From " + esc(trunc(author, 80)) + "&#39;s post, <i>" + esc(trunc(title, 120)) + "</i>";
+
+/**
+ * An image slot: an invisible marker where a real class image can be inserted later on the user's own computer
+ * (scripts/finalize-newsletter-images.ts). It takes no space, so the issue reads as finished without images.
+ * Slot ids are deterministic: "hero", then "spotlight-1" … in spotlight order.
+ */
+export function slotMarker(slot: string, attrs: Record<string, string | null>): string {
+  const a = Object.entries(attrs).filter(([, v]) => v !== null).map(([k, v]) => " data-" + k + '="' + esc(v) + '"').join("");
+  return '<div class="img-slot" data-slot="' + esc(slot) + '"' + a + ' style="display:none"></div>';
+}
+
 const STYLE = [
   "@media only screen and (max-width: 620px) { .pad { padding: 24px 18px 32px !important; } .h1 { font-size: 32px !important; } .dek { font-size: 17px !important; } .num { font-size: 24px !important; } .lbl { font-size: 9px !important; letter-spacing: 0 !important; } .stat { padding-left: 8px !important; } .mast td { display: block !important; text-align: left !important; padding-bottom: 4px !important; } .two td { display: block !important; width: 100% !important; padding: 0 0 18px !important; } img { max-width: 100% !important; height: auto !important; } }",
   // Pagination rules apply to screen-media PDF rendering too, so they are not inside @media print.
@@ -176,12 +200,9 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const hero = heroChoice && posts.has(heroChoice.postRef) ? imageFor(heroChoice, heroChoice.postRef) : null;
   let imagesShown = 0;
   if (hero) {
-    const link = href(heroChoice!.postRef);
-    const credit = "From " + esc(trunc(author(heroChoice!.postRef), 80)) + "&#39;s post, <i>" + esc(trunc(posts.get(heroChoice!.postRef)!.title, 120)) + "</i>";
-    push('<div class="keep" style="margin:6px 0 18px">' + (link ? '<a href="' + link + '" style="text-decoration:none">' + imgTag(hero, 360) + "</a>" : imgTag(hero, 360)) +
-      '<div style="font-family:' + SANS + ";font-size:11px;color:" + MUTED + ';padding-top:6px">' + credit + "</div></div>");
+    push(heroBlock(hero, heroCredit(author(heroChoice!.postRef), posts.get(heroChoice!.postRef)!.title), href(heroChoice!.postRef)));
     imagesShown++;
-  }
+  } else push(slotMarker("hero", {}));
   push('<p style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';margin:0 0 24px">Built with n8n &mdash; drafted by AI, checked by code against the week&#39;s posts.</p>');
   push("</td></tr>");
 
@@ -233,7 +254,8 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
     b.push('<h2 style="font-family:' + SERIF + ";font-weight:normal;font-size:27px;line-height:1.15;color:" + INK + ';margin:4px 0 6px">' + esc(trunc(p.title, 140)) + "</h2>");
     b.push('<div style="font-family:' + SANS + ";font-size:13px;color:" + MUTED + ';margin:0 0 16px">' + esc(trunc(p.authorName, 80)) + " &middot; " + esc(p.commentCount) + (p.commentCount === 1 ? " comment" : " comments") +
       " &middot; " + (prof ? "pipeline read from the workflow file" : "pipeline as described in the post") + "</div>");
-    if (img) { b.push('<div style="margin:0 0 16px">' + (link ? '<a href="' + link + '" style="text-decoration:none">' + imgTag(img, 340) + "</a>" : imgTag(img, 340)) + "</div>"); imagesShown++; }
+    if (img) { b.push(spotlightImageBlock(img, link)); imagesShown++; }
+    else b.push(slotMarker("spotlight-" + (shown.length + 1), { "post-ref": s.postRef, author: p.authorName, title: p.title, href: link ? o.postUrls![s.postRef] : null }));
     b.push("</div>");
     b.push(para(text, 15));
     if (prof) b.push(chips(prof.mainPath));

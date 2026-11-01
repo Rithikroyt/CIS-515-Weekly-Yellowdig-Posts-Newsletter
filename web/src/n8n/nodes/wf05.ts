@@ -73,7 +73,9 @@ export const collectAssets: NodeEntry = (ctx) => {
     const fixture: WeekAssets = { ...NO_ASSETS, manifest: syntheticManifest as unknown as AssetManifest, profiles: syntheticProfiles as unknown as WorkflowProfile[], coverageComplete: true };
     return [fixture as unknown as J];
   }
-  return [collectWeekAssets(ctx.items, req.week) as unknown as J];
+  // Privacy: class images never enter n8n. Only workflow profiles (from explicitly supplied files) are used; images
+  // are added after generation, on the user's computer, by scripts/finalize-newsletter-images.ts.
+  return [{ ...collectWeekAssets(ctx.items, req.week), images: [], bank: {} } as unknown as J];
 };
 
 /** Builds the deterministic editorial input from the week dataset and the stored asset manifest and profiles. */

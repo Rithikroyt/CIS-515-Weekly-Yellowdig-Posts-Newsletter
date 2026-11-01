@@ -106,7 +106,9 @@ async function main() {
   const okImages = images.filter((x) => entries[x.index]?.status === "VALIDATED");
   const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles, coverageComplete: manifest.coverageComplete }), source: "private_asset_store" }];
   let stripped = 0;
-  for (const x of featured(okImages)) {
+  // Privacy: class images are no longer stored in n8n; they are checked and counted here, then inserted into the
+  // finished HTML locally with `npm run newsletter:finalize-images`. Only the manifest and workflow profiles upload.
+  for (const x of process.argv.includes("--store-synthetic-test-images") ? featured(okImages) : []) {
     const payload = await optimize(x.buf);
     const meta = await sharp(Buffer.from(payload.split(",")[1], "base64")).metadata();
     if (!meta.exif && !meta.icc && !meta.xmp && !meta.iptc) stripped++;

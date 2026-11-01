@@ -12,6 +12,7 @@
     "fixtures:synthetic": "tsx scripts/make-synthetic-week2.ts",
     "build:n8n": "tsx scripts/build-n8n.ts",
     "assets:upload": "tsx scripts/assets-upload.ts",
+    "newsletter:finalize-images": "tsx scripts/finalize-newsletter-images.ts",
     "env:check": "tsx scripts/env-config.ts"
   },
   "dependencies": {

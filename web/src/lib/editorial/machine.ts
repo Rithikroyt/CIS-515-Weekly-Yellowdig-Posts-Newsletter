@@ -365,6 +365,12 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
  * A week without images skips straight to selection.
  */
 function enterImages(s: RunState): RunState {
+  // Privacy: real class images are never sent to an external model. The curator runs only on synthetic test data;
+  // real weeks get images inserted by a person on their own computer (scripts/finalize-newsletter-images.ts).
+  if (s.input.sourceStatus.provider !== "synthetic-fixture") {
+    s.imageBatches = []; s.imageBatchIndex = 0; s.phase = "selection"; chooseImages(s);
+    return s;
+  }
   const idx = indexInput(s.input);
   const noteOf = new Map(s.notes.map((n) => [n.postRef, n]));
   const order = new Map(s.input.posts.map((p, i) => [p.postRef, i]));

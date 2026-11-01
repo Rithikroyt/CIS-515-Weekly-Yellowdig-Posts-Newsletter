@@ -50,7 +50,40 @@ Matches the instructor's Week 2 reference (audit: [`newsletter-quality-gap.md`](
 - Each spotlight: group and label, title, author, comment count, "pipeline read from the workflow file" or "as described in the post", screenshot (max 340 px tall, linked to the post), architecture text, pipeline chips (only from a workflow file), control note, What the test showed, From the thread, Worth borrowing, Read the post link. Missing editor copy falls back to the evidence-screened post notes and discussion insights; the section is never dropped.
 - Images: only `data:image/png|jpeg|webp` URIs of real post images, each shown only for its own post, scaled to fit the 544 px column and a height cap (never cropped), with the curator's or the intake alt text. No stock, decorative or AI-generated images.
 
-## Images: acquisition and curation (two separate problems)
+## Images: inserted locally after generation (selected method)
+
+Class images never leave the user's computer. Workflow 05 generates the full issue with **image slots**: invisible
+markers (`<div class="img-slot" data-slot="…" style="display:none">`) that take no space, so the issue reads as
+finished without images. Slot ids are fixed: `hero`, then `spotlight-1` … `spotlight-6` in spotlight order; each
+spotlight slot also carries its post ref, author, title and verified post link.
+
+Then, locally:
+
+```bash
+cd web
+npm run newsletter:finalize-images -- --html issue.html --list            # see the slots
+npm run newsletter:finalize-images -- --html issue.html --assets <folder> [--out final.html] [--pdf final.pdf]
+```
+
+`<folder>/images.json` (keep the folder outside the repository; the script refuses paths inside it):
+
+```json
+{ "hero": { "file": "hero.png", "from": "spotlight-2", "alt": "…" },
+  "spotlights": { "spotlight-1": "canvas.png", "post:<id>": { "file": "run.jpg", "alt": "…" } } }
+```
+
+Keys are slot ids or a spotlight's post ref; unknown keys stop the run. Each file must really decode as PNG, JPEG or
+WebP (max 15 MB, 60 MP); orientation is applied, all metadata (EXIF, GPS, ICC, XMP, IPTC) is dropped and checked,
+images are only scaled down (max 1088 px wide, never cropped) and embedded as `data:image/png|jpeg;base64` using the
+renderer's own image blocks. `hero.from` names the spotlight the hero comes from, for its credit line and link.
+`--pdf` uses the app's PDF path (scripts off, network blocked; set `CHROME_EXECUTABLE_PATH`). Empty slots stay
+invisible.
+
+Privacy guards in code: the Image Curator runs only on synthetic test data (never on real weeks); workflow 05 ignores
+any stored image rows for real weeks; `assets:upload` no longer stores images in n8n (workflow files are still
+checked and profiled there); `validate-repo` fails on committed image files or HTML with embedded images.
+
+## Images: acquisition and curation (synthetic and fallback paths)
 
 **Acquisition** (`web/src/lib/assets/intake.ts`). Two adapters produce one canonical image record (`assetRef, postRef, source, mimeType, width, height, role, altText`; bytes kept separately by `assetRef`):
 

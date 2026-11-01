@@ -1,5 +1,5 @@
 // Renders a synthetic issue (mock provider) to a file, for visual checks. Invented data only.
-// Usage (from web/): npx tsx scripts/render-synthetic.ts <out.html> [scenario] [--reference]
+// Usage (from web/): npx tsx scripts/render-synthetic.ts <out.html> [scenario] [--reference [--slots]]
 // --reference renders the 27-post reference-sized week with drawn placeholder screenshots (clearly labelled
 // synthetic) flowing through the same asset, curator, selection and renderer path as real post images.
 import { writeFileSync } from "node:fs";
@@ -38,6 +38,17 @@ function drawing(s: ReferenceImageSpec): { svg: string; w: number; h: number } {
 async function main() {
   const out = process.argv[2];
   if (!out) throw new Error("usage: render-synthetic.ts <out.html> [scenario] [--reference]");
+  if (process.argv.includes("--reference") && process.argv.includes("--slots")) {
+    // As a real week arrives now: no images reach the generator, so every image position is a slot to fill locally.
+    const week = referenceWeek();
+    const input = E.buildEditorialInput({ dataset: week.dataset, manifest: week.manifest, profiles: week.profiles, images: [], course: { ...E.SYNTHETIC_COURSE }, coverageComplete: false });
+    const draft = await E.runEditorial({ input, provider: E.createMockProvider(week.scenario), now: () => "2026-11-01T12:00:00Z" });
+    const r = renderNewsletter({ input, draft });
+    assertPublicationQuality(input, r);
+    writeFileSync(out, r.html);
+    console.log(r.status, "bytes:", r.html.length, JSON.stringify(r.quality));
+    return;
+  }
   if (process.argv.includes("--reference")) {
     const week = referenceWeek();
     const imageBank: Record<string, string> = {};
