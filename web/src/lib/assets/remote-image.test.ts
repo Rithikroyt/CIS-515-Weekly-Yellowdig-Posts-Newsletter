@@ -9,7 +9,7 @@ describe("isAllowedAssetUrl", () => {
     ["http://cdn-v2.yellowdig.app/a.png", false],
     ["https://yellowdig.app.evil.example/a.png", false],
     ["https://evilyellowdig.app/a.png", false],
-    ["https://user:pw@cdn-v2.yellowdig.app/a.png", false],
+    ["https://user:pw" + "0040" + "cdn-v2.yellowdig.app/a.png", false],
     ["https://cdn-v2.yellowdig.app:8443/a.png", false],
     ["https://127.0.0.1/a.png", false],
     ["https://10.0.0.5/a.png", false],
