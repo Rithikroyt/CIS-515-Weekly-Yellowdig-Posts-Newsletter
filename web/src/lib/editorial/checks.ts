@@ -91,7 +91,7 @@ const HEDGE_RE = /\b(says|said|describes|described|reports|reported|plans?|plann
 const TREND_RE = /\b(than last week|previous week|prior week|week over week|compared (to|with) (last|previous|earlier|week)|(rose|fell|grew|increased|decreased|improved|declined) (from|by|to|since)|more and more|on the rise)\b/i;
 const OVERBROAD_RE = /\b((every|all|most) (students?|classmates|builds?|workflows?|posts?|teams?)|the whole class|the entire class|everyone|everybody)\b/i;
 const STYLE_RE = /\b(in today's rapidly evolving|leverag(e|ing) the power of|revolutionary|game[- ]changing|delve|transformative journey|cutting[- ]edge|unlock the (full )?potential)\b/i;
-const RANKING_RE = /\b(best (student|workflow|build)|top (student|performer)|worst|weakest|lowest quality)\b/i;
+const RANKING_RE = /\b(best (students?|workflows?|builds?)|top (students?|performers?|builds?)|worst|weakest|lowest quality)\b/i;
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function sourceText(idx: RefIndex, ref: string): string {

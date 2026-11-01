@@ -192,11 +192,31 @@ const runNormalize = node({
   output: [{}]
 });
 
+const findWeekAssets = node({
+  type: 'n8n-nodes-base.dataTable',
+  version: 1.1,
+  config: {
+    name: 'Find Week Assets', position: [3060, 120], alwaysOutputData: true,
+    parameters: {
+      resource: 'row', operation: 'get', dataTableId: { __rl: true, mode: 'id', value: 'IrcjvrqKzY70YB8R', cachedResultName: 'newsletter_assets' }, matchType: 'allConditions',
+      filters: { conditions: [{ keyName: 'week', condition: 'eq', keyValue: expr("{{ $('Route Request').first().json.week }}") }] }, returnAll: true
+    }
+  },
+  output: [{ week: 2, kind: 'bundle', post_id: '', role: '', alt: '', payload: '{}' }]
+});
+
+const collectAssets = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: { name: 'Collect Assets', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: "// wf05.collectAssets: replaced with n8n/src/generated/wf05/collectAssets.js after creation" }, position: [3280, 120], onError: 'continueErrorOutput' },
+  output: [{}]
+});
+
 const stageGenerating = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
   config: {
-    name: 'Stage: Generating Editorial', position: [3060, 120], executeOnce: true,
+    name: 'Stage: Generating Editorial', position: [3500, 120], executeOnce: true,
     parameters: {
       resource: 'row', operation: 'update', dataTableId: { __rl: true, mode: 'id', value: 'uWls7HHm5Ek7u1SQ', cachedResultName: 'newsletter_runs' }, matchType: 'allConditions', filters: { conditions: [{ keyName: 'run_id', condition: 'eq', keyValue: expr("{{ $('Route Request').first().json.runId }}") }] },
       columns: { mappingMode: 'defineBelow', value: { status: 'generating_editorial' }, schema: [{ id: 'status', displayName: 'status', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }] }
@@ -208,7 +228,7 @@ const stageGenerating = node({
 const editorialRequest = node({
   type: 'n8n-nodes-base.code',
   version: 2,
-  config: { name: 'Editorial Request', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: "// wf05.editorialRequest: replaced with n8n/src/generated/wf05/editorialRequest.js after creation" }, position: [3280, 120], onError: 'continueErrorOutput' },
+  config: { name: 'Editorial Request', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: "// wf05.editorialRequest: replaced with n8n/src/generated/wf05/editorialRequest.js after creation" }, position: [3720, 120], onError: 'continueErrorOutput' },
   output: [{}]
 });
 
@@ -216,7 +236,7 @@ const runEditorial = node({
   type: 'n8n-nodes-base.executeWorkflow',
   version: 1.2,
   config: {
-    name: 'Run 04 Editorial Intelligence', position: [3500, 120], onError: 'continueErrorOutput',
+    name: 'Run 04 Editorial Intelligence', position: [3940, 120], onError: 'continueErrorOutput',
     parameters: { source: 'database', workflowId: { __rl: true, mode: 'id', value: 'U2uwnaV09NohVmjn' }, mode: 'once', options: { waitForSubWorkflow: true } }
   },
   output: [{}]
@@ -226,7 +246,7 @@ const stageRendering = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
   config: {
-    name: 'Stage: Rendering', position: [3720, 120], executeOnce: true,
+    name: 'Stage: Rendering', position: [4160, 120], executeOnce: true,
     parameters: {
       resource: 'row', operation: 'update', dataTableId: { __rl: true, mode: 'id', value: 'uWls7HHm5Ek7u1SQ', cachedResultName: 'newsletter_runs' }, matchType: 'allConditions', filters: { conditions: [{ keyName: 'run_id', condition: 'eq', keyValue: expr("{{ $('Route Request').first().json.runId }}") }] },
       columns: { mappingMode: 'defineBelow', value: { status: 'rendering' }, schema: [{ id: 'status', displayName: 'status', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }] }
@@ -238,7 +258,7 @@ const stageRendering = node({
 const renderArtifact = node({
   type: 'n8n-nodes-base.code',
   version: 2,
-  config: { name: 'Render Artifact', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: "// wf05.renderArtifact: replaced with n8n/src/generated/wf05/renderArtifact.js after creation" }, position: [3940, 120], onError: 'continueErrorOutput' },
+  config: { name: 'Render Artifact', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: "// wf05.renderArtifact: replaced with n8n/src/generated/wf05/renderArtifact.js after creation" }, position: [4380, 120], onError: 'continueErrorOutput' },
   output: [{}]
 });
 
@@ -246,7 +266,7 @@ const saveResult = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
   config: {
-    name: 'Save Result', position: [4160, 120],
+    name: 'Save Result', position: [4600, 120],
     parameters: {
       resource: 'row', operation: 'update', dataTableId: { __rl: true, mode: 'id', value: 'uWls7HHm5Ek7u1SQ', cachedResultName: 'newsletter_runs' }, matchType: 'allConditions', filters: { conditions: [{ keyName: 'run_id', condition: 'eq', keyValue: expr("{{ $('Route Request').first().json.runId }}") }] },
       columns: {
@@ -282,7 +302,7 @@ const saveFailure = node({
 const overview = sticky(
   '## 05 · Generate Newsletter\n' +
   'One authenticated webhook (Header Auth credential) with three actions: generate {week, runId}, status {runId}, artifact {runId}. Called only by the Next.js server.\n\n' +
-  'generate validates the week (1-5, topic configured in web/src/lib/weeks.ts), reuses an in-progress run for that week, inserts a newsletter_runs row and responds at once. It then runs 01 Fetch (Yellowdig only, no fixture fallback) -> 02 Normalize -> editorial input (no workflow files, so no profile claims) -> 04 Editorial Intelligence (Gemini, evidence review, at most 2 revisions) -> render (web/src/lib/render/newsletter.ts) -> store the HTML. Any failure stores failed with a safe code.\n\n' +
+  'generate validates the week (1-5, topic configured in web/src/lib/weeks.ts), reuses an in-progress run for that week, inserts a newsletter_runs row and responds at once. It then runs 01 Fetch (Yellowdig only, no fixture fallback) -> 02 Normalize -> week assets from newsletter_assets (workflow profiles and screenshots stored by the private intake script; none means coverage unknown) -> editorial input -> 04 Editorial Intelligence (Gemini, evidence review, at most 2 revisions) -> render (web/src/lib/render/newsletter.ts) -> store the HTML. Any failure stores failed with a safe code.\n\n' +
   'Statuses: queued, fetching_yellowdig, generating_editorial, rendering, ready, ready_with_omissions, failed. The manual trigger runs the synthetic fixture with the mock model only.',
   [webhook, manualTest, routeRequest],
   { color: 4 }
@@ -304,6 +324,9 @@ export default workflow('wf05-generate-newsletter', '05 - Generate Newsletter')
   .add(runFetch.onError(failRun))
   .to(runNormalize)
   .add(runNormalize.onError(failRun))
+  .to(findWeekAssets)
+  .to(collectAssets)
+  .add(collectAssets.onError(failRun))
   .to(stageGenerating)
   .to(editorialRequest)
   .add(editorialRequest.onError(failRun))

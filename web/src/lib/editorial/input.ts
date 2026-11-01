@@ -38,8 +38,9 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
     { ref: "metric:uniqueCommenters", label: "Distinct commenters", value: m.uniqueCommenters },
     { ref: "metric:reactions", label: "Reactions (null when the source has none)", value: m.reactions },
     { ref: "metric:views", label: "Views (null when the source has none)", value: m.views },
-    { ref: "metric:workflowFiles", label: "Workflow files profiled and matched to a post", value: m.workflowFiles },
-    { ref: "metric:screenshots", label: "Validated screenshots matched to a post", value: m.screenshots },
+    // Without an asset batch for the week, file and image coverage is unknown (null), not zero.
+    { ref: "metric:workflowFiles", label: "Workflow files profiled and matched to a post", value: src.manifest ? m.workflowFiles : null },
+    { ref: "metric:screenshots", label: "Validated screenshots matched to a post", value: src.manifest ? m.screenshots : null },
     { ref: "metric:avgCommentsPerPost", label: "Average comments per post", value: m.avgCommentsPerPost },
     ...Object.entries(m.signals).map(([k, v]) => ({ ref: "metric:signals." + k, label: "Profiled builds with signal " + k, value: v })),
     ...CAPABILITY_KEYS.map((k: CapabilityKey) => ({ ref: "metric:capabilities." + k, label: "Profiled builds where " + k + " is true", value: used.filter((p) => p.capabilities[k]).length })),
@@ -75,6 +76,8 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
         bodyTruncated: body.truncated,
         commentCount: p.metrics.commentCount,
         workflowProfileRef: prof ? "workflow:" + prof.profileId : null,
+        screenshotCount: src.manifest ? p.assets.screenshots.length : null,
+        sourceUrlVerified: p.source.sourceUrlVerified,
         comments: p.comments.slice(0, INPUT_LIMITS.commentsPerPost).map((c) => {
           const cb = cut(c.body, INPUT_LIMITS.commentBodyChars);
           return { commentRef: "comment:" + c.commentId, authorRef: "person:" + c.author.id, authorName: c.author.displayName, body: cb.text, bodyTruncated: cb.truncated };

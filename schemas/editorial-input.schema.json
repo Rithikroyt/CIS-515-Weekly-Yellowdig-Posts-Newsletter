@@ -66,6 +66,8 @@
           "bodyTruncated": { "type": "boolean" },
           "commentCount": { "type": "integer", "minimum": 0 },
           "workflowProfileRef": { "oneOf": [{ "$ref": "#/$defs/workflowRef" }, { "type": "null" }] },
+          "screenshotCount": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+          "sourceUrlVerified": { "type": "boolean" },
           "comments": {
             "type": "array",
             "maxItems": 25,

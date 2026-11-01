@@ -271,8 +271,8 @@ describe("normalization and joins", () => {
     const odd = { ...b, events: [...b.events, { ...b.events[0], eventId: "zz", type: "mystery" as "post" }] };
     expect(normalizeBundle(odd).diagnostics.unknownEventTypes).toBe(3);
   });
-  it("never builds a source URL until the format is verified", () => {
-    expect(yellowdigPostUrl("n", "c", "p")).toBeNull();
+  it("builds post links in the verified ?postId= format, and never for synthetic data", () => {
+    expect(yellowdigPostUrl("carey-school-of-business", "c-1", "p 1")).toBe("https://yellowdig.app/n/carey-school-of-business/community/c-1?postId=p%201");
     const ds = normalizeBundle(fixtureRun());
     ds.posts.forEach((p) => {
       expect(p.sourceUrl).toBeNull();

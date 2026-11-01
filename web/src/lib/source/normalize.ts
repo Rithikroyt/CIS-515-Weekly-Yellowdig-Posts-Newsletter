@@ -62,7 +62,8 @@ export function stageJoin(c: ClassifiedEvents) {
     if (posts.has(postId)) { duplicatePostEvents += 1; return; }
     if (!e.actor) { orphans.push({ eventId: e.eventId, type: e.type, reason: "MISSING_AUTHOR" }); return; }
     const topic = e.topics.find((t) => postMatchesTopic({ ...e, topics: [t] }, bundle.topic, bundle.topicId)) ?? e.topics[0] ?? { id: null, name: bundle.topic };
-    const url = yellowdigPostUrl(bundle.network, bundle.communityId, postId);
+    // Links only for real Yellowdig posts; synthetic ids would make fabricated links.
+    const url = bundle.provider === "yellowdig-api" ? yellowdigPostUrl(bundle.network, bundle.communityId, postId) : null;
     posts.set(postId, {
       schemaVersion: NORMALIZED_POST_VERSION,
       postId,

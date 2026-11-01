@@ -110,6 +110,7 @@
       }
     ]
   },
+  "buildGroups": {"groups": [{"title": "Personal planning and food", "postRefs": ["post:syn-w2-p01", "post:syn-w2-p02"]}, {"title": "News and research", "postRefs": ["post:syn-w2-p03", "post:syn-w2-p07"]}, {"title": "Finance and operations", "postRefs": ["post:syn-w2-p04", "post:syn-w2-p08"]}, {"title": "Customer support", "postRefs": ["post:syn-w2-p05"]}]},
   "themes": {
     "themes": [
       {
@@ -220,7 +221,8 @@
       { "title": "A high score isn't proof", "text": { "text": "A judge passed a reply that broke policy; hard rules belong in code or with a person.", "evidenceRefs": ["post:syn-w2-p05", "workflow:wf_dc3ee8e8f7f1"] } },
       { "title": "Cap the loop, then hand off", "text": { "text": "Give every retry loop a maximum and a place to go when it runs out.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p04", "workflow:wf_d1d310e6217a", "workflow:wf_17e0a499e621"] } },
       { "title": "Test the failure path on purpose", "text": { "text": "Raise the threshold or feed a known-bad input to see what your safeguards catch.", "evidenceRefs": ["post:syn-w2-p01", "post:syn-w2-p05"] } }
-    ]
+    ],
+    "nextSteps": [{"text": "Test the failure path on purpose, the way Avery raised the pass mark for one run.", "evidenceRefs": ["post:syn-w2-p01"]}, {"text": "Check amounts and dates in code before anything is saved.", "evidenceRefs": ["post:syn-w2-p04"]}, {"text": "Give every revision loop a maximum and a place to go when it runs out.", "evidenceRefs": ["post:syn-w2-p01"]}, {"text": "Send risky tickets to a person even when the score passes.", "evidenceRefs": ["post:syn-w2-p05"]}]
   },
   "inventedCountClaim": { "text": "13 workflows used human approval this week.", "evidenceRefs": ["metric:capabilities.usesHumanApproval"] }
 }

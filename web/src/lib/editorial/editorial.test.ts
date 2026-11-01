@@ -47,7 +47,7 @@ describe("1–3, 25–30: generation, structure and provenance", () => {
     expect(draft.review.passed).toBe(true);
     expect(draft.run.revisionCount).toBe(0);
     expect(draft.run.statusHistory).toEqual(["draft", "evidence_review", "human_review"]);
-    expect(provider.calls.map((c) => c.promptId)).toEqual(["post-extractor", "theme-analyst", "spotlight-pattern-selector", "discussion-analyst", "newsletter-editor", "evidence-reviewer"]);
+    expect(provider.calls.map((c) => c.promptId)).toEqual(["post-extractor", "theme-analyst", "build-categorizer", "spotlight-pattern-selector", "discussion-analyst", "newsletter-editor", "evidence-reviewer"]);
     expect(ajv["editorial-draft"](draft), JSON.stringify(ajv["editorial-draft"].errors)).toBe(true);
     expect(draft.newsletter?.failurePath?.postRef).toBe("post:syn-w2-p05");
   });
@@ -102,7 +102,7 @@ describe("1–3, 25–30: generation, structure and provenance", () => {
   });
   it("27: prompt ids and versions are recorded", async () => {
     const { draft } = await run();
-    expect(draft.run.promptVersions).toEqual(["post-extractor", "theme-analyst", "spotlight-pattern-selector", "discussion-analyst", "newsletter-editor", "evidence-reviewer"].map((id) => ({ promptId: id, promptVersion: E.PROMPTS[id as E.PromptId].promptVersion })));
+    expect(draft.run.promptVersions).toEqual(["post-extractor", "theme-analyst", "build-categorizer", "spotlight-pattern-selector", "discussion-analyst", "newsletter-editor", "evidence-reviewer"].map((id) => ({ promptId: id, promptVersion: E.PROMPTS[id as E.PromptId].promptVersion })));
     Object.values(E.PROMPTS).forEach((p) => expect(p).toMatchObject({ inputSchemaVersion: "1.0", outputSchemaVersion: "1.0" }));
   });
   it("28: input hash, idempotency key and run linkage", async () => {
@@ -256,7 +256,10 @@ describe("12–19: stage rules", () => {
     const bare = E.buildEditorialInput({ dataset: copy(weekDataset) as unknown as WeekDataset, manifest: null, profiles: [], course: { ...E.SYNTHETIC_COURSE } });
     expect(bare.workflowProfiles).toEqual([]);
     expect(bare.posts.every((p) => p.workflowProfileRef === null)).toBe(true);
-    expect(bare.metrics.find((m) => m.ref === "metric:workflowFiles")!.value).toBe(0);
+    // No asset batch: coverage is unknown, not zero.
+    expect(bare.metrics.find((m) => m.ref === "metric:workflowFiles")!.value).toBeNull();
+    expect(bare.metrics.find((m) => m.ref === "metric:screenshots")!.value).toBeNull();
+    expect(bare.posts.every((p) => p.screenshotCount === null)).toBe(true);
     expect(input.workflowProfiles).toHaveLength(7);
   });
   it("14: no comments → the discussion stage is skipped", async () => {
@@ -307,13 +310,13 @@ describe("12–19: stage rules", () => {
     const sel = copy(F.selection);
     sel.spotlights.push({ postRef: "post:syn-w2-p08", label: "Clear Multi-Agent Design", reason: { text: "Summarizes notes.", evidenceRefs: ["post:syn-w2-p08"] } });
     const { draft } = await run({ "spotlight-pattern-selector": [{ json: sel }] });
-    expect(draft.selection.spotlights.map((s) => s.postRef)).toEqual(["post:syn-w2-p05", "post:syn-w2-p01", "post:syn-w2-p04", "post:syn-w2-p02"]);
+    // The unsupported label is dropped; code may still choose the post, but only with a label its profile supports.
+    expect(draft.selection.spotlights.find((s) => s.postRef === "post:syn-w2-p08")?.label).not.toBe("Clear Multi-Agent Design");
     expect(issueCodes(draft)).toContain("SPOTLIGHT_UNSUPPORTED");
     const bad = copy(F.selection) as unknown as { spotlights: Array<{ label: string }> };
     bad.spotlights[0].label = "Best Workflow";
     const ranked = (await run({ "spotlight-pattern-selector": [{ json: bad }] })).draft;
     expect(ranked.selection.spotlights.map((s) => s.label)).not.toContain("Best Workflow");
-    expect(ranked.selection.spotlights.map((s) => s.postRef)).not.toContain(F.selection.spotlights[0].postRef);
   });
   it("patterns must exist in a cited workflow's structure", async () => {
     const sel = copy(F.selection);

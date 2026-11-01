@@ -3,7 +3,7 @@
 // Changing any prompt text requires a new promptVersion.
 
 export type PromptId =
-  | "post-extractor" | "theme-analyst" | "spotlight-pattern-selector" | "discussion-analyst"
+  | "post-extractor" | "theme-analyst" | "build-categorizer" | "spotlight-pattern-selector" | "discussion-analyst"
   | "newsletter-editor" | "evidence-reviewer" | "newsletter-reviser";
 
 export type PromptDef = {
@@ -60,11 +60,21 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     ].join("\n"),
     outputShape: '{"themes": [{"themeId": "kebab-case", "title": string, "summary": ' + CLAIM + ', "supportingPostRefs": ["post:…"], "supportingWorkflowRefs": ["workflow:…"], "support": "multi-source"|"notable-single-example", "confidence": "high"|"medium"|"low"}]}',
   },
+  "build-categorizer": {
+    promptId: "build-categorizer", promptVersion: "1.0.0", purpose: "Group every post into use-case categories for the every-build list.",
+    inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "buildGroupsOutput",
+    instructions: [
+      "TASK: group every post into 4 to 7 categories that emerge from this week's builds, by the job the workflow does or the domain it serves (for example \"Hiring and HR\" or \"Customer support triage\").",
+      "Every postRef appears in exactly one group. Titles are 2 to 6 plain words: no numbers, no student names, no rankings, no hype.",
+      "Use the title \"Other builds\" only for posts that fit no other group. Do not make a group for a single post unless it fits nowhere else.",
+    ].join("\n"),
+    outputShape: '{"groups": [{"title": string, "postRefs": ["post:…"]}]}',
+  },
   "spotlight-pattern-selector": {
-    promptId: "spotlight-pattern-selector", promptVersion: "1.0.0", purpose: "Choose spotlight candidates, a failure path and reusable patterns.",
+    promptId: "spotlight-pattern-selector", promptVersion: "1.1.0", purpose: "Choose spotlight candidates, a failure path and reusable patterns.",
     inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "selectionOutput",
     instructions: [
-      "TASK 1 — spotlights (up to 6): choose posts with a clear, evidenced lesson. Use only these labels: Strong Human Control, Interesting Failure Recovery, Reusable Validation Pattern, Creative Integration, Clear Multi-Agent Design, Thoughtful Fallback, Useful Testing Pattern. Never rank. Do not choose by views or comment counts.",
+      "TASK 1 — spotlights (4 to 6): choose posts with a clear, evidenced lesson, covering different kinds of builds and patterns. Code makes the final choice and may add or replace posts. Use only these labels: Strong Human Control, Interesting Failure Recovery, Reusable Validation Pattern, Creative Integration, Clear Multi-Agent Design, Thoughtful Fallback, Useful Testing Pattern. Never rank. Do not choose by views or comment counts.",
       "TASK 2 — failurePath: choose one only if the evidence shows a failure or negative test, the control that detected it, the response, and a lesson. The workflowProfileRef must be that post's workflow. Otherwise return null. Never invent one.",
       "TASK 3 — patterns (up to 4): reusable architectures that exist in the cited workflow profiles. steps must follow the order of categories in a cited profile's mainPath. Explain why the pattern matters; never invent structure.",
     ].join("\n"),
@@ -80,14 +90,21 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     outputShape: '{"insights": [{"kind": "recurring-question"|"peer-suggestion"|"unresolved-concern"|"testing-idea"|"insight", "insight": ' + CLAIM + "}]}",
   },
   "newsletter-editor": {
-    promptId: "newsletter-editor", promptVersion: "1.0.0", purpose: "Write the structured newsletter draft.",
+    promptId: "newsletter-editor", promptVersion: "1.1.0", purpose: "Write the structured newsletter draft.",
     inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "newsletterOutput",
     instructions: [
-      "TASK: write the issue copy from the validated notes, themes, spotlight candidates, failure path, patterns and discussion insights provided.",
-      "Use only the candidates provided (same themeId, postRef, label, patternId; keep failurePath null if it is null). Every text field is a claim with evidence refs.",
-      "hero.title is a short headline (no numbers). executiveSummary is 2–4 short claims. Do not write metric numbers; code inserts the official numbers.",
+      "TASK: write the issue copy from the validated notes, spotlight selection, failure path and discussion insights provided. Write like a careful magazine editor: specific, concrete, about what students built and learned.",
+      "Every text field is a claim with evidence refs. Do not write metric numbers; code inserts the official numbers.",
+      "hero.title: a 6 to 12 word headline naming the week's central idea or tension. No numbers.",
+      "hero.dek: 25 to 50 words that make the headline concrete.",
+      "executiveSummary: 1 or 2 claims that together form a 90 to 150 word introduction. Name at least 3 specific builds by their author (cite each post) and say what connects them.",
+      "spotlights: one entry for EVERY spotlight in the selection, in the same order, with the same postRef and label. text: 40 to 80 words on what the build does and how its pipeline is put together. testResult: what the student's test showed, or null if the post reports no test. threadInsight: what the comment thread added, citing comment refs, or null if no comment adds anything. worthBorrowing: one sentence naming the reusable idea.",
+      "Keep failurePath exactly as provided (null if it is null).",
+      "takeaways: exactly 3. Each has a 3 to 8 word title (no numbers) and a 30 to 60 word text that ties one lesson to named builds.",
+      "nextSteps: 3 to 5 one-sentence actions students can take next week, each citing the posts that motivate it.",
+      "themes, borrowThisPattern and discussionHighlights: return empty arrays.",
     ].join("\n"),
-    outputShape: '{"hero": {"title": claim, "dek": claim}, "executiveSummary": [claim], "themes": [{"themeId": "…", "title": string, "text": claim}], "spotlights": [{"postRef": "post:…", "label": "…", "text": claim, "worthBorrowing": claim}], "failurePath": null | {…same as candidate…}, "borrowThisPattern": [{"patternId": "…", "title": string, "why": claim}], "discussionHighlights": [claim], "takeaways": [{"title": string, "text": claim}]}',
+    outputShape: '{"hero": {"title": claim, "dek": claim}, "executiveSummary": [claim], "themes": [], "spotlights": [{"postRef": "post:…", "label": "…", "text": claim, "testResult": claim|null, "threadInsight": claim|null, "worthBorrowing": claim}], "failurePath": null | {…same as candidate…}, "borrowThisPattern": [], "discussionHighlights": [], "takeaways": [{"title": string, "text": claim}], "nextSteps": [claim]}',
   },
   "evidence-reviewer": {
     promptId: "evidence-reviewer", promptVersion: "1.0.0", purpose: "Judge whether each claim is supported by its cited sources.",

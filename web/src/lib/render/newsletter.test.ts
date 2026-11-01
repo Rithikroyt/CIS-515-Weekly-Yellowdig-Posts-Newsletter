@@ -28,7 +28,7 @@ describe("renderNewsletter", () => {
 
   it("contains no scripts, handlers or external resources", async () => {
     const { input, draft } = await draftFor("clean");
-    const { html } = renderNewsletter({ input, draft, postUrls: { [input.posts[0].postRef]: "javascript:alert(1)" }, heroImage: "https://evil.example.com/x.png" });
+    const { html } = renderNewsletter({ input, draft, postUrls: { [input.posts[0].postRef]: "javascript:alert(1)" }, hero: { src: "https://evil.example.com/x.png", alt: "" }, images: { [input.posts[0].postRef]: { src: "https://evil.example.com/y.png", alt: "x" } } });
     expect(html).not.toMatch(/<script|\son[a-z]+=|javascript:|src="http|href="http:/i);
   });
 

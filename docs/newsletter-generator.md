@@ -35,10 +35,40 @@ These are the states workflow 05 actually writes. Normalizing (inside 02) and ev
 Code entries: `web/src/n8n/nodes/wf05.ts`, logic in `web/src/lib/runs.ts`, `web/src/lib/weeks.ts`, `web/src/lib/render/newsletter.ts`. SDK template: `n8n/sdk/05-generate-newsletter.template.js` (fully expanded; the SDK parser allows no helper functions). Export: `n8n/workflows/05-generate-newsletter.json`.
 
 - One POST webhook, path `cis515-newsletter`, Header Auth, `responseMode: responseNode`. Actions: `generate {week, runId}`, `status {runId}`, `artifact {runId}`. Only the body is read.
-- Production source mode is `yellowdig`: no fixture fallback. A dataset from the fixture is refused (`SOURCE_FALLBACK`). No workflow files are uploaded in this flow, so there are no workflow profiles and no profile-based claims.
+- Production source mode is `yellowdig`: no fixture fallback. A dataset from the fixture is refused (`SOURCE_FALLBACK`).
+- **Find Week Assets** (read-only) and **Collect Assets** read the week's rows from `newsletter_assets` (see below). The stored manifest and workflow profiles go into the editorial input; screenshots go to the renderer. No rows means coverage is unknown: workflow files and images show "–", not 0, and there are no profile-based claims. The synthetic test path uses the synthetic fixture's manifest and profiles instead.
+- **Render Artifact** links posts only through the verified URL format, then applies the publication gate: every post must appear once in the every-build list, and a week with 4 or more posts needs at least 4 spotlights. Otherwise the run fails with `NEEDS_ASSETS` (no workflow files or screenshots for the week) or `NEWSLETTER_QUALITY_INCOMPLETE`, and the page says the week needs screenshots or workflow files.
 - Provider is `gemini` for real data; the mock runs only on synthetic input from the manual trigger.
 - Failures from the source config, 01, 02, editorial input, 04 or render go to **Fail Run**, which stores `failed` with a bracketed safe code or `GENERATION_FAILED`.
-- Settings: `callerPolicy: none`, production execution data not saved. `validate-repo` enforces node types, the single header-auth webhook, sub-workflow targets (01, 02, 04 only) and the table.
+- Settings: `callerPolicy: none`, production execution data not saved. `validate-repo` enforces node types, the single header-auth webhook, sub-workflow targets (01, 02, 04 only) and the tables (`newsletter_runs`; `newsletter_assets` read-only).
+
+## Issue structure (`web/src/lib/render/newsletter.ts`)
+
+Matches the instructor's Week 2 reference (audit: [`newsletter-quality-gap.md`](newsletter-quality-gap.md)): preview text, masthead with week and dates, headline, dek, hero (a chosen screenshot, else a collage of three spotlight screenshots, else none), credibility line, four code-counted metrics (builds, comments, workflow files, images), introduction, **01 — Spotlights** (4–6), **02 — In brief: every build this week** (every post once, in 4–7 groups, with a one-line summary, comment count and "See the spotlight above"), most discussed and most generous, **03 — What to carry into Week N+1** ("What to carry forward" for Week 5: three titled lessons and 3–5 numbered actions), footer.
+
+- Spotlights are chosen by code (`web/src/lib/editorial/curate.ts`). Score: workflow file +4, screenshot +4, test result +3, two or more substantive comments +2, a control or fallback +2, verified link +1, and +1 for adding a new build group or label. At most 2 per group and per label while enough candidates remain. Comment counts and views never count. Labels must be supported by the workflow profile; otherwise "Useful Testing Pattern". The model's picks are suggestions.
+- Each spotlight: group and label, title, author, comment count, "pipeline read from the workflow file" or "as described in the post", screenshot (max 340 px tall, linked to the post), architecture text, pipeline chips (only from a workflow file), control note, What the test showed, From the thread, Worth borrowing, Read the post link. Missing editor copy falls back to the evidence-screened post notes and discussion insights; the section is never dropped.
+- Images: only `data:image/png|jpeg|webp` URIs from real post screenshots, shown at most 544 px wide, with the alt text from the intake manifest. No stock, decorative or AI-generated images.
+- PDF: the same HTML through headless Chromium with JavaScript off and the network blocked. Spotlights, every-build entries and lessons carry `break-inside: avoid`.
+
+## Private asset intake (`npm run assets:upload`)
+
+Yellowdig's API does not return attachments, so screenshots and workflow files are supplied privately by the instructor or TA. Keep the files **outside the repository** (the script refuses a manifest inside it).
+
+```json
+{
+  "week": 2,
+  "assets": [
+    { "postRef": "<Yellowdig post id>", "kind": "workflow_json", "path": "workflows/alex.json" },
+    { "postRef": "<Yellowdig post id>", "kind": "post_image", "path": "shots/alex-canvas.png", "role": "spotlight", "altText": "n8n canvas: schedule, model, judge, Telegram approval" }
+  ]
+}
+```
+
+- `postRef` is the post id from the post's Yellowdig link (`?postId=…`), with or without `post:`. Every file is mapped explicitly; nothing is matched by name.
+- `kind`: `workflow_json` or `post_image`. `role` (images): `hero` (at most one), `spotlight` or `supporting` (default). `altText` is required for images (8–200 characters). Paths are relative to the manifest, without `..`.
+
+`cd web && npm run assets:upload -- --week 2 --manifest <path> [--dry-run]` validates and profiles every file with the same shared code as workflow 03 (type, size and magic-byte checks, sanitizing, static profiling; workflow JSON is never executed), re-encodes one screenshot per post with sharp (JPEG, max 1088 px wide, metadata stripped), and replaces the week's rows in the private n8n Data Table `newsletter_assets` (`IrcjvrqKzY70YB8R`): one `bundle` row (manifest and profiles; the workflow files themselves are not stored) and one `image` row per post. Workflow 05 reads them on the next Generate. The workflow 03 logic runs at intake rather than inside workflow 05, so raw student workflow files never reach n8n.
 
 ## Storage: `newsletter_runs` Data Table (`uWls7HHm5Ek7u1SQ`)
 

@@ -92,8 +92,8 @@ exports.forEach((f) => {
     if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");
   }
   // Workflow 05 is the only public entry point: exactly one POST webhook with header auth, no HTTP Request or AI
-  // nodes, sub-workflow calls only to 01, 02 and 04, Data Table access only to newsletter_runs, not callable as a
-  // sub-workflow, and no saved production execution data (the webhook request carries the secret header).
+  // nodes, sub-workflow calls only to 01, 02 and 04, Data Table access only to newsletter_runs (and read-only to
+  // newsletter_assets), not callable as a sub-workflow, and no saved production execution data (the webhook request carries the secret header).
   if (/[\\/]05-[^\\/]+$/.test(f)) {
     const allowed = new Set(["n8n-nodes-base.webhook", "n8n-nodes-base.respondToWebhook", "n8n-nodes-base.manualTrigger", "n8n-nodes-base.code",
       "n8n-nodes-base.if", "n8n-nodes-base.switch", "n8n-nodes-base.dataTable", "n8n-nodes-base.executeWorkflow", "n8n-nodes-base.noOp", "n8n-nodes-base.stickyNote"]);
@@ -108,7 +108,9 @@ exports.forEach((f) => {
       if (!subs.has(String((n.parameters?.workflowId as { value?: unknown })?.value))) fail(rel(f) + ": '" + n.name + "' calls a workflow other than 01, 02 or 04");
     });
     nodes.filter((n) => n.type === "n8n-nodes-base.dataTable").forEach((n) => {
-      if ((n.parameters?.dataTableId as { cachedResultName?: unknown })?.cachedResultName !== "newsletter_runs") fail(rel(f) + ": '" + n.name + "' uses a table other than newsletter_runs");
+      const table = (n.parameters?.dataTableId as { cachedResultName?: unknown })?.cachedResultName;
+      if (table === "newsletter_assets" && n.parameters?.operation !== "get") fail(rel(f) + ": '" + n.name + "' may only read newsletter_assets");
+      else if (table !== "newsletter_runs" && table !== "newsletter_assets") fail(rel(f) + ": '" + n.name + "' uses a table other than newsletter_runs or newsletter_assets");
     });
     const s = wf.settings ?? {};
     if (s.callerPolicy !== "none") fail(rel(f) + ": callerPolicy must be none");

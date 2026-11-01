@@ -13,7 +13,9 @@ const MAX_POLL_ERRORS = 3;
 type Done = { runId: string; week: number; omitted: number };
 // Only the server's fixed safe codes (or the HTTP status) are shown, so failures can be diagnosed without dev tools.
 const SAFE_CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
+const NEEDS_ASSETS = "This week's newsletter needs post screenshots/workflow files before it can be generated at publication quality.";
 const failed = (code: unknown, httpStatus?: number) =>
+  code === "NEEDS_ASSETS" || code === "NEWSLETTER_QUALITY_INCOMPLETE" ? NEEDS_ASSETS + " (Error code: " + code + ")" :
   FAILED + (typeof code === "string" && SAFE_CODE.test(code) ? " (Error code: " + code + ")" : httpStatus ? " (HTTP " + httpStatus + ")" : "");
 
 export function NewsletterGenerator({ defaultWeek }: { defaultWeek: number }) {

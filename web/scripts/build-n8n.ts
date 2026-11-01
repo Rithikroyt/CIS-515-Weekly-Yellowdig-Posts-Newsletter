@@ -13,7 +13,7 @@ export const ENTRIES = {
   wf02: ["fixtureRunConfig", "validateSourceMetadata", "classifyEvents", "joinToPosts", "computeMetrics", "validateDataset"],
   wf03: ["syntheticBatch", "checkFiles", "sanitize", "profile", "assembleAndValidate"],
   wf04: ["editorialStep", "mockModel", "attachGeminiState", "syntheticEditorialRun"],
-  wf05: ["syntheticRequest", "routeRequest", "decideRunStart", "queuedReply", "sourceConfig", "editorialRequest", "renderArtifact", "failRun", "statusReply"],
+  wf05: ["syntheticRequest", "routeRequest", "decideRunStart", "queuedReply", "sourceConfig", "collectAssets", "editorialRequest", "renderArtifact", "failRun", "statusReply"],
 } as const;
 
 const WORKFLOWS = [

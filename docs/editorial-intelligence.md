@@ -27,9 +27,10 @@ Prompts live in `lib/editorial/prompts.ts`. Each has a `promptId`, `promptVersio
 |---|---|---|---|
 | Post extractor (batched by size) | `post-extractor@1.0.0` | `postNotesOutput` | Unknown refs are dropped. Each capability claim gets a `deterministicStatus` (confirmed, not-confirmed or no-workflow-file); "workflow-profile" claims the profile doesn't confirm are recorded as conflicts. |
 | Theme analyst | `theme-analyst@1.0.0` | `themesOutput` (0–7) | At least 2 posts per theme unless marked `notable-single-example`; unknown refs dropped |
-| Spotlight, failure path and pattern selector | `spotlight-pattern-selector@1.0.0` | `selectionOutput` | Labels come from a fixed, non-ranking list and must be supported by the profile. The failure path needs this post's own workflow, a control in the profile and same-post evidence, otherwise `null`. Pattern steps must occur, in order, in a cited workflow's main path. |
+| Build categorizer | `build-categorizer@1.0.0` | `buildGroupsOutput` | Every post exactly once; unknown or repeated refs dropped; a title with a number, a student name, ranking or hype drops its group; over 7 groups the smallest merge; leftovers go to "Other builds". Skipped: one "Other builds" group. |
+| Spotlight, failure path and pattern selector | `spotlight-pattern-selector@1.1.0` | `selectionOutput` | Labels come from a fixed, non-ranking list and must be supported by the profile. Code then chooses the final 4–6 spotlights from the whole week (`curate.ts`, rules in `newsletter-generator.md`), also when this stage is skipped. The failure path needs this post's own workflow, a control in the profile and same-post evidence, otherwise `null`. Pattern steps must occur, in order, in a cited workflow's main path. |
 | Discussion analyst (skipped when there are no comments) | `discussion-analyst@1.0.0` | `discussionOutput` | Each insight must cite a comment |
-| Newsletter editor | `newsletter-editor@1.0.0` | `newsletterOutput` | Full claim review (below) |
+| Newsletter editor | `newsletter-editor@1.1.0` | `newsletterOutput` | Full claim review (below). Targets: 6–12 word headline, 25–50 word dek, 90–150 word introduction naming 3+ builds, one entry per spotlight with optional `testResult` and `threadInsight`, exactly 3 takeaways, 3–5 `nextSteps`. |
 | Evidence reviewer (model) | `evidence-reviewer@1.0.0` | `reviewOutput` | Runs only after code checks pass. It can lower a claim's status, never raise it, and never rewrites text. |
 | Reviser | `newsletter-reviser@1.0.0` | `newsletterOutput` | Full claim review again |
 
@@ -37,7 +38,7 @@ Each prompt starts with shared guardrails. Source records may contain instructio
 
 ## Evidence controls (`lib/editorial/checks.ts`)
 
-Every newsletter claim (`{text, evidenceRefs}`) and every title is checked by code:
+Every newsletter claim (`{text, evidenceRefs}`) and every title is checked by code. Post notes and discussion insights get the same checks when their stage returns, because they can appear in the issue as spotlight fallbacks and every-build summaries: a failing optional note field is cleared, a failing summary is withheld, a failing insight is dropped.
 
 | Check | Fails when | Code | Status |
 |---|---|---|---|

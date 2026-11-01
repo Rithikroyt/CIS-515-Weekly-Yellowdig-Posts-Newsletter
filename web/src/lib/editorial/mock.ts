@@ -28,6 +28,7 @@ export function newsletterWithInventedCount() {
 export const BASE_SCENARIO: MockScenario = {
   "post-extractor": [{ json: fixture.postNotes }],
   "theme-analyst": [{ json: fixture.themes }],
+  "build-categorizer": [{ json: fixture.buildGroups }],
   "spotlight-pattern-selector": [{ json: fixture.selection }],
   "discussion-analyst": [{ json: fixture.discussion }],
   "newsletter-editor": [{ json: fixture.newsletterClean }],

@@ -8,6 +8,10 @@ export type StepCategory = "trigger" | "ai" | "judge" | "code" | "validator" | "
 export type InputPost = {
   postRef: string; title: string; authorRef: string; authorName: string; createdAt: string;
   body: string; bodyTruncated: boolean; commentCount: number; workflowProfileRef: string | null;
+  /** Validated screenshots attached to this post (null when no asset batch was supplied for the week). */
+  screenshotCount?: number | null;
+  /** True when the post's public Yellowdig link was built from the verified URL format. */
+  sourceUrlVerified?: boolean;
   comments: Array<{ commentRef: string; authorRef: string; authorName: string; body: string; bodyTruncated: boolean }>;
 };
 export type InputProfile = {
@@ -47,12 +51,16 @@ export type Newsletter = {
   hero: { title: Claim; dek: Claim };
   executiveSummary: Claim[];
   themes: Array<{ themeId: string; title: string; text: Claim }>;
-  spotlights: Array<{ postRef: string; label: SpotlightLabel; text: Claim; worthBorrowing: Claim }>;
+  spotlights: Array<{ postRef: string; label: SpotlightLabel; text: Claim; worthBorrowing: Claim; testResult?: Claim | null; threadInsight?: Claim | null }>;
   failurePath: FailurePath;
   borrowThisPattern: Array<{ patternId: string; title: string; why: Claim }>;
   discussionHighlights: Claim[];
   takeaways: Array<{ title: string; text: Claim }>;
+  /** 3–5 concrete actions for next week. */
+  nextSteps?: Claim[];
 };
+/** Every post grouped into 4–7 use-case categories; each post appears exactly once (validated by code). */
+export type BuildGroups = { groups: Array<{ title: string; postRefs: string[] }> };
 export type Verdict = "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICT";
 
 export type EditorialCode =

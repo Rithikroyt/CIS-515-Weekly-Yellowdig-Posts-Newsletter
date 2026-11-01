@@ -7,9 +7,10 @@ import {
   WITHHELD_TEXT, collectClaims, indexInput, parseModelJson, reviewNewsletter, validateDiscussion, validatePostNotes,
   validateSelection, validateThemes, worst, type ClaimResult, type ClaimStatus, type StageIssue,
 } from "./checks";
+import { chooseSpotlights, screenDiscussion, screenNotes, validateBuildGroups } from "./curate";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
 import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
-import type { Discussion, EditorialCode, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
+import type { BuildGroups, Discussion, EditorialCode, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
 import { EditorialError } from "./types";
 
 export const MAX_REVISIONS = 2;
@@ -19,7 +20,7 @@ export const MAX_FORMAT_RETRIES = 2;
 /** Characters of post content per extractor call; larger weeks are split into batches. */
 export const EXTRACT_BATCH_CHARS = 24_000;
 
-type Phase = "extract" | "themes" | "selection" | "discussion" | "newsletter" | "review" | "revise" | "done";
+type Phase = "extract" | "themes" | "groups" | "selection" | "discussion" | "newsletter" | "review" | "revise" | "done";
 
 export type ModelRequest = {
   stage: string; promptId: PromptId; promptVersion: string; outputDef: string;
@@ -46,6 +47,7 @@ export type RunState = {
   notes: PostNote[];
   capabilityChecks: CapabilityCheck[];
   themes: Theme[];
+  buildGroups: BuildGroups;
   selection: Selection;
   discussion: Discussion;
   newsletter: Newsletter | null;
@@ -107,7 +109,7 @@ export function startRun(o: StartOptions): RunState {
   return {
     v: 1, input: o.input, inputHash: hash, idempotencyKey: key, runId, parentRunId: o.parentRunId ?? null, feedback: o.feedback ?? null,
     provider: o.provider, model: o.model, startedAt: o.now, phase: batches.length ? "extract" : "done",
-    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], selection: { spotlights: [], failurePath: null, patterns: [] },
+    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], buildGroups: { groups: [] }, selection: { spotlights: [], failurePath: null, patterns: [] },
     discussion: { insights: [] }, newsletter: null, review: [], reviewedByModel: false, revisionCount: 0, stageIssues: [], modelCalls: [],
     statusHistory: ["draft"], status: "draft", steps: 0, errorCode: null,
     errorSummary: batches.length ? null : "No eligible posts in this week; nothing to draft.", pending: null,
@@ -165,6 +167,12 @@ export function nextRequest(state: RunState, now: string): RunState {
     case "themes":
       s.pending = request(s, "theme-analyst", "theme-analyst", { week: s.input.week, topic: s.input.topic }, { notes: s.notes, workflowProfiles: profileSummary(s), metrics, posts: postIndex(s) });
       break;
+    case "groups": {
+      const noteOf = new Map(s.notes.map((n) => [n.postRef, n]));
+      const posts = s.input.posts.map((p) => ({ postRef: p.postRef, title: p.title, summary: noteOf.get(p.postRef)?.summary.text ?? p.body.slice(0, 300) }));
+      s.pending = request(s, "build-categorizer", "build-categorizer", { week: s.input.week, topic: s.input.topic, groupEveryPost: posts.length }, { posts });
+      break;
+    }
     case "selection":
       s.pending = request(s, "spotlight-pattern-selector", "spotlight-pattern-selector", { week: s.input.week },
         { notes: s.notes, themes: s.themes, workflowProfiles: profileSummary(s), posts: s.input.posts, metrics });
@@ -247,7 +255,9 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
   switch (s.phase) {
     case "extract": {
       const r = validatePostNotes(idx, (v as { notes: PostNote[] }).notes, s.batches[s.batchIndex]);
-      s.notes.push(...r.notes);
+      const screened = screenNotes(idx, r.notes);
+      s.notes.push(...screened.notes);
+      s.stageIssues.push(...screened.issues);
       s.capabilityChecks.push(...r.checks);
       s.stageIssues.push(...r.issues);
       s.batchIndex += 1;
@@ -256,17 +266,23 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
     }
     case "themes": {
       const r = validateThemes(idx, (v as { themes: Theme[] }).themes);
-      s.themes = r.themes; s.stageIssues.push(...r.issues); s.phase = "selection";
+      s.themes = r.themes; s.stageIssues.push(...r.issues); s.phase = "groups";
+      return s;
+    }
+    case "groups": {
+      const r = validateBuildGroups(idx, v as BuildGroups);
+      s.buildGroups = r.buildGroups; s.stageIssues.push(...r.issues); s.phase = "selection";
       return s;
     }
     case "selection": {
       const r = validateSelection(idx, v as Selection);
-      s.selection = r.selection; s.stageIssues.push(...r.issues); s.phase = "discussion";
-      return s;
+      s.selection = r.selection; s.stageIssues.push(...r.issues);
+      return afterSelection(s);
     }
     case "discussion": {
       const r = validateDiscussion(idx, v as Discussion);
-      s.discussion = r.discussion; s.stageIssues.push(...r.issues); s.phase = "newsletter";
+      const screened = screenDiscussion(idx, r.discussion);
+      s.discussion = screened.discussion; s.stageIssues.push(...r.issues, ...screened.issues); s.phase = "newsletter";
       return s;
     }
     case "newsletter":
@@ -304,13 +320,27 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
   const skip = () => s.stageIssues.push({ stage: stage.slice(0, 40), code, detail: ("stage skipped: " + detail).slice(0, 300) });
   switch (s.phase) {
     case "extract": skip(); s.batchIndex += 1; if (s.batchIndex >= s.batches.length) s.phase = "themes"; return s;
-    case "themes": skip(); s.phase = "selection"; return s;
-    case "selection": skip(); s.phase = "discussion"; return s;
+    case "themes": skip(); s.phase = "groups"; return s;
+    case "groups": { skip(); const r = validateBuildGroups(indexInput(s.input), null); s.buildGroups = r.buildGroups; s.phase = "selection"; return s; }
+    case "selection": skip(); return afterSelection(s);
     case "discussion": skip(); s.phase = "newsletter"; return s;
     case "revise": skip(); s.revisionCount = MAX_REVISIONS; return revisionOrStop(s);
     case "review": skip(); return finish(s);
     default: return fail(s, now, code, stage + ": " + detail);
   }
+}
+
+/**
+ * The model's spotlight picks are suggestions: code scores the whole week and fixes the final 4–6 (see curate.ts).
+ * Groups are filled first if that stage never ran, so every post has a group for the diversity rule.
+ */
+function afterSelection(s: RunState): RunState {
+  const idx = indexInput(s.input);
+  if (!s.buildGroups.groups.length) s.buildGroups = validateBuildGroups(idx, null).buildGroups;
+  const r = chooseSpotlights(idx, s.notes, s.buildGroups, s.selection.spotlights);
+  s.selection = { ...s.selection, spotlights: r.spotlights };
+  s.phase = "discussion";
+  return s;
 }
 
 /** Ends the run at human_review (or failed). Nothing is ever marked approved here. */
@@ -345,7 +375,7 @@ export function buildDraft(s: RunState, now: string) {
   const body = {
     schemaVersion: "1.0" as const, issueId: s.input.issueId, week: s.input.week, status: s.status, inputHash: s.inputHash, idempotencyKey: s.idempotencyKey,
     metrics: s.input.metrics, postNotes: s.notes, capabilityChecks: s.capabilityChecks, themes: s.themes, selection: s.selection,
-    discussion: s.discussion, newsletter, review,
+    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, review,
   };
   const usedPrompts = [...new Map(s.modelCalls.map((c) => [c.promptId, c.promptVersion])).entries()].map(([promptId, promptVersion]) => ({ promptId, promptVersion }));
   const run = {

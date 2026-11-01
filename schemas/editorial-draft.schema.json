@@ -34,6 +34,7 @@
     "selection": { "$ref": "#/$defs/selectionOutput" },
     "discussion": { "$ref": "#/$defs/discussionOutput" },
     "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
+    "buildGroups": { "$ref": "#/$defs/buildGroupsOutput" },
     "review": {
       "type": "object",
       "additionalProperties": false,
@@ -263,7 +264,7 @@
             "type": "object",
             "additionalProperties": false,
             "required": ["postRef", "label", "text", "worthBorrowing"],
-            "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "label": { "$ref": "#/$defs/spotlightLabel" }, "text": { "$ref": "#/$defs/claim" }, "worthBorrowing": { "$ref": "#/$defs/claim" } }
+            "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "label": { "$ref": "#/$defs/spotlightLabel" }, "text": { "$ref": "#/$defs/claim" }, "worthBorrowing": { "$ref": "#/$defs/claim" }, "testResult": { "$ref": "#/$defs/optionalClaim" }, "threadInsight": { "$ref": "#/$defs/optionalClaim" } }
           }
         },
         "failurePath": { "$ref": "#/$defs/failurePath" },
@@ -277,6 +278,19 @@
           "type": "array",
           "maxItems": 6,
           "items": { "type": "object", "additionalProperties": false, "required": ["title", "text"], "properties": { "title": { "$ref": "#/$defs/title" }, "text": { "$ref": "#/$defs/claim" } } }
+        },
+        "nextSteps": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/claim" } }
+      }
+    },
+    "buildGroupsOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groups"],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "object", "additionalProperties": false, "required": ["title", "postRefs"], "properties": { "title": { "$ref": "#/$defs/title" }, "postRefs": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/postRef" } } } }
         }
       }
     },

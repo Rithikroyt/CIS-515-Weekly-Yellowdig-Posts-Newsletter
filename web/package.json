@@ -11,6 +11,7 @@
     "validate": "tsx scripts/validate-repo.ts",
     "fixtures:synthetic": "tsx scripts/make-synthetic-week2.ts",
     "build:n8n": "tsx scripts/build-n8n.ts",
+    "assets:upload": "tsx scripts/assets-upload.ts",
     "env:check": "tsx scripts/env-config.ts"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "esbuild": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "sharp": "0.35.5",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^3.2.7"

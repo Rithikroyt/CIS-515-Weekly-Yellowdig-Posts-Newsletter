@@ -42,3 +42,6 @@ coverage/
 
 # Private reference material (real class content). Never commit.
 reference-private/
+
+# Visual comparison screenshots and PDFs (may include the private reference issue)
+visual-compare/

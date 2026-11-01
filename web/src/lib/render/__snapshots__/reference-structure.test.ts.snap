@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reference section order > keeps a structural snapshot 1`] = `
+[
+  "Code Gates Catch What Judges Miss",
+  "01 — Spotlights",
+  "Recipe Scaler with a Judge",
+  "Study Planner with Human Approval",
+  "Morning News Brief",
+  "Expense Logger with Code Checks",
+  "Support Reply Desk",
+  "Meeting Notes Summarizer",
+  "02 — In brief: every build this week",
+  "Personal planning and food",
+  "News and research",
+  "Finance and operations",
+  "Customer support",
+  "Other builds",
+  "03 — What to carry into Week 3",
+]
+`;
