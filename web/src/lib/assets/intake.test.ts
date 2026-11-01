@@ -34,20 +34,15 @@ describe("parseIntakeManifest", () => {
 describe("collectWeekAssets", () => {
   const bundle = { week: 2, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: { week: 2, assets: [] }, profiles: [] }) };
   it("returns unknown coverage when nothing was uploaded", () => {
-    expect(collectWeekAssets([{}], 2)).toEqual({ manifest: null, profiles: [], images: {}, hero: null });
+    const a = collectWeekAssets([{}], 2);
+    expect([a.manifest, a.images, a.bank]).toEqual([null, [], {}]);
   });
-  it("reads the bundle and keeps only valid data-URI images for the week", () => {
-    const rows = [
-      bundle,
-      { week: 2, kind: "image", post_id: "syn-1", role: "spotlight", alt: "Canvas", payload: PNG },
-      { week: 2, kind: "image", post_id: "syn-2", role: "hero", alt: "Hero", payload: PNG },
-      { week: 2, kind: "image", post_id: "syn-3", role: "spotlight", alt: "Remote", payload: "https://example.com/x.png" },
-      { week: 3, kind: "image", post_id: "syn-4", role: "spotlight", alt: "Other week", payload: PNG },
-    ];
+  it("reads the bundle and keeps only valid data-URI images for the week, with ids and dimensions", () => {
+    const img = (post_id: string, role: string, payload: string, week = 2, asset_id = "asset_" + post_id.replace(/\W/g, "")) => ({ week, kind: "image", post_id, role, alt: "Canvas", payload, asset_id, width: 1600, height: 900 });
+    const rows = [bundle, img("syn-1", "spotlight", PNG), img("syn-2", "hero", PNG), img("syn-3", "spotlight", "https://example.com/x.png"), img("syn-4", "spotlight", PNG, 3)];
     const a = collectWeekAssets(rows, 2);
     expect(a.manifest).toEqual({ week: 2, assets: [] });
-    expect(Object.keys(a.images).sort()).toEqual(["post:syn-1", "post:syn-2"]);
-    expect(a.hero).toEqual({ src: PNG, alt: "Hero" });
+    expect(a.images.map((i) => [i.postRef, i.role])).toEqual([["post:syn-1", "spotlight"], ["post:syn-2", "hero"]]);
   });
   it("fails loudly on a corrupt bundle instead of silently reporting zero files", () => {
     expect(() => collectWeekAssets([{ ...bundle, payload: "{" }], 2)).toThrow(/ASSETS_INVALID/);

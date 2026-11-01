@@ -48,40 +48,96 @@ export function parseIntakeManifest(raw: unknown, week: number): IntakeManifest 
 }
 
 /** One row of the newsletter_assets table. */
-export type AssetRow = { week: number; kind: "bundle" | "image"; post_id: string; role: string; alt: string; payload: string };
-
-export type WeekAssets = {
-  /** null when nothing was uploaded for the week: coverage is then unknown, not zero. */
-  manifest: AssetManifest | null;
-  profiles: WorkflowProfile[];
-  images: Record<string, { src: string; alt: string }>;
-  hero: { src: string; alt: string } | null;
+export type AssetRow = {
+  week: number; kind: "bundle" | "image"; post_id: string; role: string; alt: string; payload: string;
+  asset_id?: string; width?: number; height?: number; source?: string;
 };
 
+// ---------- Canonical assets: one shape whatever the source ----------
+
+export type AssetSource = "yellowdig_attachment" | "private_asset_store";
+
+/** A real image attached to a post. Bytes are in WeekAssets.bank under the same assetRef, never in this record. */
+export type CanonicalImage = {
+  assetRef: string; postRef: string; kind: "image"; source: AssetSource;
+  mimeType: "image/jpeg" | "image/png" | "image/webp"; width: number; height: number; role: IntakeRole; altText: string;
+};
+
+export type WeekAssets = {
+  /** null when no source supplied anything for the week: coverage is then unknown, not zero. */
+  manifest: AssetManifest | null;
+  profiles: WorkflowProfile[];
+  images: CanonicalImage[];
+  /** assetRef → data:image/...;base64 URI. */
+  bank: Record<string, string>;
+  /** Which sources contributed, and why a source contributed nothing. */
+  sources: Array<{ source: AssetSource; available: boolean; reason: string }>;
+};
+
+export const NO_ASSETS: WeekAssets = { manifest: null, profiles: [], images: [], bank: {}, sources: [] };
+const ASSET_ID_RE = /^asset_[A-Za-z0-9_-]{1,58}$/;
+
 /**
- * Reads the week's rows back (workflow 05). Rows are private data written by the intake script, still treated as
- * untrusted: the bundle must parse and match its schema shape, and images must be base64 data URIs of an allowed type.
+ * Adapter: Yellowdig post attachments. VERIFIED 2026-11-01 against every event the API key can read (819 events):
+ * the events API has no attachment, media, file or URL field and post bodies are plain text. Until a sanctioned
+ * attachment source exists, this adapter reports itself unavailable rather than guessing.
  */
-export function collectWeekAssets(rows: unknown[], week: number): WeekAssets {
+export function yellowdigAttachmentAdapter(): { assets: WeekAssets | null; status: WeekAssets["sources"][number] } {
+  return { assets: null, status: { source: "yellowdig_attachment", available: false, reason: "the Yellowdig events API exposes no attachments (verified 2026-11-01)" } };
+}
+
+/**
+ * Adapter: the private asset store (newsletter_assets rows written by scripts/assets-upload.ts). Rows are private but
+ * still untrusted: the bundle must parse and match the week, images must be base64 data URIs of an allowed type
+ * with a valid asset id and dimensions.
+ */
+export function privateAssetStoreAdapter(rows: unknown[], week: number): { assets: WeekAssets | null; status: WeekAssets["sources"][number] } {
   const mine = rows.filter((r): r is AssetRow => !!r && typeof r === "object" && (r as AssetRow).week === week);
   const bundle = mine.find((r) => r.kind === "bundle");
+  if (!bundle) return { assets: null, status: { source: "private_asset_store", available: false, reason: "no assets uploaded for week " + week } };
   let manifest: AssetManifest | null = null, profiles: WorkflowProfile[] = [];
-  if (bundle) {
-    try {
-      const b = JSON.parse(String(bundle.payload)) as { manifest?: AssetManifest; profiles?: WorkflowProfile[] };
-      if (b.manifest && b.manifest.week === week && Array.isArray(b.manifest.assets) && Array.isArray(b.profiles)) { manifest = b.manifest; profiles = b.profiles; }
-    } catch { /* an unreadable bundle is ignored: coverage stays unknown */ }
-    if (!manifest) throw new Error("[ASSETS_INVALID] the stored asset bundle for week " + week + " could not be read");
-  }
-  const images: WeekAssets["images"] = {};
-  let hero: WeekAssets["hero"] = null;
+  try {
+    const b = JSON.parse(String(bundle.payload)) as { manifest?: AssetManifest; profiles?: WorkflowProfile[] };
+    if (b.manifest && b.manifest.week === week && Array.isArray(b.manifest.assets) && Array.isArray(b.profiles)) { manifest = b.manifest; profiles = b.profiles; }
+  } catch { /* handled below */ }
+  if (!manifest) throw new Error("[ASSETS_INVALID] the stored asset bundle for week " + week + " could not be read");
+  const images: CanonicalImage[] = [];
+  const bank: Record<string, string> = {};
   for (const r of mine) {
     if (r.kind !== "image" || typeof r.payload !== "string" || !IMAGE_RE.test(r.payload) || r.payload.length > INTAKE_LIMITS.imageDataUriBytes) continue;
     const id = bareId(r.post_id);
-    if (!id) continue;
-    const img = { src: r.payload, alt: String(r.alt ?? "").slice(0, INTAKE_LIMITS.altChars) };
-    if (r.role === "hero") hero = img;
-    if (!images["post:" + id] || r.role === "spotlight") images["post:" + id] = img;
+    const w = Number(r.width), h = Number(r.height);
+    if (!id || typeof r.asset_id !== "string" || !ASSET_ID_RE.test(r.asset_id) || !(w > 0 && h > 0)) continue;
+    const assetRef = "asset:" + r.asset_id;
+    if (bank[assetRef]) continue;
+    bank[assetRef] = r.payload;
+    const role: IntakeRole = r.role === "hero" || r.role === "spotlight" ? r.role : "supporting";
+    images.push({
+      assetRef, postRef: "post:" + id, kind: "image", source: "private_asset_store", mimeType: r.payload.slice(5, r.payload.indexOf(";")) as CanonicalImage["mimeType"],
+      width: Math.round(w), height: Math.round(h), role, altText: String(r.alt ?? "").slice(0, INTAKE_LIMITS.altChars),
+    });
   }
-  return { manifest, profiles, images, hero };
+  return { assets: { manifest, profiles, images, bank, sources: [] }, status: { source: "private_asset_store", available: true, reason: images.length + " stored images" } };
+}
+
+/**
+ * Combines the sources. Priority: a post's Yellowdig attachments when available, otherwise its private-store assets.
+ * Both arrive in the same canonical shape, so everything downstream is source-agnostic.
+ */
+export function mergeAssetSources(...parts: Array<{ assets: WeekAssets | null; status: WeekAssets["sources"][number] }>): WeekAssets {
+  const out: WeekAssets = { manifest: null, profiles: [], images: [], bank: {}, sources: parts.map((p) => p.status) };
+  const claimed = new Set<string>();
+  for (const { assets } of parts) {
+    if (!assets) continue;
+    if (!out.manifest) { out.manifest = assets.manifest; out.profiles = assets.profiles; }
+    const fresh = assets.images.filter((i) => !claimed.has(i.postRef) || out.images.some((x) => x.postRef === i.postRef && x.source === i.source));
+    fresh.forEach((i) => { out.images.push(i); out.bank[i.assetRef] = assets.bank[i.assetRef]; });
+    new Set(fresh.map((i) => i.postRef)).forEach((r) => claimed.add(r));
+  }
+  return out;
+}
+
+/** Workflow 05: the week's assets from every source, in canonical form. */
+export function collectWeekAssets(rows: unknown[], week: number): WeekAssets {
+  return mergeAssetSources(yellowdigAttachmentAdapter(), privateAssetStoreAdapter(rows, week));
 }

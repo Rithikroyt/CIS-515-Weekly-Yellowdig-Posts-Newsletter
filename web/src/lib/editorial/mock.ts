@@ -11,7 +11,9 @@ export type MockStep =
   | { json: unknown }
   | { raw: string }
   | { error: "timeout" | "provider" }
-  | { review: "all-supported" | Record<string, "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICT"> };
+  | { review: "all-supported" | Record<string, "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICT"> }
+  /** Local tests only (functions are not JSON): the response computed from the request's fenced source data. */
+  | { build: (sourceData: unknown) => unknown };
 /** Steps per prompt, used in call order; the last step repeats. */
 export type MockScenario = Partial<Record<PromptId, MockStep[]>>;
 
@@ -42,16 +44,19 @@ export const NAMED_SCENARIOS: Record<string, MockScenario> = {
   "revision-limit": { ...BASE_SCENARIO, "newsletter-editor": [{ json: newsletterWithInventedCount() }], "newsletter-reviser": [{ json: newsletterWithInventedCount() }] },
 };
 
-/** Claim ids the evidence-reviewer request asks about (read back from the fenced source data). */
-function requestedClaimIds(req: ModelRequest): string[] {
+/** The request's fenced source data, parsed back. */
+function sourceData(req: ModelRequest): unknown {
   const m = /<source_data>\n([\s\S]*)\n<\/source_data>$/.exec(req.user);
-  if (!m) return [];
+  if (!m) return null;
   try {
-    return ((JSON.parse(m[1]) as { claims?: Array<{ claimId: string }> }).claims ?? []).map((c) => c.claimId);
+    return JSON.parse(m[1]);
   } catch {
-    return [];
+    return null;
   }
 }
+
+/** Claim ids the evidence-reviewer request asks about. */
+const requestedClaimIds = (req: ModelRequest): string[] => ((sourceData(req) as { claims?: Array<{ claimId: string }> } | null)?.claims ?? []).map((c) => c.claimId);
 
 /** Pure: the response for a request, given how many earlier calls used the same prompt. */
 export function mockRespond(req: ModelRequest, callIndex: number, scenario: MockScenario): ModelResponse {
@@ -60,6 +65,7 @@ export function mockRespond(req: ModelRequest, callIndex: number, scenario: Mock
   if (!step) return { ok: false, code: "MODEL_PROVIDER_ERROR", detail: "mock has no response for " + req.promptId };
   if ("error" in step) return step.error === "timeout" ? { ok: false, code: "MODEL_TIMEOUT", detail: "mock timeout" } : { ok: false, code: "MODEL_PROVIDER_ERROR", detail: "mock provider error" };
   if ("raw" in step) return { ok: true, text: step.raw };
+  if ("build" in step) return { ok: true, text: JSON.stringify(step.build(sourceData(req))) };
   if ("review" in step) {
     const verdicts = requestedClaimIds(req).map((claimId) => ({
       claimId,

@@ -4,7 +4,7 @@
 // The webhook body is untrusted; only action, week and runId are read. Headers (which carry the secret) are never read.
 import { randomBytes } from "node:crypto";
 import type { NodeEntry } from "../runtime";
-import { collectWeekAssets, type WeekAssets } from "../../lib/assets/intake";
+import { NO_ASSETS, collectWeekAssets, type WeekAssets } from "../../lib/assets/intake";
 import type { AssetManifest, WorkflowProfile } from "../../lib/contracts";
 import syntheticManifest from "../../../../fixtures/synthetic/week-02/asset-manifest.json";
 import syntheticProfiles from "../../../../fixtures/synthetic/week-02/workflow-profiles.json";
@@ -62,14 +62,15 @@ export const sourceConfig: NodeEntry = (ctx) => {
 };
 
 /**
- * The week's private assets, read from the newsletter_assets rows that "Find Week Assets" returned. No rows: coverage
- * is unknown and the issue shows a dash for files and images. The synthetic test path never reads stored assets; it
- * uses the synthetic fixture's manifest and profiles (invented workflows) so the asset route is exercised end to end.
+ * The week's real assets in canonical form, from the asset sources in priority order: Yellowdig attachments (the
+ * events API has none, verified), then the private asset store rows that "Find Week Assets" returned. No source:
+ * coverage is unknown and the issue shows a dash for files and images. The synthetic test path never reads stored
+ * assets; it uses the synthetic fixture's manifest and profiles (invented workflows).
  */
 export const collectAssets: NodeEntry = (ctx) => {
   const req = ctx.node(WF05.route) as { week: number; test: string | null };
   if (req.test === "synthetic") {
-    const fixture: WeekAssets = { manifest: syntheticManifest as unknown as AssetManifest, profiles: syntheticProfiles as unknown as WorkflowProfile[], images: {}, hero: null };
+    const fixture: WeekAssets = { ...NO_ASSETS, manifest: syntheticManifest as unknown as AssetManifest, profiles: syntheticProfiles as unknown as WorkflowProfile[] };
     return [fixture as unknown as J];
   }
   return [collectWeekAssets(ctx.items, req.week) as unknown as J];
@@ -84,8 +85,9 @@ export const editorialRequest: NodeEntry = (ctx) => {
   const synthetic = dataset.source?.provider === "synthetic-fixture";
   if (synthetic && req.test !== "synthetic") throw new Error("[SOURCE_FALLBACK] refusing to publish fixture data as a real week");
   if (!dataset.posts.length) throw new Error("[NO_POSTS] no posts for this week's topic");
-  const input = buildEditorialInput({ dataset, manifest: assets?.manifest ?? null, profiles: assets?.profiles ?? [], course: { ...COURSE } });
-  return [{ input, options: synthetic ? { provider: "mock", scenario: "clean" } : { provider: "gemini" } } as unknown as J];
+  const input = buildEditorialInput({ dataset, manifest: assets?.manifest ?? null, profiles: assets?.profiles ?? [], images: assets?.images ?? [], course: { ...COURSE } });
+  // Image bytes ride alongside the input (not inside it): workflow 04 attaches them only to image-curator calls.
+  return [{ input, imageBank: assets?.bank ?? {}, options: synthetic ? { provider: "mock", scenario: "clean" } : { provider: "gemini" } } as unknown as J];
 };
 
 export const renderArtifact: NodeEntry = (ctx) => {
@@ -98,7 +100,8 @@ export const renderArtifact: NodeEntry = (ctx) => {
   const assets = ctx.node(WF05.assets) as unknown as WeekAssets | null;
   // Links only from the verified URL format, built in workflow 02 from the API's own identifiers.
   const postUrls = Object.fromEntries((dataset?.posts ?? []).filter((p) => p.sourceUrl && p.source.sourceUrlVerified).map((p) => ["post:" + p.postId, p.sourceUrl as string]));
-  const r = renderNewsletter({ input: req.input, draft, postUrls, images: assets?.images ?? {}, hero: assets?.hero ?? null });
+  const altText = Object.fromEntries((assets?.images ?? []).map((i) => [i.assetRef, i.altText]));
+  const r = renderNewsletter({ input: req.input, draft, postUrls, imageBank: assets?.bank ?? {}, altText });
   assertPublicationQuality(req.input, r);
   return [{ status: r.status, html: r.html, omittedClaims: r.omittedClaims }];
 };

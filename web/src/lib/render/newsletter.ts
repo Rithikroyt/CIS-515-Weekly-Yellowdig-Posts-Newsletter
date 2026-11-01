@@ -16,10 +16,13 @@ export type RenderOptions = {
   draft: EditorialDraft;
   /** Post URLs keyed by postRef. Only https://yellowdig.app/ links are used. */
   postUrls?: Record<string, string>;
-  /** One screenshot per post, keyed by postRef. Only data:image/png|jpeg|webp base64 URIs are used. */
-  images?: Record<string, RenderImage>;
-  /** A screenshot chosen as the hero. Without one, a collage of up to three spotlight screenshots is used. */
-  hero?: RenderImage | null;
+  /**
+   * Image bank: assetRef → data:image/png|jpeg|webp;base64 URI of a real post image. Which image appears where is
+   * decided by code in the draft (draft.images); anything else in the bank is ignored, and other URIs are refused.
+   */
+  imageBank?: Record<string, string>;
+  /** Intake alt text by assetRef, used when the curator gave none. */
+  altText?: Record<string, string>;
 };
 
 export type QualityReport = {
@@ -82,18 +85,20 @@ function chips(path: Array<{ category: StepCategory; label: string }>): string {
   return items.length ? '<div style="margin:0 0 14px">' + items.join(arrow) + "</div>" : "";
 }
 
-const sectionRule = (label: string) =>
-  '<tr><td style="border-top:3px solid ' + INK + ";padding:10px 0 0;font-family:" + SANS + ";font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:" + MAROON + '">' + esc(label) + "</td></tr>";
+/** The section label as a block, placed inside the first item's keep block so it is never stranded at a page bottom. */
+const ruleDiv = (label: string) =>
+  '<div style="border-top:3px solid ' + INK + ";padding:10px 0 0;margin:0 0 18px;font-family:" + SANS + ";font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:" + MAROON + '">' + esc(label) + "</div>";
 const smallHead = (t: string) =>
   '<div style="font-family:' + SANS + ";font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold;color:" + INK + ';margin:0 0 6px">' + esc(t) + "</div>";
 const para = (t: string, size = 14) =>
   '<p style="font-family:' + SANS + ";font-size:" + size + "px;line-height:1.55;color:" + INK + ';margin:0 0 14px">' + esc(t) + "</p>";
+/** The whole screenshot, scaled to fit the column and a height cap; never cropped. */
 const imgTag = (i: { src: string; alt: string }, maxH: number) =>
-  '<div style="max-height:' + maxH + 'px;overflow:hidden;border:1px solid ' + RULE + '"><img src="' + i.src + '" width="544" alt="' + esc(i.alt) +
-  '" style="display:block;width:100%;max-width:544px;height:auto;border:0"></div>';
+  '<div style="text-align:center;background:#F7F7F7;border:1px solid ' + RULE + '"><img src="' + i.src + '" alt="' + esc(i.alt) +
+  '" style="display:inline-block;max-width:100%;max-height:' + maxH + 'px;width:auto;height:auto;border:0;vertical-align:top"></div>';
 
 const STYLE = [
-  "@media only screen and (max-width: 620px) { .pad { padding: 24px 18px 32px !important; } .h1 { font-size: 32px !important; } .dek { font-size: 17px !important; } .num { font-size: 24px !important; } .lbl { font-size: 9px !important; letter-spacing: 0 !important; } .stat { padding-left: 8px !important; } .mast td { display: block !important; text-align: left !important; padding-bottom: 4px !important; } .two td { display: block !important; width: 100% !important; padding: 0 0 18px !important; } img { width: 100% !important; } }",
+  "@media only screen and (max-width: 620px) { .pad { padding: 24px 18px 32px !important; } .h1 { font-size: 32px !important; } .dek { font-size: 17px !important; } .num { font-size: 24px !important; } .lbl { font-size: 9px !important; letter-spacing: 0 !important; } .stat { padding-left: 8px !important; } .mast td { display: block !important; text-align: left !important; padding-bottom: 4px !important; } .two td { display: block !important; width: 100% !important; padding: 0 0 18px !important; } img { max-width: 100% !important; height: auto !important; } }",
   // Pagination rules apply to screen-media PDF rendering too, so they are not inside @media print.
   ".keep { break-inside: avoid; page-break-inside: avoid; }",
   "@media print { body { background: #FFFFFF !important; } }",
@@ -119,7 +124,14 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const commentPost = new Map(input.posts.flatMap((p) => p.comments.map((c) => [c.commentRef, p.postRef] as const)));
   const metric = (ref: string) => input.metrics.find((m) => m.ref === ref)?.value ?? null;
   const href = (ref: string) => safeHref(o.postUrls?.[ref]);
-  const image = (ref: string) => safeImage(o.images?.[ref]);
+  const author = (ref: string) => posts.get(ref)?.authorName ?? "a student";
+  // An image is shown only for its own post: the choice's postRef must match, and the bytes must be in the bank.
+  const imageFor = (c: { postRef: string; assetRef: string; altText: string } | null | undefined, postRef: string) =>
+    c && c.postRef === postRef && o.imageBank?.[c.assetRef]
+      ? safeImage({ src: o.imageBank[c.assetRef], alt: c.altText || o.altText?.[c.assetRef] || "Screenshot from " + author(postRef) + "'s post" })
+      : null;
+  const choiceOf = new Map((draft.images?.choices ?? []).map((c) => [c.postRef, c]));
+  const image = (ref: string) => imageFor(choiceOf.get(ref), ref);
   const week = input.week;
   const range = formatRange(input.dateRange.start, input.dateRange.end);
   const synthetic = input.sourceStatus.provider === "synthetic-fixture";
@@ -156,19 +168,19 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const groupOf = new Map((draft.buildGroups?.groups ?? []).flatMap((g) => g.postRefs.map((r) => [r, g.title] as const)));
   const spots = draft.selection.spotlights.filter((s) => posts.has(s.postRef));
 
-  // 4–7. Headline, dek, hero (chosen image, else a collage of up to three spotlight screenshots), credibility line.
+  // 4–7. Headline, dek, hero (one real post image chosen by code, credited to its post), credibility line.
   push('<tr><td style="padding:26px 0 0">');
   push('<h1 class="h1" style="font-family:' + SERIF + ";font-weight:normal;font-size:44px;line-height:1.08;color:" + INK + ';margin:0 0 14px">' + esc(title) + "</h1>");
   if (dek) push('<p class="dek" style="font-family:' + SERIF + ";font-size:19px;line-height:1.45;color:" + BODY2 + ';margin:0 0 14px">' + esc(dek) + "</p>");
-  const hero = safeImage(o.hero);
-  const collage = spots.map((s) => image(s.postRef)).filter((i): i is { src: string; alt: string } => !!i).slice(0, 3);
+  const heroChoice = draft.images?.hero ?? null;
+  const hero = heroChoice && posts.has(heroChoice.postRef) ? imageFor(heroChoice, heroChoice.postRef) : null;
   let imagesShown = 0;
-  if (hero) { push('<div style="margin:6px 0 18px">' + imgTag(hero, 360) + "</div>"); imagesShown++; }
-  else if (collage.length >= 3) {
-    push('<table role="presentation" class="collage" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 18px"><tr>' +
-      collage.map((i, k) => '<td width="33%" valign="top" style="padding:0 ' + (k < 2 ? "6px" : "0") + ' 0 0"><div style="height:120px;overflow:hidden;border:1px solid ' + RULE + '"><img src="' + i.src + '" width="176" alt="' + esc(i.alt) + '" style="display:block;width:100%;height:auto;border:0"></div></td>').join("") +
-      "</tr></table>");
-    imagesShown += collage.length;
+  if (hero) {
+    const link = href(heroChoice!.postRef);
+    const credit = "From " + esc(trunc(author(heroChoice!.postRef), 80)) + "&#39;s post, <i>" + esc(trunc(posts.get(heroChoice!.postRef)!.title, 120)) + "</i>";
+    push('<div class="keep" style="margin:6px 0 18px">' + (link ? '<a href="' + link + '" style="text-decoration:none">' + imgTag(hero, 360) + "</a>" : imgTag(hero, 360)) +
+      '<div style="font-family:' + SANS + ";font-size:11px;color:" + MUTED + ';padding-top:6px">' + credit + "</div></div>");
+    imagesShown++;
   }
   push('<p style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';margin:0 0 24px">Built with n8n &mdash; drafted by AI, checked by code against the week&#39;s posts.</p>');
   push("</td></tr>");
@@ -214,18 +226,20 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
     const link = href(s.postRef);
     spotlightRefs.add(s.postRef);
     const b: string[] = [];
-    b.push('<tr><td class="keep" style="padding:24px 0 30px;border-bottom:1px solid ' + RULE + '">');
+    b.push('<tr><td style="padding:' + (shown.length ? "24px" : "0") + ' 0 30px;border-bottom:1px solid ' + RULE + '">');
+    b.push('<div class="keep">' + (shown.length ? "" : ruleDiv("01 — Spotlights")));
     const group = groupOf.get(s.postRef);
     b.push('<div style="font-family:' + SANS + ";font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold;color:" + MAROON + ';margin:0 0 6px">' + (group && group !== OTHER_BUILDS ? esc(trunc(group, 60)) + " &middot; " : "") + esc(s.label) + "</div>");
     b.push('<h2 style="font-family:' + SERIF + ";font-weight:normal;font-size:27px;line-height:1.15;color:" + INK + ';margin:4px 0 6px">' + esc(trunc(p.title, 140)) + "</h2>");
     b.push('<div style="font-family:' + SANS + ";font-size:13px;color:" + MUTED + ';margin:0 0 16px">' + esc(trunc(p.authorName, 80)) + " &middot; " + esc(p.commentCount) + (p.commentCount === 1 ? " comment" : " comments") +
       " &middot; " + (prof ? "pipeline read from the workflow file" : "pipeline as described in the post") + "</div>");
     if (img) { b.push('<div style="margin:0 0 16px">' + (link ? '<a href="' + link + '" style="text-decoration:none">' + imgTag(img, 340) + "</a>" : imgTag(img, 340)) + "</div>"); imagesShown++; }
+    b.push("</div>");
     b.push(para(text, 15));
     if (prof) b.push(chips(prof.mainPath));
     if (control) b.push('<p style="font-family:' + SANS + ";font-size:12px;font-style:italic;color:" + MUTED + ';margin:0 0 18px">' + esc(control) + "</p>");
-    if (test) b.push(smallHead("What the test showed") + para(test));
-    if (thread) b.push(smallHead("From the thread") + para(thread));
+    if (test) b.push('<div class="keep">' + smallHead("What the test showed") + para(test) + "</div>");
+    if (thread) b.push('<div class="keep">' + smallHead("From the thread") + para(thread) + "</div>");
     if (borrow) b.push('<p style="font-family:' + SERIF + ";font-size:16px;font-style:italic;color:" + BODY2 + ';margin:6px 0 14px">Worth borrowing: ' + esc(borrow) + "</p>");
     if (link) b.push('<a href="' + link + '" style="font-family:' + SANS + ";font-size:13px;font-weight:bold;color:" + MAROON + ';text-decoration:none">Read ' + esc(firstName(p.authorName)) + "&#39;s post &rarr;</a>");
     b.push("</td></tr>");
@@ -233,7 +247,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   }
   let n = 1;
   if (shown.length) {
-    push(sectionRule(String(n++).padStart(2, "0") + " — Spotlights"));
+    n++;
     shown.forEach(push);
     push('<tr><td style="height:40px"></td></tr>');
   }
@@ -248,22 +262,25 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   }
   let everyBuild = 0;
   if (input.posts.length) {
-    push(sectionRule(String(n++).padStart(2, "0") + " — In brief: every build this week"));
-    push('<tr><td style="padding:10px 0 0"><p style="font-family:' + SERIF + ";font-size:15px;font-style:italic;color:" + BODY2 + ';margin:0 0 6px">All ' + esc(input.posts.length) + " builds, grouped by what they do. Red numbers are comment counts.</p></td></tr>");
+    let lead = ruleDiv(String(n++).padStart(2, "0") + " — In brief: every build this week") +
+      '<p style="font-family:' + SERIF + ";font-size:15px;font-style:italic;color:" + BODY2 + ';margin:0 0 6px">All ' + esc(input.posts.length) + " builds, grouped by what they do. Red numbers are comment counts.</p>";
     for (const g of groups) {
-      push('<tr><td class="keep" style="padding:26px 0 6px;border-bottom:1px solid ' + INK + ";font-family:" + SERIF + ";font-size:21px;color:" + INK + '">' + esc(trunc(g.title, 90)) +
-        ' <span style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';padding-left:6px">' + esc(g.refs.length) + (g.refs.length === 1 ? " build" : " builds") + "</span></td></tr>");
-      for (const ref of g.refs) {
+      // A group heading is never left alone at a page bottom: it shares a keep block with its first entry.
+      const head = lead + '<div style="padding:26px 0 6px;border-bottom:1px solid ' + INK + ";font-family:" + SERIF + ";font-size:21px;color:" + INK + '">' + esc(trunc(g.title, 90)) +
+        ' <span style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';padding-left:6px">' + esc(g.refs.length) + (g.refs.length === 1 ? " build" : " builds") + "</span></div>";
+      lead = "";
+      g.refs.forEach((ref, k) => {
         const p = posts.get(ref)!;
         const link = href(ref);
         const name = link ? '<a href="' + link + '" style="font-weight:bold;color:' + INK + ';text-decoration:none">' + esc(trunc(p.authorName, 80)) + "</a>" : "<b>" + esc(trunc(p.authorName, 80)) + "</b>";
         const sum = notes.get(ref)?.summary;
         const line = usable(sum) ? " " + esc(clipWords(sum.text, 45)) : "";
-        push('<tr><td class="keep" style="padding:10px 0;border-bottom:1px solid #E5E5E5;font-family:' + SANS + ";font-size:13px;line-height:1.5;color:" + INK + '">' + name +
+        const entry = '<div style="padding:10px 0;border-bottom:1px solid #E5E5E5;font-family:' + SANS + ";font-size:13px;line-height:1.5;color:" + INK + '">' + name +
           " &mdash; <i>" + esc(trunc(p.title, 160)) + "</i>." + line + (spotlightRefs.has(ref) ? ' <span style="color:' + MAROON + '">See the spotlight above.</span>' : "") +
-          (p.commentCount ? ' <span style="color:' + MAROON + '">' + esc(p.commentCount) + "</span>" : "") + "</td></tr>");
+          (p.commentCount ? ' <span style="color:' + MAROON + '">' + esc(p.commentCount) + "</span>" : "") + "</div>";
+        push('<tr><td class="keep" style="padding:0">' + (k === 0 ? head : "") + entry + "</td></tr>");
         everyBuild++;
-      }
+      });
     }
   }
 
@@ -283,10 +300,11 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const takeaways = nl.takeaways.filter((t) => ok(t.text)).slice(0, 3);
   const steps = (nl.nextSteps ?? []).filter(ok).slice(0, 5);
   if (takeaways.length || steps.length) {
-    push(sectionRule(String(n++).padStart(2, "0") + " — " + (week >= FINAL_WEEK ? "What to carry forward" : "What to carry into Week " + (week + 1))));
+    const label = ruleDiv(String(n++).padStart(2, "0") + " — " + (week >= FINAL_WEEK ? "What to carry forward" : "What to carry into Week " + (week + 1)));
+    if (!takeaways.length) push('<tr><td class="keep">' + label + "</td></tr>");
     if (takeaways.length) {
-      push('<tr><td style="padding:18px 0 6px">');
-      takeaways.forEach((t) => push('<div class="keep"><div style="font-family:' + SERIF + ";font-size:18px;color:" + INK + ';margin:0 0 4px">' + esc(trunc(t.title, 120)) + "</div>" +
+      push('<tr><td style="padding:0 0 6px">');
+      takeaways.forEach((t, k) => push('<div class="keep">' + (k === 0 ? label : "") + '<div style="font-family:' + SERIF + ";font-size:18px;color:" + INK + ';margin:0 0 4px">' + esc(trunc(t.title, 120)) + "</div>" +
         '<p style="font-family:' + SANS + ";font-size:14px;line-height:1.55;color:" + BODY2 + ';margin:0 0 16px">' + esc(t.text.text) + "</p></div>"));
       push("</td></tr>");
     }

@@ -7,11 +7,13 @@ import {
   WITHHELD_TEXT, checkClaim, collectClaims, indexInput, parseModelJson, reviewNewsletter, validateDiscussion, validatePostNotes,
   validateSelection, validateThemes, worst, type ClaimResult, type ClaimStatus, type StageIssue,
 } from "./checks";
-import { chooseSpotlights, screenDiscussion, screenNotes, validateBuildGroups } from "./curate";
+import {
+  CURATOR_LIMITS, candidateImages, chooseHero, chooseImage, chooseSpotlights, scorePost, screenDiscussion, screenNotes, validateBuildGroups, validateImageCuration,
+} from "./curate";
 import { finalizeIntroduction, type IntroSource } from "./intro";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
 import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
-import type { BuildGroups, Discussion, EditorialCode, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
+import type { BuildGroups, Discussion, EditorialCode, ImageChoice, ImageCuration, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
 import { EditorialError } from "./types";
 
 export const MAX_REVISIONS = 2;
@@ -21,11 +23,13 @@ export const MAX_FORMAT_RETRIES = 2;
 /** Characters of post content per extractor call; larger weeks are split into batches. */
 export const EXTRACT_BATCH_CHARS = 24_000;
 
-type Phase = "extract" | "themes" | "groups" | "selection" | "discussion" | "newsletter" | "review" | "revise" | "done";
+type Phase = "extract" | "themes" | "groups" | "images" | "selection" | "discussion" | "newsletter" | "review" | "revise" | "done";
 
 export type ModelRequest = {
   stage: string; promptId: PromptId; promptVersion: string; outputDef: string;
   provider: ProviderName; model: string; system: string; user: string;
+  /** Real images sent with the call (image-curator only). Bytes are attached by the caller from the image bank. */
+  images?: Array<{ assetRef: string; mimeType: string; data?: string }>;
 };
 export type ModelResponse = { ok: true; text: string } | { ok: false; code: "MODEL_TIMEOUT" | "MODEL_PROVIDER_ERROR"; detail: string };
 
@@ -49,6 +53,12 @@ export type RunState = {
   capabilityChecks: CapabilityCheck[];
   themes: Theme[];
   buildGroups: BuildGroups;
+  /** Image curator batches (post refs), its validated evaluations, and code's final image choices. */
+  imageBatches: string[][];
+  imageBatchIndex: number;
+  imageCuration: ImageCuration["posts"];
+  imageChoices: ImageChoice[];
+  heroImage: ImageChoice | null;
   selection: Selection;
   discussion: Discussion;
   newsletter: Newsletter | null;
@@ -110,7 +120,7 @@ export function startRun(o: StartOptions): RunState {
   return {
     v: 1, input: o.input, inputHash: hash, idempotencyKey: key, runId, parentRunId: o.parentRunId ?? null, feedback: o.feedback ?? null,
     provider: o.provider, model: o.model, startedAt: o.now, phase: batches.length ? "extract" : "done",
-    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], buildGroups: { groups: [] }, selection: { spotlights: [], failurePath: null, patterns: [] },
+    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], buildGroups: { groups: [] }, imageBatches: [], imageBatchIndex: 0, imageCuration: [], imageChoices: [], heroImage: null, selection: { spotlights: [], failurePath: null, patterns: [] },
     discussion: { insights: [] }, newsletter: null, review: [], reviewedByModel: false, revisionCount: 0, stageIssues: [], modelCalls: [],
     statusHistory: ["draft"], status: "draft", steps: 0, errorCode: null,
     errorSummary: batches.length ? null : "No eligible posts in this week; nothing to draft.", pending: null,
@@ -174,6 +184,17 @@ export function nextRequest(state: RunState, now: string): RunState {
       s.pending = request(s, "build-categorizer", "build-categorizer", { week: s.input.week, topic: s.input.topic, groupEveryPost: posts.length }, { posts });
       break;
     }
+    case "images": {
+      const refs = s.imageBatches[s.imageBatchIndex];
+      const posts = s.input.posts.filter((p) => refs.includes(p.postRef)).map((p) => ({
+        postRef: p.postRef, title: p.title, body: p.body.slice(0, 600), workflowProfileRef: p.workflowProfileRef,
+        images: candidateImages(p).slice(0, CURATOR_LIMITS.imagesPerPost).map((i) => ({ assetRef: i.assetRef, mimeType: i.mimeType, width: i.width, height: i.height })),
+      }));
+      s.pending = request(s, "image-curator", "image-curator", { batch: s.imageBatchIndex + 1, of: s.imageBatches.length, evaluateEveryImage: true },
+        { posts, workflowProfiles: profileSummary(s).filter((w) => w.postRef && refs.includes(w.postRef)) });
+      s.pending.images = posts.flatMap((p) => p.images.map((i) => ({ assetRef: i.assetRef, mimeType: i.mimeType })));
+      break;
+    }
     case "selection":
       s.pending = request(s, "spotlight-pattern-selector", "spotlight-pattern-selector", { week: s.input.week },
         { notes: s.notes, themes: s.themes, workflowProfiles: profileSummary(s), posts: s.input.posts, metrics });
@@ -186,7 +207,7 @@ export function nextRequest(state: RunState, now: string): RunState {
     }
     case "newsletter":
       s.pending = request(s, "newsletter-editor", "newsletter-editor", { week: s.input.week, reviewerFeedback: s.feedback },
-        { notes: s.notes, themes: s.themes, selection: s.selection, discussion: s.discussion, metrics, posts: postIndex(s), workflowProfiles: profileSummary(s) });
+        { notes: s.notes, themes: s.themes, selection: s.selection, discussion: s.discussion, metrics, posts: postIndex(s), workflowProfiles: profileSummary(s), spotlightImages: spotlightImages(s) });
       break;
     case "review": {
       const claims = collectClaims(s.newsletter).map(({ claimId, claim }) => ({ claimId, text: claim.text, evidence: excerpts(s, claim.evidenceRefs) }));
@@ -272,8 +293,13 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
     }
     case "groups": {
       const r = validateBuildGroups(idx, v as BuildGroups);
-      s.buildGroups = r.buildGroups; s.stageIssues.push(...r.issues); s.phase = "selection";
-      return s;
+      s.buildGroups = r.buildGroups; s.stageIssues.push(...r.issues);
+      return enterImages(s);
+    }
+    case "images": {
+      const r = validateImageCuration(idx, v as ImageCuration, s.imageBatches[s.imageBatchIndex]);
+      s.imageCuration.push(...r.posts); s.stageIssues.push(...r.issues);
+      return nextImageBatch(s);
     }
     case "selection": {
       const r = validateSelection(idx, v as Selection);
@@ -322,7 +348,9 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
   switch (s.phase) {
     case "extract": skip(); s.batchIndex += 1; if (s.batchIndex >= s.batches.length) s.phase = "themes"; return s;
     case "themes": skip(); s.phase = "groups"; return s;
-    case "groups": { skip(); const r = validateBuildGroups(indexInput(s.input), null); s.buildGroups = r.buildGroups; s.phase = "selection"; return s; }
+    case "groups": { skip(); const r = validateBuildGroups(indexInput(s.input), null); s.buildGroups = r.buildGroups; return enterImages(s); }
+    // A failed curator batch never fails the run: those posts get the deterministic image choice.
+    case "images": skip(); return nextImageBatch(s);
     case "selection": skip(); return afterSelection(s);
     case "discussion": skip(); s.phase = "newsletter"; return s;
     case "revise": skip(); s.revisionCount = MAX_REVISIONS; return revisionOrStop(s);
@@ -332,14 +360,60 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
 }
 
 /**
+ * Plans the image curator: the strongest posts that have readable real images (scored without the image bonus),
+ * at most CURATOR_LIMITS.posts, batched so no call carries more than CURATOR_LIMITS.imagesPerCall images.
+ * A week without images skips straight to selection.
+ */
+function enterImages(s: RunState): RunState {
+  const idx = indexInput(s.input);
+  const noteOf = new Map(s.notes.map((n) => [n.postRef, n]));
+  const order = new Map(s.input.posts.map((p, i) => [p.postRef, i]));
+  const withImages = s.input.posts.filter((p) => candidateImages(p).length)
+    .map((p) => ({ p, score: scorePost(p, noteOf.get(p.postRef), idx.profileOfPost.get(p.postRef)).score }))
+    .sort((a, b) => b.score - a.score || order.get(a.p.postRef)! - order.get(b.p.postRef)!).slice(0, CURATOR_LIMITS.posts);
+  const batches: string[][] = [];
+  let cur: string[] = [], n = 0;
+  for (const { p } of withImages) {
+    const k = Math.min(candidateImages(p).length, CURATOR_LIMITS.imagesPerPost);
+    if (cur.length && n + k > CURATOR_LIMITS.imagesPerCall) { batches.push(cur); cur = []; n = 0; }
+    cur.push(p.postRef); n += k;
+  }
+  if (cur.length) batches.push(cur);
+  s.imageBatches = batches;
+  s.imageBatchIndex = 0;
+  s.phase = batches.length ? "images" : "selection";
+  if (!batches.length) chooseImages(s);
+  return s;
+}
+
+function nextImageBatch(s: RunState): RunState {
+  s.imageBatchIndex += 1;
+  if (s.imageBatchIndex >= s.imageBatches.length) { chooseImages(s); s.phase = "selection"; }
+  return s;
+}
+
+/** Code's image for every post with readable images: curator-informed where evaluated, deterministic otherwise. */
+function chooseImages(s: RunState) {
+  const byPost = new Map(s.imageCuration.map((c) => [c.postRef, c]));
+  s.imageChoices = s.input.posts.map((p) => chooseImage(p, byPost.get(p.postRef))).filter((c): c is ImageChoice => !!c);
+}
+
+const spotlightImages = (s: RunState) => s.selection.spotlights.map((sp) => {
+  const c = s.imageChoices.find((x) => x.postRef === sp.postRef);
+  return { postRef: sp.postRef, classification: c?.classification ?? null };
+});
+
+/**
  * The model's spotlight picks are suggestions: code scores the whole week and fixes the final 4–6 (see curate.ts).
  * Groups are filled first if that stage never ran, so every post has a group for the diversity rule.
  */
 function afterSelection(s: RunState): RunState {
   const idx = indexInput(s.input);
   if (!s.buildGroups.groups.length) s.buildGroups = validateBuildGroups(idx, null).buildGroups;
-  const r = chooseSpotlights(idx, s.notes, s.buildGroups, s.selection.spotlights);
+  const choices = new Map(s.imageChoices.map((c) => [c.postRef, c]));
+  const r = chooseSpotlights(idx, s.notes, s.buildGroups, s.selection.spotlights, choices);
   s.selection = { ...s.selection, spotlights: r.spotlights };
+  s.heroImage = chooseHero(idx, r.spotlights, choices, s.imageCuration);
   s.phase = "discussion";
   return s;
 }
@@ -392,7 +466,8 @@ export function buildDraft(s: RunState, now: string) {
   const body = {
     schemaVersion: "1.0" as const, issueId: s.input.issueId, week: s.input.week, status: s.status, inputHash: s.inputHash, idempotencyKey: s.idempotencyKey,
     metrics: s.input.metrics, postNotes: s.notes, capabilityChecks: s.capabilityChecks, themes: s.themes, selection: s.selection,
-    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource, review,
+    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource,
+    images: { curation: { posts: s.imageCuration }, choices: s.imageChoices, hero: s.heroImage }, review,
   };
   const usedPrompts = [...new Map(s.modelCalls.map((c) => [c.promptId, c.promptVersion])).entries()].map(([promptId, promptVersion]) => ({ promptId, promptVersion }));
   const run = {

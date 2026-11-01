@@ -44,12 +44,15 @@ async function optimize(buf: Buffer): Promise<string> {
   throw new Error("[IMAGE_TOO_LARGE] a screenshot stays over the size limit after re-encoding");
 }
 
-/** The image to feature for a post: the hero first, then one marked spotlight, then the first listed. */
-function featured(images: Array<{ a: IntakeAsset; buf: Buffer }>) {
-  const byPost = new Map<string, { a: IntakeAsset; buf: Buffer }>();
+/** Images stored per post for the image curator to choose from (all validated images still count in the metrics). */
+const STORED_PER_POST = 2;
+
+/** The images stored for each post: hero first, then those marked spotlight, then in manifest order. */
+function featured<T extends { a: IntakeAsset }>(images: T[]): T[] {
   const rank = (a: IntakeAsset) => (a.role === "hero" ? 0 : a.role === "spotlight" ? 1 : 2);
-  images.forEach((x) => { const cur = byPost.get(x.a.postId); if (!cur || rank(x.a) < rank(cur.a)) byPost.set(x.a.postId, x); });
-  return [...byPost.values()];
+  const byPost = new Map<string, T[]>();
+  images.forEach((x) => byPost.set(x.a.postId, [...(byPost.get(x.a.postId) ?? []), x]));
+  return [...byPost.values()].flatMap((list) => list.map((x, i) => ({ x, i })).sort((p, q) => rank(p.x.a) - rank(q.x.a) || p.i - q.i).slice(0, STORED_PER_POST).map((y) => y.x));
 }
 
 async function api(path: string, init: RequestInit = {}) {
@@ -101,13 +104,14 @@ async function main() {
   if (multiWf) ambiguous.push(multiWf + " post(s) with more than one workflow file");
 
   const okImages = images.filter((x) => entries[x.index]?.status === "VALIDATED");
-  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles }) }];
+  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles }), source: "private_asset_store" }];
   let stripped = 0;
   for (const x of featured(okImages)) {
     const payload = await optimize(x.buf);
     const meta = await sharp(Buffer.from(payload.split(",")[1], "base64")).metadata();
     if (!meta.exif && !meta.icc && !meta.xmp && !meta.iptc) stripped++;
-    rows.push({ week, kind: "image", post_id: x.a.postId, role: x.a.role, alt: x.a.altText, payload });
+    const assetId = entries[x.index].asset.assetId;
+    rows.push({ week, kind: "image", post_id: x.a.postId, role: x.a.role, alt: x.a.altText, payload, asset_id: assetId, width: meta.width ?? 0, height: meta.height ?? 0, source: "private_asset_store" });
   }
 
   // Counts only: no file names, contents or post text are printed.
@@ -115,7 +119,7 @@ async function main() {
     week, postsInWeek: known?.length ?? "not checked", assets: entries.length,
     accepted: count("PROFILED") + count("VALIDATED"), workflowFilesProfiled: count("PROFILED"), imagesValidated: count("VALIDATED"),
     rejected: count("REJECTED"), duplicates: count("DUPLICATE"), unmatched: count("UNMATCHED_ASSET"), rejectedReasons: reasons,
-    postsWithWorkflowFile: Object.keys(wfPerPost).length, postsWithImage: rows.length - 1, hero: rows.some((r) => r.role === "hero"),
+    postsWithWorkflowFile: Object.keys(wfPerPost).length, postsWithImage: new Set(rows.filter((r) => r.kind === "image").map((r) => r.post_id)).size, imagesStored: rows.length - 1, hero: rows.some((r) => r.role === "hero"),
     imagesMetadataStripped: stripped + "/" + (rows.length - 1), storedBytes: rows.reduce((t, r) => t + r.payload.length, 0),
   }, null, 1));
   if (ambiguous.length) throw new Error("[AMBIGUOUS_MAPPING] " + ambiguous.join("; ") + ". Fix the manifest; nothing was uploaded.");

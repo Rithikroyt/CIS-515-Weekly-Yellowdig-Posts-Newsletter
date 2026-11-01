@@ -3,11 +3,12 @@
 import type { NodeEntry } from "../runtime";
 import { acceptResponse, assertDraft, buildDraft, nextRequest, runRow, startRun, type ModelResponse, type RunState } from "../../lib/editorial/machine";
 import { NAMED_SCENARIOS, mockRespond } from "../../lib/editorial/mock";
-import { DEFAULT_MODELS, geminiRequest, parseGeminiResponse } from "../../lib/editorial/providers";
+import { DEFAULT_MODELS, geminiRequest, parseGeminiResponse, withImageBytes, type ImageBank } from "../../lib/editorial/providers";
 import { EditorialError, type EditorialInput, type ProviderName } from "../../lib/editorial/types";
 import { syntheticEditorialInput } from "../../lib/editorial/synthetic";
 
 type J = Record<string, unknown>;
+const TRIGGER = "When Called by Another Workflow";
 type StepItem = { state: RunState; scenario: string | null };
 type StartItem = {
   input: EditorialInput;
@@ -42,9 +43,11 @@ export const editorialStep: NodeEntry = (ctx) => {
   else throw new EditorialError("INPUT_INVALID", "expected {input, options} or {state, modelResponse}");
   const state = nextRequest(step.state, ctx.now);
   if (state.pending) {
+    // The image bank comes with the caller's item and is re-read from the trigger on every loop; it never enters the state.
+    const bank = ((ctx.node(TRIGGER) as { imageBank?: ImageBank } | null)?.imageBank ?? (item.imageBank as ImageBank | undefined)) ?? null;
     return [{
       done: false, state, scenario: step.scenario, stepCount: state.steps, useMock: state.provider === "mock",
-      gemini: state.provider === "gemini" ? geminiRequest(state.pending) : null,
+      gemini: state.provider === "gemini" ? geminiRequest(withImageBytes(state.pending, bank)) : null,
     } as unknown as J];
   }
   const draft = buildDraft(state, ctx.now);

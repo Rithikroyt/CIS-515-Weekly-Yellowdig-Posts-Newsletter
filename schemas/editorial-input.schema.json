@@ -68,6 +68,23 @@
           "workflowProfileRef": { "oneOf": [{ "$ref": "#/$defs/workflowRef" }, { "type": "null" }] },
           "screenshotCount": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
           "sourceUrlVerified": { "type": "boolean" },
+          "images": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["assetRef", "source", "mimeType", "width", "height", "role"],
+              "properties": {
+                "assetRef": { "$ref": "#/$defs/assetRef" },
+                "source": { "enum": ["yellowdig_attachment", "private_asset_store"] },
+                "mimeType": { "enum": ["image/jpeg", "image/png", "image/webp"] },
+                "width": { "type": "integer", "minimum": 1, "maximum": 20000 },
+                "height": { "type": "integer", "minimum": 1, "maximum": 20000 },
+                "role": { "enum": ["hero", "spotlight", "supporting"] }
+              }
+            }
+          },
           "comments": {
             "type": "array",
             "maxItems": 25,
@@ -158,6 +175,7 @@
   },
   "$defs": {
     "postRef": { "type": "string", "pattern": "^post:[A-Za-z0-9._:-]+$" },
+    "assetRef": { "type": "string", "pattern": "^asset:[A-Za-z0-9_-]{1,64}$" },
     "workflowRef": { "type": "string", "pattern": "^workflow:wf_[a-f0-9]{12}$" },
     "personRef": { "type": "string", "pattern": "^person:u_[a-f0-9]{12}$" },
     "stepCategory": { "enum": ["trigger", "ai", "judge", "code", "validator", "gate", "approval", "action", "storage", "tool", "errorPath", "other"] }

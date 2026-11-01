@@ -12,7 +12,13 @@ export type InputPost = {
   screenshotCount?: number | null;
   /** True when the post's public Yellowdig link was built from the verified URL format. */
   sourceUrlVerified?: boolean;
+  /** Real images attached to the post (metadata only; bytes travel separately in the image bank). */
+  images?: InputImage[];
   comments: Array<{ commentRef: string; authorRef: string; authorName: string; body: string; bodyTruncated: boolean }>;
+};
+export type InputImage = {
+  assetRef: string; source: "yellowdig_attachment" | "private_asset_store"; mimeType: "image/jpeg" | "image/png" | "image/webp";
+  width: number; height: number; role: "hero" | "spotlight" | "supporting";
 };
 export type InputProfile = {
   workflowProfileRef: string; postRef: string | null; workflowName: string; nodeCount: number; edgeCount: number;
@@ -59,6 +65,15 @@ export type Newsletter = {
   /** 3–5 concrete actions for next week. */
   nextSteps?: Claim[];
 };
+/** Fixed scale for every image score: 0 none, 1 poor, 2 weak, 3 adequate, 4 good, 5 excellent. */
+export type ImageClass = "workflow_canvas" | "execution_result" | "application_output" | "chart" | "supporting_visual" | "irrelevant";
+export type ImageEvaluation = {
+  assetRef: string; classification: ImageClass; relevanceScore: number; readabilityScore: number; spotlightSuitability: number;
+  reason: string; altText: string; caption: string; evidenceRefs: string[];
+};
+export type ImageCuration = { posts: Array<{ postRef: string; evaluations: ImageEvaluation[]; recommendedAssetRef: string | null; recommendationReason: string }> };
+/** Code's final image choice. source says whether curator evaluations or the deterministic fallback decided. */
+export type ImageChoice = { postRef: string; assetRef: string; classification: ImageClass | null; altText: string; source: "curator" | "deterministic" };
 /** Every post grouped into 4–7 use-case categories; each post appears exactly once (validated by code). */
 export type BuildGroups = { groups: Array<{ title: string; postRefs: string[] }> };
 export type Verdict = "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICT";

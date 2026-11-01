@@ -3,7 +3,7 @@
 // Changing any prompt text requires a new promptVersion.
 
 export type PromptId =
-  | "post-extractor" | "theme-analyst" | "build-categorizer" | "spotlight-pattern-selector" | "discussion-analyst"
+  | "post-extractor" | "theme-analyst" | "build-categorizer" | "image-curator" | "spotlight-pattern-selector" | "discussion-analyst"
   | "newsletter-editor" | "evidence-reviewer" | "newsletter-reviser";
 
 export type PromptDef = {
@@ -70,6 +70,18 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     ].join("\n"),
     outputShape: '{"groups": [{"title": string, "postRefs": ["post:…"]}]}',
   },
+  "image-curator": {
+    promptId: "image-curator", promptVersion: "1.0.0", purpose: "Classify each real post image and say how useful it is for a spotlight.",
+    inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "imageCurationOutput",
+    instructions: [
+      "TASK: the attached images are real screenshots from students' posts. Each image follows a text part naming its assetRef. Evaluate every image of every post in the source data.",
+      "classification: workflow_canvas (an n8n editor canvas with nodes), execution_result (an execution log, test run or pass/fail output), application_output (what the workflow produced: an email, message, sheet, report or app screen), chart, supporting_visual (other project-related image), irrelevant (avatar, logo, decoration or unrelated).",
+      "Scores are integers on this fixed scale: 0 none, 1 poor, 2 weak, 3 adequate, 4 good, 5 excellent. relevanceScore: how directly the image shows this post's workflow or its result. readabilityScore: how legible it would be at 544 pixels wide. spotlightSuitability: how well it would illustrate a magazine spotlight about this build.",
+      "Describe only what is visible. Do not read or quote small text, do not guess node settings, scores or results you cannot see, and do not name people. altText: one plain sentence (under 25 words) describing what the image shows. caption: an optional short neutral caption, or an empty string.",
+      "recommendedAssetRef: the post's most useful image for a spotlight, or null if none is suitable. Only use assetRefs given for that post.",
+    ].join("\n"),
+    outputShape: '{"posts": [{"postRef": "post:…", "evaluations": [{"assetRef": "asset:…", "classification": "workflow_canvas"|"execution_result"|"application_output"|"chart"|"supporting_visual"|"irrelevant", "relevanceScore": 0-5, "readabilityScore": 0-5, "spotlightSuitability": 0-5, "reason": string, "altText": string, "caption": string, "evidenceRefs": ["post:…", "asset:…"]}], "recommendedAssetRef": "asset:…"|null, "recommendationReason": string}]}',
+  },
   "spotlight-pattern-selector": {
     promptId: "spotlight-pattern-selector", promptVersion: "1.1.0", purpose: "Choose spotlight candidates, a failure path and reusable patterns.",
     inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "selectionOutput",
@@ -90,7 +102,7 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     outputShape: '{"insights": [{"kind": "recurring-question"|"peer-suggestion"|"unresolved-concern"|"testing-idea"|"insight", "insight": ' + CLAIM + "}]}",
   },
   "newsletter-editor": {
-    promptId: "newsletter-editor", promptVersion: "1.1.0", purpose: "Write the structured newsletter draft.",
+    promptId: "newsletter-editor", promptVersion: "1.2.0", purpose: "Write the structured newsletter draft.",
     inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "newsletterOutput",
     instructions: [
       "TASK: write the issue copy from the validated notes, spotlight selection, failure path and discussion insights provided. Write like a careful magazine editor: specific, concrete, about what students built and learned.",
@@ -103,6 +115,7 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "takeaways: exactly 3. Each has a 3 to 8 word title (no numbers) and a 30 to 60 word text that ties one lesson to named builds.",
       "nextSteps: 3 to 5 one-sentence actions students can take next week, each citing the posts that motivate it.",
       "themes, borrowThisPattern and discussionHighlights: return empty arrays.",
+      "spotlightImages says what kind of real screenshot code chose for each spotlight (for example a workflow canvas). Use it only as context; never state anything that rests on the image alone.",
     ].join("\n"),
     outputShape: '{"hero": {"title": claim, "dek": claim}, "executiveSummary": [claim], "themes": [], "spotlights": [{"postRef": "post:…", "label": "…", "text": claim, "testResult": claim|null, "threadInsight": claim|null, "worthBorrowing": claim}], "failurePath": null | {…same as candidate…}, "borrowThisPattern": [], "discussionHighlights": [], "takeaways": [{"title": string, "text": claim}], "nextSteps": [claim]}',
   },

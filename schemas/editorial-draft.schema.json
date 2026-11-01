@@ -36,6 +36,16 @@
     "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
     "buildGroups": { "$ref": "#/$defs/buildGroupsOutput" },
     "introSource": { "enum": ["ai", "repaired", "deterministic", null] },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["curation", "choices", "hero"],
+      "properties": {
+        "curation": { "$ref": "#/$defs/imageCurationOutput" },
+        "choices": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/imageChoice" } },
+        "hero": { "oneOf": [{ "$ref": "#/$defs/imageChoice" }, { "type": "null" }] }
+      }
+    },
     "review": {
       "type": "object",
       "additionalProperties": false,
@@ -283,6 +293,62 @@
         "nextSteps": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/claim" } }
       }
     },
+    "imageCurationOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["posts"],
+      "properties": {
+        "posts": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["postRef", "evaluations", "recommendedAssetRef", "recommendationReason"],
+            "properties": {
+              "postRef": { "$ref": "#/$defs/postRef" },
+              "evaluations": {
+                "type": "array",
+                "maxItems": 10,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["assetRef", "classification", "relevanceScore", "readabilityScore", "spotlightSuitability", "reason", "altText", "caption", "evidenceRefs"],
+                  "properties": {
+                    "assetRef": { "$ref": "#/$defs/assetRef" },
+                    "classification": { "$ref": "#/$defs/imageClass" },
+                    "relevanceScore": { "$ref": "#/$defs/imageScore" },
+                    "readabilityScore": { "$ref": "#/$defs/imageScore" },
+                    "spotlightSuitability": { "$ref": "#/$defs/imageScore" },
+                    "reason": { "type": "string", "maxLength": 300 },
+                    "altText": { "type": "string", "minLength": 1, "maxLength": 200 },
+                    "caption": { "type": "string", "maxLength": 200 },
+                    "evidenceRefs": { "type": "array", "maxItems": 4, "items": { "type": "string", "pattern": "^(post|asset):[A-Za-z0-9._:-]+$" } }
+                  }
+                }
+              },
+              "recommendedAssetRef": { "oneOf": [{ "$ref": "#/$defs/assetRef" }, { "type": "null" }] },
+              "recommendationReason": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      }
+    },
+    "imageChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["postRef", "assetRef", "classification", "altText", "source"],
+      "properties": {
+        "postRef": { "$ref": "#/$defs/postRef" },
+        "assetRef": { "$ref": "#/$defs/assetRef" },
+        "classification": { "oneOf": [{ "$ref": "#/$defs/imageClass" }, { "type": "null" }] },
+        "altText": { "type": "string", "maxLength": 200 },
+        "source": { "enum": ["curator", "deterministic"] }
+      }
+    },
+    "assetRef": { "type": "string", "pattern": "^asset:[A-Za-z0-9_-]{1,64}$" },
+    "imageClass": { "enum": ["workflow_canvas", "execution_result", "application_output", "chart", "supporting_visual", "irrelevant"] },
+    "imageScore": { "type": "integer", "minimum": 0, "maximum": 5 },
     "buildGroupsOutput": {
       "type": "object",
       "additionalProperties": false,

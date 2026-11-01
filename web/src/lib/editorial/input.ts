@@ -2,6 +2,7 @@
 // Metrics are computed here by the shared metric code, never by a model. Only fields needed for editorial
 // reasoning are kept; text is truncated to fixed limits.
 import type { AssetManifest, CapabilityKey, WorkflowProfile } from "../contracts";
+import type { CanonicalImage } from "../assets/intake";
 import { CAPABILITY_KEYS } from "../contracts/vocab";
 import { applyAssetManifest } from "../assets/apply";
 import { computeDiscussion, computeIssueMetrics, profilesByPost } from "../metrics";
@@ -21,7 +22,20 @@ export type EditorialSource = {
   manifest: AssetManifest | null;
   profiles: WorkflowProfile[];
   course: { code: string; name: string; term: string };
+  /** Real images in canonical form (metadata only), from the asset sources. */
+  images?: CanonicalImage[];
 };
+
+/** Week-level attachment counts from the manifest: files attached to posts, and how many of those were profiled. */
+export function attachmentCounts(manifest: AssetManifest) {
+  const mapped = manifest.assets.filter((e) => e.asset.postRef && e.status !== "DUPLICATE" && e.status !== "UNMATCHED_ASSET");
+  const json = mapped.filter((e) => e.asset.kind === "n8n_workflow_json");
+  return {
+    workflowFiles: json.filter((e) => e.status === "PROFILED" || (e.status === "REJECTED" && e.reason !== "BATCH_LIMIT_EXCEEDED" && e.reason !== "INVALID_ASSET_METADATA")).length,
+    profiledWorkflows: json.filter((e) => e.status === "PROFILED").length,
+    images: mapped.filter((e) => e.asset.kind === "workflow_screenshot" && e.status === "VALIDATED").length,
+  };
+}
 
 export function buildEditorialInput(src: EditorialSource): EditorialInput {
   const { dataset, course } = src;
@@ -30,6 +44,8 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
   const used = [...byPost.values()];
   const m = computeIssueMetrics(posts, src.profiles);
   const disc = computeDiscussion(posts);
+  // Without an asset source for the week, file and image coverage is unknown (null), not zero.
+  const counts = src.manifest ? attachmentCounts(src.manifest) : null;
 
   const metrics: EditorialInput["metrics"] = [
     { ref: "metric:posts", label: "Workflow posts", value: m.posts },
@@ -38,9 +54,9 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
     { ref: "metric:uniqueCommenters", label: "Distinct commenters", value: m.uniqueCommenters },
     { ref: "metric:reactions", label: "Reactions (null when the source has none)", value: m.reactions },
     { ref: "metric:views", label: "Views (null when the source has none)", value: m.views },
-    // Without an asset batch for the week, file and image coverage is unknown (null), not zero.
-    { ref: "metric:workflowFiles", label: "Workflow files profiled and matched to a post", value: src.manifest ? m.workflowFiles : null },
-    { ref: "metric:screenshots", label: "Validated screenshots matched to a post", value: src.manifest ? m.screenshots : null },
+    { ref: "metric:workflowFiles", label: "Workflow files attached to the week's posts", value: counts ? counts.workflowFiles : null },
+    { ref: "metric:profiledWorkflows", label: "Workflow files profiled and matched to a post", value: src.manifest ? m.workflowFiles : null },
+    { ref: "metric:screenshots", label: "Images attached to the week's posts", value: counts ? counts.images : null },
     { ref: "metric:avgCommentsPerPost", label: "Average comments per post", value: m.avgCommentsPerPost },
     ...Object.entries(m.signals).map(([k, v]) => ({ ref: "metric:signals." + k, label: "Profiled builds with signal " + k, value: v })),
     ...CAPABILITY_KEYS.map((k: CapabilityKey) => ({ ref: "metric:capabilities." + k, label: "Profiled builds where " + k + " is true", value: used.filter((p) => p.capabilities[k]).length })),
@@ -78,6 +94,8 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
         workflowProfileRef: prof ? "workflow:" + prof.profileId : null,
         screenshotCount: src.manifest ? p.assets.screenshots.length : null,
         sourceUrlVerified: p.source.sourceUrlVerified,
+        images: (src.images ?? []).filter((i) => i.postRef === "post:" + p.postId).slice(0, 10)
+          .map((i) => ({ assetRef: i.assetRef, source: i.source, mimeType: i.mimeType, width: i.width, height: i.height, role: i.role })),
         comments: p.comments.slice(0, INPUT_LIMITS.commentsPerPost).map((c) => {
           const cb = cut(c.body, INPUT_LIMITS.commentBodyChars);
           return { commentRef: "comment:" + c.commentId, authorRef: "person:" + c.author.id, authorName: c.author.displayName, body: cb.text, bodyTruncated: cb.truncated };

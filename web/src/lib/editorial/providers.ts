@@ -23,13 +23,26 @@ export const DEFAULT_MODELS: Record<ProviderName, string> = {
 // ---------- Gemini (pure request/response helpers, shared with n8n workflow 04) ----------
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
 
+/** Image bank: assetRef → data:image/...;base64 URI. Bytes stay out of the run state; they join only the call that needs them. */
+export type ImageBank = Record<string, string>;
+const DATA_URI = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/;
+
+/** Attaches image bytes from the bank to a request's images. Images missing from the bank are left out. */
+export function withImageBytes(req: ModelRequest, bank: ImageBank | null | undefined): ModelRequest {
+  if (!req.images?.length) return req;
+  const images = req.images.flatMap((i) => { const m = DATA_URI.exec(bank?.[i.assetRef] ?? ""); return m ? [{ assetRef: i.assetRef, mimeType: m[1], data: m[2] }] : []; });
+  return { ...req, images };
+}
+
 export function geminiRequest(req: ModelRequest) {
   if (!/^[a-z0-9.-]{3,60}$/.test(req.model)) throw new EditorialError("PROVIDER_NOT_CONFIGURED", "invalid model name");
+  // Each image follows a text part naming its assetRef, so the model can refer to it.
+  const imageParts = (req.images ?? []).filter((i) => i.data).flatMap((i) => [{ text: "Image " + i.assetRef + ":" }, { inlineData: { mimeType: i.mimeType, data: i.data! } }]);
   return {
     url: GEMINI_BASE + req.model + ":generateContent",
     body: {
       systemInstruction: { parts: [{ text: req.system }] },
-      contents: [{ role: "user", parts: [{ text: req.user }] }],
+      contents: [{ role: "user", parts: [{ text: req.user }, ...imageParts] }],
       // Low thinking keeps the whole run inside n8n Cloud's 300 s execution cap; thinking tokens count toward the limit.
       generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 16384, thinkingConfig: { thinkingLevel: "low" } },
     },

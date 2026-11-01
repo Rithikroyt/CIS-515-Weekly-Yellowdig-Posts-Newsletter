@@ -7,7 +7,6 @@ import { indexInput } from "../editorial/checks";
 import { assertPublicationQuality, esc, renderNewsletter } from "./newsletter";
 
 const NOW = () => "2026-11-01T12:00:00Z";
-const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
 async function draftFor(scenario: E.MockScenario = E.NAMED_SCENARIOS.clean) {
@@ -63,8 +62,9 @@ describe("spotlights", () => {
     const p = copy(input.posts[0]);
     const base = scorePost({ ...p, comments: [], commentCount: 999, screenshotCount: 0, sourceUrlVerified: false }, undefined, undefined);
     expect(base.score).toBe(0);
-    const full = scorePost({ ...p, screenshotCount: 2, sourceUrlVerified: true, comments: [1, 2].map((i) => ({ ...p.comments[0], commentRef: "comment:x" + i, body: "x".repeat(80) })) }, undefined, indexInput(input).profileOfPost.get(p.postRef));
-    expect(full.reasons.join(" ")).toMatch(/workflow file \+4.*screenshot \+4.*substantive comments \+2.*verified link \+1/);
+    const image = { postRef: p.postRef, assetRef: "asset:x", classification: "workflow_canvas" as const, altText: "", source: "curator" as const };
+    const full = scorePost({ ...p, sourceUrlVerified: true, comments: [1, 2].map((i) => ({ ...p.comments[0], commentRef: "comment:x" + i, body: "x".repeat(80) })) }, undefined, indexInput(input).profileOfPost.get(p.postRef), image);
+    expect(full.reasons.join(" ")).toMatch(/suitable image \+5.*workflow file \+4.*substantive comments \+2.*verified link \+1/);
   });
 
   it("falls back to the post notes when the editor leaves a spotlight out, and never drops the section", async () => {
@@ -123,21 +123,6 @@ describe("metrics and images", () => {
     const row = html.slice(html.indexOf(">builds<") - 400, html.indexOf(">images<"));
     expect(row.match(/&ndash;<\/div>/g)).toHaveLength(2);
     expect(html).toMatch(/>workflow files</);
-  });
-
-  it("embeds only data-URI screenshots, with alt text, and builds a three-image collage without a hero", async () => {
-    const { input, draft } = await draftFor();
-    const images = Object.fromEntries(draft.selection.spotlights.map((s) => [s.postRef, { src: PNG, alt: "Canvas for " + s.postRef }]));
-    images[draft.selection.spotlights[0].postRef] = { src: "https://example.com/x.png", alt: "remote" };
-    const r = renderNewsletter({ input, draft, images });
-    expect(r.html).not.toContain("example.com");
-    expect(r.html).toMatch(/class="collage"/);
-    expect(r.quality.images).toBe(3 + draft.selection.spotlights.length - 1);
-    expect([...r.html.matchAll(/<img [^>]*>/g)].every((m) => /alt="Canvas for post:/.test(m[0]) && /src="data:image\/png;base64,/.test(m[0]))).toBe(true);
-    expect(r.html).toMatch(/max-height:340px;overflow:hidden/);
-    const withHero = renderNewsletter({ input, draft, images, hero: { src: PNG, alt: "Hero screenshot" } });
-    expect(withHero.html).not.toMatch(/class="collage"/);
-    expect(withHero.html).toContain('alt="Hero screenshot"');
   });
 
   it("marks spotlight and every-build blocks to stay on one PDF page", async () => {

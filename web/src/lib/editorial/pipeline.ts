@@ -1,11 +1,13 @@
 // Local editorial runner: drives the state machine with one provider. The same machine runs in n8n workflow 04.
 import { acceptResponse, assertDraft, buildDraft, nextRequest, startRun, type EditorialDraft, type StartOptions } from "./machine";
-import type { EditorialModelProvider } from "./providers";
+import { withImageBytes, type EditorialModelProvider, type ImageBank } from "./providers";
 
 export type RunOptions = Omit<StartOptions, "provider" | "model" | "now"> & {
   provider: EditorialModelProvider;
   /** Clock, injectable so tests are deterministic. */
   now?: () => string;
+  /** Real image bytes for the image curator, by assetRef. */
+  imageBank?: ImageBank;
 };
 
 export async function runEditorial(o: RunOptions): Promise<EditorialDraft> {
@@ -14,7 +16,7 @@ export async function runEditorial(o: RunOptions): Promise<EditorialDraft> {
   for (;;) {
     state = nextRequest(state, now());
     if (!state.pending) break;
-    state = acceptResponse(state, await o.provider.generate(state.pending), now());
+    state = acceptResponse(state, await o.provider.generate(withImageBytes(state.pending, o.imageBank)), now());
   }
   const draft = buildDraft(state, now());
   assertDraft(draft);
