@@ -74,7 +74,7 @@ export function createLiteValidator(schemas: Array<Record<string, unknown>>) {
     if (typeof data === "string") {
       const len = [...data].length;
       if (typeof schema.minLength === "number" && len < schema.minLength) err("too short");
-      if (typeof schema.maxLength === "number" && len > schema.maxLength) err("too long");
+      if (typeof schema.maxLength === "number" && len > schema.maxLength) err("too long (max " + schema.maxLength + ")");
       if (typeof schema.pattern === "string") {
         let re = regexCache.get(schema.pattern);
         if (!re) { re = new RegExp(schema.pattern, "u"); regexCache.set(schema.pattern, re); }
@@ -92,7 +92,7 @@ export function createLiteValidator(schemas: Array<Record<string, unknown>>) {
     }
     if (Array.isArray(data)) {
       if (typeof schema.minItems === "number" && data.length < schema.minItems) err("too few items");
-      if (typeof schema.maxItems === "number" && data.length > schema.maxItems) err("too many items");
+      if (typeof schema.maxItems === "number" && data.length > schema.maxItems) err("too many items (max " + schema.maxItems + ")");
       if (schema.uniqueItems === true && new Set(data.map((x) => JSON.stringify(x))).size !== data.length) err("items must be unique");
       if (schema.items !== undefined) data.forEach((x, i) => check(schema.items as Schema, x, base, path + "/" + i, errors));
     }

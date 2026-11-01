@@ -178,14 +178,18 @@ describe("generated n8n bundles", () => {
     const fakeGemini = { candidates: [{ content: { parts: [{ text: "not json" }] } }] };
     const attached = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": first })[0];
     expect(attached.modelResponse).toEqual({ ok: true, text: "not json" });
-    // One format retry re-asks the same stage with the correction attached; a second bad response fails the run.
-    const retry = runNode("wf04", "editorialStep", [attached])[0];
-    expect(retry.done).toBe(false);
-    expect(JSON.stringify((retry.gemini as { body: J }).body)).toContain("Your previous response was rejected (MODEL_INVALID_JSON");
-    const again = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": retry })[0];
-    const next = runNode("wf04", "editorialStep", [again])[0];
-    expect(next).toMatchObject({ done: true, status: "failed" });
-    expect((next.runRow as J).error_code).toBe("MODEL_INVALID_JSON");
+    // A bad response re-asks the same stage with the correction attached; when retries run out, the optional
+    // extractor stage is skipped and the run moves on to themes.
+    let step = runNode("wf04", "editorialStep", [attached])[0];
+    expect(step.done).toBe(false);
+    expect(JSON.stringify((step.gemini as { body: J }).body)).toContain("Your previous response was rejected (MODEL_INVALID_JSON");
+    for (let i = 0; i < 2; i++) {
+      const again = runNode("wf04", "attachGeminiState", [fakeGemini], { "Use Mock Model?": step })[0];
+      step = runNode("wf04", "editorialStep", [again])[0];
+    }
+    expect(step.done).toBe(false);
+    expect(JSON.stringify((step.gemini as { body: J }).body)).not.toContain("previous response was rejected");
+    expect((step.state as { phase: string }).phase).toBe("themes");
     const failed = runNode("wf04", "attachGeminiState", [{ error: "timeout of 120000ms exceeded" }], { "Use Mock Model?": first })[0];
     expect(failed.modelResponse).toMatchObject({ ok: false, code: "MODEL_TIMEOUT" });
   });

@@ -8,14 +8,14 @@ import {
   validateSelection, validateThemes, worst, type ClaimResult, type ClaimStatus, type StageIssue,
 } from "./checks";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
-import { EDITORIAL_IDS, schemaErrors } from "./registry";
+import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
 import type { Discussion, EditorialCode, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
 import { EditorialError } from "./types";
 
 export const MAX_REVISIONS = 2;
 export const MAX_STEPS = 30;
-/** A response that is not valid JSON or breaks its output schema is re-requested this many times per call. */
-export const MAX_FORMAT_RETRIES = 1;
+/** A failed call (transport error, invalid JSON, schema mismatch after repair) is re-requested this many times. */
+export const MAX_FORMAT_RETRIES = 2;
 /** Characters of post content per extractor call; larger weeks are split into batches. */
 export const EXTRACT_BATCH_CHARS = 24_000;
 
@@ -148,7 +148,11 @@ export function nextRequest(state: RunState, now: string): RunState {
   const s = clone(state);
   s.pending = null;
   if (s.phase === "done" || s.status === "failed") return finish(s);
-  if (s.steps >= MAX_STEPS) return fail(s, now, "STEP_BUDGET_EXCEEDED", "model-call budget of " + MAX_STEPS + " exceeded");
+  if (s.steps >= MAX_STEPS) {
+    // With a newsletter already drafted, stop here and keep it: unresolved claims are still withheld.
+    if (s.newsletter) { s.stageIssues.push({ stage: s.phase, code: "STEP_BUDGET_EXCEEDED", detail: "model-call budget of " + MAX_STEPS + " reached" }); return finish(s); }
+    return fail(s, now, "STEP_BUDGET_EXCEEDED", "model-call budget of " + MAX_STEPS + " exceeded");
+  }
   const metrics = s.input.metrics;
   switch (s.phase) {
     case "extract": {
@@ -223,23 +227,23 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
   if (!req) throw new EditorialError("MODEL_PROVIDER_ERROR", "no pending model request");
   s.pending = null;
   const log = (ok: boolean, code: EditorialCode | null) => s.modelCalls.push({ stage: req.stage, promptId: req.promptId, promptVersion: req.promptVersion, ok, errorCode: code });
-  if (!response.ok) { log(false, response.code); return fail(s, now, response.code, req.stage + ": " + response.detail); }
-  const parsed = parseModelJson<Record<string, unknown>>(response.text, req.outputDef);
-  if (!parsed.ok) {
-    log(false, parsed.code);
-    // The phase is unchanged, so nextRequest() re-issues the same call, this time with the correction attached.
+  const parsed = response.ok ? parseModelJson<Record<string, unknown>>(response.text, req.outputDef) : null;
+  if (!response.ok || !parsed!.ok) {
+    const bad = response.ok ? (parsed as { code: EditorialCode; detail: string }) : response;
+    log(false, bad.code);
+    // The phase is unchanged, so nextRequest() re-issues the same call (with the correction for a format problem).
     if (s.formatRetries < MAX_FORMAT_RETRIES) {
       s.formatRetries += 1;
-      s.retryNote = "Your previous response was rejected (" + parsed.code + ": " + parsed.detail.slice(0, 300) + "). Return exactly one JSON object that matches the required output format.";
+      s.retryNote = response.ok ? "Your previous response was rejected (" + bad.code + ": " + bad.detail.slice(0, 300) + "). Return exactly one JSON object that matches the required output format." : null;
       return s;
     }
-    return fail(s, now, parsed.code, req.stage + ": " + parsed.detail);
+    return giveUpOnStage(s, now, req.stage, bad.code, bad.detail);
   }
   s.formatRetries = 0;
   s.retryNote = null;
   log(true, null);
   const idx = indexInput(s.input);
-  const v = parsed.value;
+  const v = parsed!.value;
   switch (s.phase) {
     case "extract": {
       const r = validatePostNotes(idx, (v as { notes: PostNote[] }).notes, s.batches[s.batchIndex]);
@@ -287,6 +291,26 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
     }
   }
   return s;
+}
+
+/**
+ * Retries are used up. Only the newsletter draft is essential: an optional stage is skipped and recorded (the
+ * newsletter is then written without it), a failed revision keeps the previous draft with its unresolved claims
+ * withheld, and a failed model review keeps the code review, which every claim had already passed.
+ */
+function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialCode, detail: string): RunState {
+  s.formatRetries = 0;
+  s.retryNote = null;
+  const skip = () => s.stageIssues.push({ stage: stage.slice(0, 40), code, detail: ("stage skipped: " + detail).slice(0, 300) });
+  switch (s.phase) {
+    case "extract": skip(); s.batchIndex += 1; if (s.batchIndex >= s.batches.length) s.phase = "themes"; return s;
+    case "themes": skip(); s.phase = "selection"; return s;
+    case "selection": skip(); s.phase = "discussion"; return s;
+    case "discussion": skip(); s.phase = "newsletter"; return s;
+    case "revise": skip(); s.revisionCount = MAX_REVISIONS; return revisionOrStop(s);
+    case "review": skip(); return finish(s);
+    default: return fail(s, now, code, stage + ": " + detail);
+  }
 }
 
 /** Ends the run at human_review (or failed). Nothing is ever marked approved here. */
@@ -338,6 +362,8 @@ export type EditorialDraft = ReturnType<typeof buildDraft>;
 
 /** Throws CONTRACT_VIOLATION-style EditorialError when a draft does not match schemas/editorial-draft.schema.json. */
 export function assertDraft(draft: unknown): void {
+  // Larger real weeks can exceed list or length limits (post notes, stage issues); trim structurally before checking.
+  repairToSchema(EDITORIAL_IDS.draft, draft);
   const errs = schemaErrors(EDITORIAL_IDS.draft, draft);
   if (errs.length) throw new EditorialError("MODEL_SCHEMA_INVALID", "editorial draft does not match its schema: " + errs.slice(0, 3).join("; "));
 }

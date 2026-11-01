@@ -50,7 +50,18 @@ Every newsletter claim (`{text, evidenceRefs}`) and every title is checked by co
 | Style | Hype phrases; ranking language ("best workflow", "weakest") | `MODEL_STYLE_VIOLATION` | partial or conflict |
 | Structure | A newsletter theme, spotlight, pattern or failure path that isn't a validated candidate | `MODEL_UNSUPPORTED_CLAIM` / `PATTERN_STRUCTURE_MISMATCH` / `FAILURE_PATH_UNSUPPORTED` | unsupported |
 
-Model output must parse as JSON (`MODEL_INVALID_JSON`), match its schema exactly with no extra fields (`MODEL_SCHEMA_INVALID`), and stay under 200,000 characters (`MODEL_OUTPUT_TOO_LARGE`). These failures, `MODEL_TIMEOUT` and `MODEL_PROVIDER_ERROR` all **fail the run**. Nothing invalid reaches the next stage. The model has no field for metrics; the draft's `metrics` are copied by code from the input.
+Model output must parse as JSON (`MODEL_INVALID_JSON`), match its schema (`MODEL_SCHEMA_INVALID`), and stay under 200,000 characters (`MODEL_OUTPUT_TOO_LARGE`). Before the schema check, code repairs structure only: extra fields are dropped, over-long strings are shortened, over-long lists are cut, and any list element that still breaks the schema is removed. Nothing is added or rewritten, and nothing invalid reaches the next stage.
+
+A failed call (any of the codes above, `MODEL_TIMEOUT` or `MODEL_PROVIDER_ERROR`) is re-requested up to 2 times, with the format error attached. If it still fails:
+
+| Stage | Result |
+|---|---|
+| newsletter-editor | the run **fails** with that code |
+| post-extractor, theme-analyst, spotlight-pattern-selector, discussion-analyst | the stage is skipped and recorded in `review.stageIssues`; the newsletter is written without it |
+| newsletter-reviser | the previous draft is kept; unresolved claims stay withheld (`REVISION_LIMIT_REACHED`) |
+| evidence-reviewer | the code evidence review, which every claim already passed, stands |
+
+The step budget (30 calls) keeps an existing draft instead of failing. The model has no field for metrics; the draft's `metrics` are copied by code from the input.
 
 ## Bounded revision and states
 

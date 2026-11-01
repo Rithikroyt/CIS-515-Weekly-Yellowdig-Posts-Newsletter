@@ -67,14 +67,21 @@ describe("1–3, 25–30: generation, structure and provenance", () => {
     expect(provider.calls.filter((c) => c.promptId === "discussion-analyst")[0].user).not.toContain("previous response was rejected");
     expect(draft.run.modelCalls.filter((c) => c.promptId === "theme-analyst").map((c) => c.ok)).toEqual([false, true]);
   });
-  it("2: invalid JSON fails the run with MODEL_INVALID_JSON", async () => {
-    const { draft } = await run({ "theme-analyst": [{ raw: "Here are the themes: {oops" }] });
-    expect(draft).toMatchObject({ status: "failed", newsletter: null, run: { errorCode: "MODEL_INVALID_JSON", outputHash: null } });
+  it("2: invalid JSON in an optional stage skips it after retries; in the newsletter stage it fails the run", async () => {
+    const { draft, provider } = await run({ "theme-analyst": [{ raw: "Here are the themes: {oops" }] });
+    expect(draft.status).toBe("human_review");
+    expect(draft.themes).toEqual([]);
+    expect(provider.calls.filter((c) => c.promptId === "theme-analyst")).toHaveLength(1 + E.MAX_FORMAT_RETRIES);
+    expect(draft.review.stageIssues).toContainEqual(expect.objectContaining({ stage: "theme-analyst", code: "MODEL_INVALID_JSON" }));
+    const critical = (await run({ "newsletter-editor": [{ raw: "{oops" }] })).draft;
+    expect(critical).toMatchObject({ status: "failed", newsletter: null, run: { errorCode: "MODEL_INVALID_JSON", outputHash: null } });
   });
-  it("3: schema mismatch fails the run with MODEL_SCHEMA_INVALID", async () => {
+  it("3: extra properties are dropped by repair; a wrong type that cannot be repaired still fails", async () => {
     const bad = copy(F.themes) as { themes: Array<Record<string, unknown>> };
     bad.themes[0].rank = 1;
-    expect((await run({ "theme-analyst": [{ json: bad }] })).draft.run.errorCode).toBe("MODEL_SCHEMA_INVALID");
+    const repaired = (await run({ "theme-analyst": [{ json: bad }] })).draft;
+    expect(repaired.status).toBe("human_review");
+    expect(repaired.themes[0]).not.toHaveProperty("rank");
     const wrongType = copy(F.newsletterClean) as Record<string, unknown>;
     wrongType.executiveSummary = "a string";
     expect((await run({ "newsletter-editor": [{ json: wrongType }] })).draft.run.errorCode).toBe("MODEL_SCHEMA_INVALID");
@@ -135,8 +142,8 @@ describe("1–3, 25–30: generation, structure and provenance", () => {
   });
   it("30: the model cannot set or alter metrics", async () => {
     const withMetrics = { ...copy(F.newsletterClean), metrics: { posts: 99 } };
-    expect((await run({ "newsletter-editor": [{ json: withMetrics }] })).draft.run.errorCode).toBe("MODEL_SCHEMA_INVALID");
-    const { draft, input } = await run();
+    const { draft, input } = await run({ "newsletter-editor": [{ json: withMetrics }] });
+    expect(draft.newsletter).not.toHaveProperty("metrics");
     expect(draft.metrics).toEqual(input.metrics);
   });
 });
@@ -304,7 +311,9 @@ describe("12–19: stage rules", () => {
     expect(issueCodes(draft)).toContain("SPOTLIGHT_UNSUPPORTED");
     const bad = copy(F.selection) as unknown as { spotlights: Array<{ label: string }> };
     bad.spotlights[0].label = "Best Workflow";
-    expect((await run({ "spotlight-pattern-selector": [{ json: bad }] })).draft.run.errorCode).toBe("MODEL_SCHEMA_INVALID");
+    const ranked = (await run({ "spotlight-pattern-selector": [{ json: bad }] })).draft;
+    expect(ranked.selection.spotlights.map((s) => s.label)).not.toContain("Best Workflow");
+    expect(ranked.selection.spotlights.map((s) => s.postRef)).not.toContain(F.selection.spotlights[0].postRef);
   });
   it("patterns must exist in a cited workflow's structure", async () => {
     const sel = copy(F.selection);
@@ -342,11 +351,22 @@ describe("20–24: revision loop and provider failures", () => {
     expect(r2.draft.review.unresolved[0]).toMatchObject({ claimId: "hero.dek", reviewStatus: "partially-supported", codes: ["REVIEWER_FLAGGED"] });
     expect(r2.draft.newsletter!.hero.dek.text).not.toBe(E.WITHHELD_TEXT);
   });
-  it("23: provider timeout fails the run with MODEL_TIMEOUT", async () => {
-    expect((await run({ "theme-analyst": [{ error: "timeout" }] })).draft).toMatchObject({ status: "failed", run: { errorCode: "MODEL_TIMEOUT" } });
+  it("23: a provider timeout skips an optional stage after retries and fails the newsletter stage", async () => {
+    const skipped = (await run({ "theme-analyst": [{ error: "timeout" }] })).draft;
+    expect(skipped.status).toBe("human_review");
+    expect(issueCodes(skipped)).toContain("MODEL_TIMEOUT");
+    expect((await run({ "newsletter-editor": [{ error: "timeout" }] })).draft).toMatchObject({ status: "failed", run: { errorCode: "MODEL_TIMEOUT" } });
   });
-  it("24: provider error fails the run with MODEL_PROVIDER_ERROR", async () => {
-    expect((await run({ "newsletter-reviser": [{ error: "provider" }], ...{ "newsletter-editor": [{ json: E.newsletterWithInventedCount() }] } })).draft.run.errorCode).toBe("MODEL_PROVIDER_ERROR");
+  it("24: a failed revision keeps the previous draft with unresolved claims withheld", async () => {
+    const { draft } = await run({ "newsletter-reviser": [{ error: "provider" }], "newsletter-editor": [{ json: E.newsletterWithInventedCount() }] });
+    expect(draft.status).toBe("human_review");
+    expect(draft.run.errorCode).toBe("REVISION_LIMIT_REACHED");
+    expect(issueCodes(draft)).toContain("MODEL_PROVIDER_ERROR");
+    expect(draft.review.unresolved.length).toBeGreaterThan(0);
+  });
+  it("the step budget keeps an existing draft instead of failing", () => {
+    const s = { ...E.startRun({ input: E.syntheticEditorialInput(), provider: "mock", model: "m", now: NOW() }), steps: E.MAX_STEPS, newsletter: copy(F.newsletterClean) as E.Newsletter };
+    expect(E.nextRequest(s, NOW())).toMatchObject({ status: "human_review", pending: null });
   });
   it("the step budget is a hard stop", () => {
     const s = { ...E.startRun({ input: E.syntheticEditorialInput(), provider: "mock", model: "m", now: NOW() }), steps: E.MAX_STEPS };

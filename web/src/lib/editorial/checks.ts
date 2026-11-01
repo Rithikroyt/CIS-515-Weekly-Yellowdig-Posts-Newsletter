@@ -1,7 +1,7 @@
 // Deterministic evidence controls. Pure. The model is never trusted for references, numbers, names or
 // workflow capabilities: every check here compares model output with the deterministic input package.
 import type { CapabilityKey } from "../contracts";
-import { EDITORIAL_IDS, schemaErrors } from "./registry";
+import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
 import type {
   Claim, Discussion, EditorialCode, EditorialInput, InputPost, InputProfile, Newsletter, PostNote, Selection, SpotlightLabel, Theme,
 } from "./types";
@@ -55,6 +55,7 @@ export function parseModelJson<T>(text: string, def: string): Parsed<T> {
   } catch {
     return { ok: false, code: "MODEL_INVALID_JSON", detail: "response is not valid JSON" };
   }
+  repairToSchema(EDITORIAL_IDS.stage(def), value);
   const errs = schemaErrors(EDITORIAL_IDS.stage(def), value);
   if (errs.length) return { ok: false, code: "MODEL_SCHEMA_INVALID", detail: errs.slice(0, 3).join("; ") };
   return { ok: true, value: value as T };
