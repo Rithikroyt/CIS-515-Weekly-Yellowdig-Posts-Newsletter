@@ -46,6 +46,36 @@ export function refExists(idx: RefIndex, ref: string): boolean {
 export type Parsed<T> = { ok: true; value: T } | { ok: false; code: EditorialCode; detail: string };
 
 /** JSON parse + schema check against one $defs entry. A single surrounding code fence is tolerated. */
+/**
+ * Keys the prompt asks to leave empty, which models often omit instead. Only an absent key gets the empty value;
+ * nothing with content is ever added, so every claim check still sees exactly what the model wrote.
+ */
+const EMPTY_DEFAULTS: Record<string, Record<string, unknown>> = {
+  newsletterOutput: { themes: [], borrowThisPattern: [], discussionHighlights: [], failurePath: null },
+  selectionOutput: { failurePath: null, patterns: [] },
+  imageCurationOutput: {},
+};
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+function fillEmptyDefaults(def: string, value: unknown) {
+  const d = EMPTY_DEFAULTS[def];
+  if (!d || !isObj(value)) return;
+  for (const [k, v] of Object.entries(d)) if (!(k in value)) value[k] = JSON.parse(JSON.stringify(v));
+  if (def === "imageCurationOutput" && Array.isArray(value.posts)) {
+    for (const p of value.posts) {
+      if (!isObj(p)) continue;
+      if (!("recommendationReason" in p)) p.recommendationReason = "";
+      if (!("recommendedAssetRef" in p)) p.recommendedAssetRef = null;
+      for (const e of Array.isArray(p.evaluations) ? p.evaluations : []) {
+        if (!isObj(e)) continue;
+        if (!("caption" in e)) e.caption = "";
+        if (!("reason" in e)) e.reason = "";
+        if (!("evidenceRefs" in e)) e.evidenceRefs = [];
+      }
+    }
+  }
+}
+
 export function parseModelJson<T>(text: string, def: string): Parsed<T> {
   if (text.length > MAX_MODEL_OUTPUT_CHARS) return { ok: false, code: "MODEL_OUTPUT_TOO_LARGE", detail: "response is " + text.length + " characters" };
   const body = text.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");
@@ -55,6 +85,7 @@ export function parseModelJson<T>(text: string, def: string): Parsed<T> {
   } catch {
     return { ok: false, code: "MODEL_INVALID_JSON", detail: "response is not valid JSON" };
   }
+  fillEmptyDefaults(def, value);
   repairToSchema(EDITORIAL_IDS.stage(def), value);
   const errs = schemaErrors(EDITORIAL_IDS.stage(def), value);
   if (errs.length) return { ok: false, code: "MODEL_SCHEMA_INVALID", detail: errs.slice(0, 3).join("; ") };

@@ -141,7 +141,8 @@ describe("publication gate", () => {
     const thin = { ...ok, quality: { ...ok.quality, spotlights: 2 } };
     expect(() => assertPublicationQuality(input, thin)).toThrow(/NEWSLETTER_QUALITY_INCOMPLETE/);
     const bare = copy(input);
-    bare.metrics.forEach((m) => { if (m.ref === "metric:workflowFiles" || m.ref === "metric:screenshots") m.value = null; });
+    bare.workflowProfiles = [];
+    bare.posts.forEach((p) => { p.workflowProfileRef = null; p.images = []; });
     expect(() => assertPublicationQuality(bare, thin)).toThrow(/NEEDS_ASSETS/);
     expect(() => assertPublicationQuality(input, { ...ok, quality: { ...ok.quality, everyBuild: 3 } })).toThrow(/NEWSLETTER_QUALITY_INCOMPLETE/);
   });

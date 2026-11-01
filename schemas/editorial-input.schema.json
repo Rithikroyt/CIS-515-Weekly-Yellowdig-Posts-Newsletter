@@ -49,6 +49,12 @@
         }
       }
     },
+    "assetCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "knownImages", "knownWorkflowFiles", "profiledWorkflows"],
+      "properties": { "complete": { "type": "boolean" }, "knownImages": { "type": "integer", "minimum": 0 }, "knownWorkflowFiles": { "type": "integer", "minimum": 0 }, "profiledWorkflows": { "type": "integer", "minimum": 0 } }
+    },
     "posts": {
       "type": "array",
       "maxItems": 400,

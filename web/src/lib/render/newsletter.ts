@@ -341,8 +341,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
 export function assertPublicationQuality(input: EditorialInput, r: RenderResult): void {
   if (r.quality.everyBuild !== input.posts.length) throw new Error("[NEWSLETTER_QUALITY_INCOMPLETE] every-build list has " + r.quality.everyBuild + " of " + input.posts.length + " posts");
   if (input.posts.length < SPOTLIGHT_MIN || r.quality.spotlights >= SPOTLIGHT_MIN) return;
-  const files = input.metrics.find((m) => m.ref === "metric:workflowFiles")?.value ?? null;
-  const shots = input.metrics.find((m) => m.ref === "metric:screenshots")?.value ?? null;
-  if (!files && !shots) throw new Error("[NEEDS_ASSETS] only " + r.quality.spotlights + " spotlights without workflow files or screenshots");
+  const hasAssets = input.workflowProfiles.length > 0 || input.posts.some((p) => (p.images ?? []).length > 0);
+  if (!hasAssets) throw new Error("[NEEDS_ASSETS] only " + r.quality.spotlights + " spotlights without workflow files or screenshots");
   throw new Error("[NEWSLETTER_QUALITY_INCOMPLETE] only " + r.quality.spotlights + " spotlights");
 }

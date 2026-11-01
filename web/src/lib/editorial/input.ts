@@ -24,6 +24,8 @@ export type EditorialSource = {
   course: { code: string; name: string; term: string };
   /** Real images in canonical form (metadata only), from the asset sources. */
   images?: CanonicalImage[];
+  /** The asset source holds every file of the week. Without it, week totals are unknown (null). */
+  coverageComplete?: boolean;
 };
 
 /** Week-level attachment counts from the manifest: files attached to posts, and how many of those were profiled. */
@@ -44,8 +46,10 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
   const used = [...byPost.values()];
   const m = computeIssueMetrics(posts, src.profiles);
   const disc = computeDiscussion(posts);
-  // Without an asset source for the week, file and image coverage is unknown (null), not zero.
-  const counts = src.manifest ? attachmentCounts(src.manifest) : null;
+  // Week totals need complete coverage: a partial upload must not read as the whole week's count. Known counts are
+  // kept in assetCoverage for the record; the metric is null (rendered as a dash) until coverage is complete.
+  const known = src.manifest ? attachmentCounts(src.manifest) : null;
+  const counts = known && src.coverageComplete === true ? known : null;
 
   const metrics: EditorialInput["metrics"] = [
     { ref: "metric:posts", label: "Workflow posts", value: m.posts },
@@ -55,7 +59,7 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
     { ref: "metric:reactions", label: "Reactions (null when the source has none)", value: m.reactions },
     { ref: "metric:views", label: "Views (null when the source has none)", value: m.views },
     { ref: "metric:workflowFiles", label: "Workflow files attached to the week's posts", value: counts ? counts.workflowFiles : null },
-    { ref: "metric:profiledWorkflows", label: "Workflow files profiled and matched to a post", value: src.manifest ? m.workflowFiles : null },
+    { ref: "metric:profiledWorkflows", label: "Workflow files profiled and matched to a post", value: counts ? m.workflowFiles : null },
     { ref: "metric:screenshots", label: "Images attached to the week's posts", value: counts ? counts.images : null },
     { ref: "metric:avgCommentsPerPost", label: "Average comments per post", value: m.avgCommentsPerPost },
     ...Object.entries(m.signals).map(([k, v]) => ({ ref: "metric:signals." + k, label: "Profiled builds with signal " + k, value: v })),
@@ -79,6 +83,7 @@ export function buildEditorialInput(src: EditorialSource): EditorialInput {
       reactionsLiveVerified: false,
     },
     metrics,
+    assetCoverage: { complete: !!counts, knownImages: known?.images ?? 0, knownWorkflowFiles: known?.workflowFiles ?? 0, profiledWorkflows: src.profiles.length },
     posts: posts.map((p) => {
       const body = cut(p.body, INPUT_LIMITS.postBodyChars);
       const prof = byPost.get(p.postId);

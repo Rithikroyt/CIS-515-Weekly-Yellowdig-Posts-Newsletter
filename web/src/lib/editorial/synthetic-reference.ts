@@ -134,7 +134,7 @@ export function referenceWeek(): ReferenceWeek {
     width: s.cls === "irrelevant" ? 400 : 1600, height: s.cls === "irrelevant" ? 400 : 900, role: "supporting", altText: "Synthetic screenshot for " + POSTS[s.i].title,
   }));
   const imageSpecs = imageSlots.map((s, n) => ({ assetRef: images[n].assetRef, postRef: ref(s.i), cls: s.cls, title: POSTS[s.i].title, steps: STEPS[s.cls] }));
-  const input = buildEditorialInput({ dataset, manifest, profiles, images, course: { ...SYNTHETIC_COURSE } });
+  const input = buildEditorialInput({ dataset, manifest, profiles, images, course: { ...SYNTHETIC_COURSE }, coverageComplete: true });
   return { dataset, manifest, profiles, images, imageSpecs, input, scenario: scenario(input, imageSpecs) };
 }
 

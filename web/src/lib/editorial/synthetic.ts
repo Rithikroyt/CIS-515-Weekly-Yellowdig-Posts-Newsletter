@@ -15,5 +15,6 @@ export function syntheticEditorialInput() {
     manifest: JSON.parse(JSON.stringify(manifest)) as AssetManifest,
     profiles: JSON.parse(JSON.stringify(profiles)) as WorkflowProfile[],
     course: { ...SYNTHETIC_COURSE },
+    coverageComplete: true,
   });
 }

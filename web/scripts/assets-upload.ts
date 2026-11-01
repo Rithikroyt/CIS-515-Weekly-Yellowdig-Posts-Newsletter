@@ -104,7 +104,7 @@ async function main() {
   if (multiWf) ambiguous.push(multiWf + " post(s) with more than one workflow file");
 
   const okImages = images.filter((x) => entries[x.index]?.status === "VALIDATED");
-  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles }), source: "private_asset_store" }];
+  const rows: AssetRow[] = [{ week, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: assetManifest, profiles, coverageComplete: manifest.coverageComplete }), source: "private_asset_store" }];
   let stripped = 0;
   for (const x of featured(okImages)) {
     const payload = await optimize(x.buf);
@@ -116,7 +116,7 @@ async function main() {
 
   // Counts only: no file names, contents or post text are printed.
   console.log(JSON.stringify({
-    week, postsInWeek: known?.length ?? "not checked", assets: entries.length,
+    week, postsInWeek: known?.length ?? "not checked", coverageComplete: manifest.coverageComplete, assets: entries.length,
     accepted: count("PROFILED") + count("VALIDATED"), workflowFilesProfiled: count("PROFILED"), imagesValidated: count("VALIDATED"),
     rejected: count("REJECTED"), duplicates: count("DUPLICATE"), unmatched: count("UNMATCHED_ASSET"), rejectedReasons: reasons,
     postsWithWorkflowFile: Object.keys(wfPerPost).length, postsWithImage: new Set(rows.filter((r) => r.kind === "image").map((r) => r.post_id)).size, imagesStored: rows.length - 1, hero: rows.some((r) => r.role === "hero"),

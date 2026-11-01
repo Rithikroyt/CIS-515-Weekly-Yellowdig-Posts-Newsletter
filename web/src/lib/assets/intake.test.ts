@@ -13,8 +13,10 @@ describe("parseIntakeManifest", () => {
   it.each([
     [{ week: 3, assets: [shot()] }, /does not match/],
     [{ week: 2, assets: [] }, /non-empty/],
-    [{ week: 2, assets: [shot({ postRef: undefined })] }, /postRef/],
-    [{ week: 2, assets: [shot({ postRef: "post:../x" })] }, /postRef/],
+    [{ week: 2, assets: [shot({ postRef: undefined })] }, /postId/],
+    [{ week: 2, assets: [shot({ postRef: "post:../x" })] }, /postId/],
+    [{ week: 2, assets: [shot({ postId: "p-1" })] }, /not both/],
+    [{ week: 2, coverageComplete: "yes", assets: [shot()] }, /coverageComplete/],
     [{ week: 2, assets: [shot({ kind: "pdf" })] }, /kind/],
     [{ week: 2, assets: [shot({ path: "../secret.png" })] }, /relative/],
     [{ week: 2, assets: [shot({ path: "C:/Users/x.png" })] }, /relative/],
@@ -23,6 +25,11 @@ describe("parseIntakeManifest", () => {
     [{ week: 2, assets: [{ postRef: "syn-2", kind: "workflow_json", path: "b.json", role: "hero" }] }, /only a post_image/],
   ])("rejects an invalid manifest (%#)", (m, re) => {
     expect(() => parseIntakeManifest(m, 2)).toThrow(re);
+  });
+  it("accepts postId keys and defaults to partial coverage", () => {
+    const m = parseIntakeManifest({ week: 2, assets: [{ postId: "p-1", kind: "workflow_json", path: "w.json" }] }, 2);
+    expect(m).toMatchObject({ coverageComplete: false, assets: [{ postId: "p-1" }] });
+    expect(parseIntakeManifest({ week: 2, coverageComplete: true, assets: [shot()] }, 2).coverageComplete).toBe(true);
   });
   it("normalizes ids", () => {
     expect(bareId("post:abc-1")).toBe("abc-1");

@@ -31,6 +31,8 @@ export type EditorialInput = {
   dateRange: { start: string; end: string; timezone: string }; topic: string;
   sourceStatus: { provider: "yellowdig-api" | "synthetic-fixture"; liveSourceVerified: boolean; fallbackReason: string; commentsLiveVerified: boolean; reactionsLiveVerified: boolean };
   metrics: Array<{ ref: string; label: string; value: number | null }>;
+  /** What the asset sources hold. Week totals in metrics are null unless complete. */
+  assetCoverage?: { complete: boolean; knownImages: number; knownWorkflowFiles: number; profiledWorkflows: number };
   posts: InputPost[]; workflowProfiles: InputProfile[];
   discussionSignals: { mostDiscussed: Array<{ postRef: string; commentCount: number }>; generousCommenters: Array<{ personRef: string; name: string; commentsOnOthers: number }> };
   methodology: { builderVersion: string; limits: { postBodyChars: number; commentBodyChars: number; commentsPerPost: number }; notes: string[] };

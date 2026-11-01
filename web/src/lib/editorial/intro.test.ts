@@ -20,6 +20,19 @@ async function runWithIntro(intro: Array<{ text: string; evidenceRefs: string[] 
 }
 const introText = (d: E.EditorialDraft) => d.newsletter!.executiveSummary.map((c) => c.text).join(" ");
 
+describe("model output normalization", () => {
+  it("accepts a newsletter that omits the keys it was told to leave empty, without adding content", () => {
+    const nl = copy(F.newsletterClean) as Record<string, unknown>;
+    delete nl.themes; delete nl.borrowThisPattern; delete nl.discussionHighlights; delete nl.failurePath;
+    const r = E.parseModelJson<Record<string, unknown>>(JSON.stringify(nl), "newsletterOutput");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect([r.value.themes, r.value.borrowThisPattern, r.value.discussionHighlights, r.value.failurePath]).toEqual([[], [], [], null]);
+    // A missing required key with content (takeaways) is still a schema error.
+    delete nl.takeaways;
+    expect(E.parseModelJson(JSON.stringify(nl), "newsletterOutput")).toMatchObject({ ok: false, code: "MODEL_SCHEMA_INVALID" });
+  });
+});
+
 describe("introduction", () => {
   it("keeps a valid AI introduction as written", async () => {
     const { draft } = await runWithIntro(F.newsletterClean.executiveSummary);

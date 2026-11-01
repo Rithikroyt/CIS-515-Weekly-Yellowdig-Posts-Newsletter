@@ -7,6 +7,8 @@ export const SPOTLIGHT_MIN = 4;
 export const SPOTLIGHT_MAX = 6;
 const MAX_PER_LABEL = 2;
 const MAX_PER_GROUP = 2;
+/** A post this well evidenced may exceed the label and group caps once the minimum is met. */
+const STRONG_SCORE = 12;
 export const GROUP_MAX = 7;
 export const OTHER_BUILDS = "Other builds";
 /** A comment this long or longer counts as substantive for spotlight scoring. */
@@ -155,10 +157,10 @@ export function chooseSpotlights(idx: RefIndex, notes: PostNote[], groups: Build
     const n = noteOf.get(ref);
     return live(n?.summary) ? n!.summary : { text: idx.posts.get(ref)!.title || "Post", evidenceRefs: [ref] };
   };
-  const pick = (capped: boolean) => {
-    while (chosen.length < SPOTLIGHT_MAX) {
+  const pick = (capped: boolean, pool: SpotlightScore[], target: number) => {
+    while (chosen.length < target) {
       let best: { s: SpotlightScore; label: SpotlightLabel; value: number } | null = null;
-      for (const s of eligible) {
+      for (const s of pool) {
         if (chosen.some((c) => c.postRef === s.postRef)) continue;
         const label = labelFor(s.postRef);
         const group = groupOf.get(s.postRef) ?? "";
@@ -171,11 +173,12 @@ export function chooseSpotlights(idx: RefIndex, notes: PostNote[], groups: Build
       labelCount.set(best.label, (labelCount.get(best.label) ?? 0) + 1);
       const g = groupOf.get(best.s.postRef) ?? "";
       groupCount.set(g, (groupCount.get(g) ?? 0) + 1);
-      if (!capped && chosen.length >= SPOTLIGHT_MIN) return;
     }
   };
-  pick(true);
-  if (chosen.length < SPOTLIGHT_MIN) pick(false);
+  pick(true, eligible, SPOTLIGHT_MAX);
+  if (chosen.length < SPOTLIGHT_MIN) pick(false, eligible, SPOTLIGHT_MIN);
+  // Past the minimum, the caps give way only for fully evidenced posts (for example image + workflow file + test).
+  pick(false, eligible.filter((s) => s.score >= STRONG_SCORE), SPOTLIGHT_MAX);
   chosen.sort((a, b) => order.get(a.postRef)! - order.get(b.postRef)!);
   return { spotlights: chosen, scores, eligible: eligible.length };
 }

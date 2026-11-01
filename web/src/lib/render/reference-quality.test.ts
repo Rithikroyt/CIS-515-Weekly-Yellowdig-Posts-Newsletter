@@ -113,6 +113,30 @@ describe("reference-quality synthetic week", () => {
   });
 });
 
+describe("partial asset coverage", () => {
+  it("keeps week totals as a dash while still showing the known spotlight images", async () => {
+    const week = referenceWeek();
+    const input = E.buildEditorialInput({ dataset: week.dataset, manifest: week.manifest, profiles: week.profiles, images: week.images, course: { ...E.SYNTHETIC_COURSE }, coverageComplete: false });
+    const m = (ref: string) => input.metrics.find((x) => x.ref === ref)!.value;
+    expect([m("metric:workflowFiles"), m("metric:screenshots"), m("metric:profiledWorkflows")]).toEqual([null, null, null]);
+    expect(input.assetCoverage).toEqual({ complete: false, knownImages: 18, knownWorkflowFiles: 14, profiledWorkflows: 14 });
+    const imageBank = bankFor(week);
+    const draft = await E.runEditorial({ input, provider: E.createMockProvider(week.scenario), imageBank, now: NOW });
+    const r = renderNewsletter({ input, draft, imageBank });
+    const row = r.html.slice(r.html.indexOf('class="num"'), r.html.indexOf(">images<"));
+    expect([...row.matchAll(/class="num"[^>]*>([^<]+)</g)].map((x) => x[1])).toEqual(["27", String(m("metric:comments")), "&ndash;", "&ndash;"]);
+    expect(r.quality.images).toBe(r.quality.spotlights + 1);
+    expect(() => assertPublicationQuality(input, r)).not.toThrow();
+  });
+
+  it("reads the coverage flag from the stored bundle", () => {
+    const rows = (complete: unknown) => [{ week: 2, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: { week: 2, assets: [] }, profiles: [], coverageComplete: complete }) }];
+    expect(collectWeekAssets(rows(true), 2).coverageComplete).toBe(true);
+    expect(collectWeekAssets(rows("true"), 2).coverageComplete).toBe(false);
+    expect(collectWeekAssets(rows(undefined), 2).coverageComplete).toBe(false);
+  });
+});
+
 describe("asset sources", () => {
   const row = (over: Record<string, unknown>) => ({ week: 2, kind: "image", post_id: "p-1", role: "spotlight", alt: "A canvas", payload: "data:image/png;base64," + PNG, asset_id: "asset_aa11", width: 1600, height: 900, source: "private_asset_store", ...over });
   const bundle = { week: 2, kind: "bundle", post_id: "", role: "", alt: "", payload: JSON.stringify({ manifest: { week: 2, assets: [] }, profiles: [] }) };

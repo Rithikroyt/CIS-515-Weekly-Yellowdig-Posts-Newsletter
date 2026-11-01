@@ -11,7 +11,8 @@ const IMAGE_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 export type IntakeKind = "workflow_json" | "post_image";
 export type IntakeRole = "hero" | "spotlight" | "supporting";
 export type IntakeAsset = { postId: string; kind: IntakeKind; path: string; role: IntakeRole; altText: string };
-export type IntakeManifest = { week: number; assets: IntakeAsset[] };
+/** coverageComplete: the manifest lists every image and workflow file of the week (default false: a subset). */
+export type IntakeManifest = { week: number; coverageComplete: boolean; assets: IntakeAsset[] };
 
 const fail = (why: string): never => { throw new Error("[INVALID_MANIFEST] " + why); };
 
@@ -26,13 +27,15 @@ export function bareId(ref: unknown): string | null {
 export function parseIntakeManifest(raw: unknown, week: number): IntakeManifest {
   const m = (raw && typeof raw === "object" ? raw : fail("manifest must be a JSON object")) as Record<string, unknown>;
   if (m.week !== week) fail("manifest week " + String(m.week) + " does not match --week " + week);
+  if (m.coverageComplete !== undefined && typeof m.coverageComplete !== "boolean") fail("coverageComplete must be true or false");
   if (!Array.isArray(m.assets) || !m.assets.length) fail("assets must be a non-empty array");
   const list = m.assets as unknown[];
   if (list.length > INTAKE_LIMITS.assets) fail("at most " + INTAKE_LIMITS.assets + " assets per week");
   let heroes = 0;
   const assets = list.map((x, i) => {
     const a = (x && typeof x === "object" ? x : fail("asset " + i + " is not an object")) as Record<string, unknown>;
-    const postId = bareId(a.postRef) ?? fail("asset " + i + ": postRef must be the Yellowdig post id");
+    if (a.postId !== undefined && a.postRef !== undefined) fail("asset " + i + ": give postId or postRef, not both");
+    const postId = bareId(a.postId ?? a.postRef) ?? fail("asset " + i + ": postId must be the Yellowdig post id");
     const kind = a.kind === "workflow_json" || a.kind === "post_image" ? a.kind : fail("asset " + i + ": kind must be workflow_json or post_image");
     const path = typeof a.path === "string" ? a.path.replace(/\\/g, "/") : fail("asset " + i + ": path is required");
     if (!path || path.startsWith("/") || /^[A-Za-z]:/.test(path) || path.split("/").includes("..")) fail("asset " + i + ": path must be relative to the manifest, without ..");
@@ -44,7 +47,7 @@ export function parseIntakeManifest(raw: unknown, week: number): IntakeManifest 
     return { postId, kind, path, role, altText } as IntakeAsset;
   });
   if (heroes > 1) fail("at most one hero image");
-  return { week, assets };
+  return { week, coverageComplete: m.coverageComplete === true, assets };
 }
 
 /** One row of the newsletter_assets table. */
@@ -67,6 +70,11 @@ export type WeekAssets = {
   /** null when no source supplied anything for the week: coverage is then unknown, not zero. */
   manifest: AssetManifest | null;
   profiles: WorkflowProfile[];
+  /**
+   * True only when the source says it holds every image and workflow file of the week. Otherwise the week-level
+   * file and image totals are unknown and render as a dash, even though individual images can still be shown.
+   */
+  coverageComplete: boolean;
   images: CanonicalImage[];
   /** assetRef → data:image/...;base64 URI. */
   bank: Record<string, string>;
@@ -74,7 +82,7 @@ export type WeekAssets = {
   sources: Array<{ source: AssetSource; available: boolean; reason: string }>;
 };
 
-export const NO_ASSETS: WeekAssets = { manifest: null, profiles: [], images: [], bank: {}, sources: [] };
+export const NO_ASSETS: WeekAssets = { manifest: null, profiles: [], coverageComplete: false, images: [], bank: {}, sources: [] };
 const ASSET_ID_RE = /^asset_[A-Za-z0-9_-]{1,58}$/;
 
 /**
@@ -95,10 +103,10 @@ export function privateAssetStoreAdapter(rows: unknown[], week: number): { asset
   const mine = rows.filter((r): r is AssetRow => !!r && typeof r === "object" && (r as AssetRow).week === week);
   const bundle = mine.find((r) => r.kind === "bundle");
   if (!bundle) return { assets: null, status: { source: "private_asset_store", available: false, reason: "no assets uploaded for week " + week } };
-  let manifest: AssetManifest | null = null, profiles: WorkflowProfile[] = [];
+  let manifest: AssetManifest | null = null, profiles: WorkflowProfile[] = [], coverageComplete = false;
   try {
-    const b = JSON.parse(String(bundle.payload)) as { manifest?: AssetManifest; profiles?: WorkflowProfile[] };
-    if (b.manifest && b.manifest.week === week && Array.isArray(b.manifest.assets) && Array.isArray(b.profiles)) { manifest = b.manifest; profiles = b.profiles; }
+    const b = JSON.parse(String(bundle.payload)) as { manifest?: AssetManifest; profiles?: WorkflowProfile[]; coverageComplete?: unknown };
+    if (b.manifest && b.manifest.week === week && Array.isArray(b.manifest.assets) && Array.isArray(b.profiles)) { manifest = b.manifest; profiles = b.profiles; coverageComplete = b.coverageComplete === true; }
   } catch { /* handled below */ }
   if (!manifest) throw new Error("[ASSETS_INVALID] the stored asset bundle for week " + week + " could not be read");
   const images: CanonicalImage[] = [];
@@ -117,7 +125,7 @@ export function privateAssetStoreAdapter(rows: unknown[], week: number): { asset
       width: Math.round(w), height: Math.round(h), role, altText: String(r.alt ?? "").slice(0, INTAKE_LIMITS.altChars),
     });
   }
-  return { assets: { manifest, profiles, images, bank, sources: [] }, status: { source: "private_asset_store", available: true, reason: images.length + " stored images" } };
+  return { assets: { manifest, profiles, coverageComplete, images, bank, sources: [] }, status: { source: "private_asset_store", available: true, reason: images.length + " stored images" } };
 }
 
 /**
@@ -125,11 +133,11 @@ export function privateAssetStoreAdapter(rows: unknown[], week: number): { asset
  * Both arrive in the same canonical shape, so everything downstream is source-agnostic.
  */
 export function mergeAssetSources(...parts: Array<{ assets: WeekAssets | null; status: WeekAssets["sources"][number] }>): WeekAssets {
-  const out: WeekAssets = { manifest: null, profiles: [], images: [], bank: {}, sources: parts.map((p) => p.status) };
+  const out: WeekAssets = { manifest: null, profiles: [], coverageComplete: false, images: [], bank: {}, sources: parts.map((p) => p.status) };
   const claimed = new Set<string>();
   for (const { assets } of parts) {
     if (!assets) continue;
-    if (!out.manifest) { out.manifest = assets.manifest; out.profiles = assets.profiles; }
+    if (!out.manifest) { out.manifest = assets.manifest; out.profiles = assets.profiles; out.coverageComplete = assets.coverageComplete; }
     const fresh = assets.images.filter((i) => !claimed.has(i.postRef) || out.images.some((x) => x.postRef === i.postRef && x.source === i.source));
     fresh.forEach((i) => { out.images.push(i); out.bank[i.assetRef] = assets.bank[i.assetRef]; });
     new Set(fresh.map((i) => i.postRef)).forEach((r) => claimed.add(r));

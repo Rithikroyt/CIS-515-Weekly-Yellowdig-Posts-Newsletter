@@ -70,7 +70,7 @@ export const sourceConfig: NodeEntry = (ctx) => {
 export const collectAssets: NodeEntry = (ctx) => {
   const req = ctx.node(WF05.route) as { week: number; test: string | null };
   if (req.test === "synthetic") {
-    const fixture: WeekAssets = { ...NO_ASSETS, manifest: syntheticManifest as unknown as AssetManifest, profiles: syntheticProfiles as unknown as WorkflowProfile[] };
+    const fixture: WeekAssets = { ...NO_ASSETS, manifest: syntheticManifest as unknown as AssetManifest, profiles: syntheticProfiles as unknown as WorkflowProfile[], coverageComplete: true };
     return [fixture as unknown as J];
   }
   return [collectWeekAssets(ctx.items, req.week) as unknown as J];
@@ -85,7 +85,7 @@ export const editorialRequest: NodeEntry = (ctx) => {
   const synthetic = dataset.source?.provider === "synthetic-fixture";
   if (synthetic && req.test !== "synthetic") throw new Error("[SOURCE_FALLBACK] refusing to publish fixture data as a real week");
   if (!dataset.posts.length) throw new Error("[NO_POSTS] no posts for this week's topic");
-  const input = buildEditorialInput({ dataset, manifest: assets?.manifest ?? null, profiles: assets?.profiles ?? [], images: assets?.images ?? [], course: { ...COURSE } });
+  const input = buildEditorialInput({ dataset, manifest: assets?.manifest ?? null, profiles: assets?.profiles ?? [], images: assets?.images ?? [], coverageComplete: assets?.coverageComplete === true, course: { ...COURSE } });
   // Image bytes ride alongside the input (not inside it): workflow 04 attaches them only to image-curator calls.
   return [{ input, imageBank: assets?.bank ?? {}, options: synthetic ? { provider: "mock", scenario: "clean" } : { provider: "gemini" } } as unknown as J];
 };
@@ -95,7 +95,8 @@ export const renderArtifact: NodeEntry = (ctx) => {
   const req = ctx.node(WF05.request) as { input: EditorialInput } | null;
   const draft = out?.draft;
   if (!draft || !req) throw new Error("[EDITORIAL_FAILED] no editorial draft");
-  if (draft.status === "failed" || !draft.newsletter) throw new Error("[" + (draft.run?.errorCode ?? "EDITORIAL_FAILED") + "] editorial run failed");
+  // The summary is code-generated (stage, code, schema path); it never contains post text. Only the code is stored.
+  if (draft.status === "failed" || !draft.newsletter) throw new Error("[" + (draft.run?.errorCode ?? "EDITORIAL_FAILED") + "] editorial run failed: " + String(draft.run?.errorSummary ?? "").slice(0, 200));
   const dataset = ctx.node(WF05.dataset) as unknown as WeekDataset | null;
   const assets = ctx.node(WF05.assets) as unknown as WeekAssets | null;
   // Links only from the verified URL format, built in workflow 02 from the API's own identifiers.

@@ -28,7 +28,8 @@ describe("renderNewsletter", () => {
 
   it("contains no scripts, handlers or external resources", async () => {
     const { input, draft } = await draftFor("clean");
-    const { html } = renderNewsletter({ input, draft, postUrls: { [input.posts[0].postRef]: "javascript:alert(1)" }, hero: { src: "https://evil.example.com/x.png", alt: "" }, images: { [input.posts[0].postRef]: { src: "https://evil.example.com/y.png", alt: "x" } } });
+    draft.images = { curation: { posts: [] }, choices: [{ postRef: input.posts[0].postRef, assetRef: "asset:evil", classification: null, altText: "x", source: "deterministic" }], hero: { postRef: input.posts[0].postRef, assetRef: "asset:evil", classification: null, altText: "", source: "deterministic" } };
+    const { html } = renderNewsletter({ input, draft, postUrls: { [input.posts[0].postRef]: "javascript:alert(1)" }, imageBank: { "asset:evil": "https://evil.example.com/x.png" } });
     expect(html).not.toMatch(/<script|\son[a-z]+=|javascript:|src="http|href="http:/i);
   });
 
