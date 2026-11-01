@@ -1,6 +1,6 @@
 # Architecture — CIS 515 Workflow Observatory
 
-Status: **Phase 0 (audit) complete.** Sections marked _Planned_ are not built yet.
+Status: **Phases 0–2 complete** (audit, contracts, source layer and workflows 01–02). Sections marked _Planned_ are not built yet.
 
 ## Product
 
@@ -41,16 +41,44 @@ flowchart LR
 - **AI** writes prose only: summaries, theme descriptions, spotlight narratives, discussion synthesis, headline and introduction, lessons and takeaways. Every AI claim carries source IDs, and code checks them.
 - **A person** approves before anything is published.
 
-## Shared logic (_Planned_)
+## Shared logic
 
-The deterministic parts (normalization, metrics, workflow profiling, the HTML renderer and validation) are written once in TypeScript under `web/lib/`. They are used by the web app and the tests, and are bundled into plain JavaScript (`n8n/src/generated/`) for n8n Code nodes. The web app, the n8n workflows and the tests therefore compute the same numbers from the same code.
+Deterministic logic is written once in TypeScript under `web/src/lib/` and used by the web app, the tests and n8n:
+
+| Module | Purpose |
+|---|---|
+| `lib/metrics.ts`, `lib/ids.ts` | Code-counted metrics, hashing, pseudonymous ids (Phase 1) |
+| `lib/source/` | Run config, Phoenix date windows, Yellowdig field map and privacy boundary, pagination and failure handling, dedupe, topic/date filter, normalization and joins, capability probe, synthetic Week 2 provider |
+| `lib/contracts/` | Zod types, and a small JSON Schema validator that reads `/schemas` (n8n has no Ajv or Zod) |
+| `n8n/nodes/wf01.ts`, `wf02.ts` | One thin entry per n8n Code node; each calls one shared stage |
+
+`npm run build:n8n` bundles each entry with esbuild into `n8n/src/generated/<wf>/<entry>.js` and fills the SDK templates in `n8n/sdk/`. Drift is caught three ways:
+
+- `bundles.test.ts` runs the bundles in a simulated Code node and requires the committed bundles to match a fresh build.
+- `npm run validate` requires every Code node in the committed exports to equal a generated bundle.
+- `export-n8n.ts` refuses to export a workflow whose Code nodes differ from the bundles.
+
+### Source layer (Phase 2)
+
+```mermaid
+flowchart LR
+  CFG[run config] --> V[validate + resolve mode]
+  V -->|fixture / auto without credential| FX[synthetic Yellowdig-shaped pages]
+  V -->|yellowdig / auto with credential| PR[capability probe, 10 events] --> PG[cursor pagination, 250/page]
+  PG -->|401/403/429/5xx| CL[classify: retry with backoff, fallback only in auto, else fail]
+  CL -->|fallback| FX
+  FX --> MIN[collect pages + privacy minimize]
+  PG --> MIN
+  MIN --> DD[dedupe by event id] --> FL[Phoenix date + structured topic filter] --> SB[(source bundle)]
+  SB --> N2[02: validate, classify, join, metrics, validate] --> WD[(week dataset)]
+```
 
 ## n8n workflows
 
 | Workflow | Status |
 |---|---|
-| 01-fetch-yellowdig-events | _Planned_ |
-| 02-normalize-and-join | _Planned_ |
+| 01 - Yellowdig Fetch Events | **Built** in n8n Cloud (`dHZoXDny6WU1v62y`), export `n8n/workflows/01-fetch-yellowdig-events.json`. Fixture mode tested; Yellowdig branch tested with pinned synthetic HTTP responses only. Not published. |
+| 02 - Yellowdig Normalize and Join | **Built** in n8n Cloud (`ZZoqGbrNSC3nAo3f`), export `n8n/workflows/02-normalize-and-join.json`. 01 → 02 tested in fixture mode. Not published. |
 | 03-parse-workflow-assets | _Planned_ (reuses the tested parser in `n8n/src/parse-workflows.js`) |
 | 04-editorial-intelligence | _Planned_ (needs an LLM credential) |
 | 05-review-and-publish | _Planned_ (needs GitHub and Gmail credentials) |

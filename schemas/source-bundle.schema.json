@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/source-bundle.schema.json",
+  "title": "SourceBundle",
+  "description": "Output of workflow 01. Minimized, deduplicated and filtered events for one week, with how they were obtained. Contains no SIS ids, LTI fields, emails or raw user ids.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "sourceModeRequested", "sourceModeUsed", "liveSourceVerified", "fallbackReason", "provider", "fetchedAt", "network", "communityId", "week", "topic", "topicId", "window", "capabilities", "capability", "events", "diagnostics"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "sourceModeRequested": { "enum": ["fixture", "yellowdig", "auto"] },
+    "sourceModeUsed": { "enum": ["fixture", "yellowdig"] },
+    "liveSourceVerified": { "type": "boolean", "description": "true only when this run's data came from a successful authorized Yellowdig request." },
+    "fallbackReason": { "$ref": "#/$defs/fallbackReason" },
+    "provider": { "enum": ["yellowdig-api", "synthetic-fixture"] },
+    "fetchedAt": { "type": "string", "format": "date-time" },
+    "network": { "$ref": "#/$defs/id" },
+    "communityId": { "$ref": "#/$defs/id" },
+    "week": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "topic": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "topicId": { "type": ["string", "null"], "maxLength": 128 },
+    "window": { "$ref": "#/$defs/window" },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reactionEvents", "viewEvents"],
+      "properties": { "reactionEvents": { "type": "boolean" }, "viewEvents": { "type": "boolean" } }
+    },
+    "capability": { "type": ["object", "null"], "description": "Sanitized capability-probe report (field names and types only) or null in fixture mode." },
+    "events": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/event" } },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pagesFetched", "eventsFetched", "eventsAfterDeduplication", "duplicateEventsRemoved", "conflictingDuplicates", "posts", "comments", "reactions", "views", "otherKnownEvents", "unknownEventTypes", "unknownEventTypeNames", "filteredByDate", "filteredByTopic", "filteredWithParent", "privacyFieldsRemoved", "emailsRedacted", "retries"],
+      "properties": {
+        "pagesFetched": { "$ref": "#/$defs/count" },
+        "eventsFetched": { "$ref": "#/$defs/count" },
+        "eventsAfterDeduplication": { "$ref": "#/$defs/count" },
+        "duplicateEventsRemoved": { "$ref": "#/$defs/count" },
+        "conflictingDuplicates": { "$ref": "#/$defs/count" },
+        "posts": { "$ref": "#/$defs/count" },
+        "comments": { "$ref": "#/$defs/count" },
+        "reactions": { "$ref": "#/$defs/count" },
+        "views": { "$ref": "#/$defs/count" },
+        "otherKnownEvents": { "$ref": "#/$defs/count" },
+        "unknownEventTypes": { "$ref": "#/$defs/count" },
+        "unknownEventTypeNames": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 40 } },
+        "filteredByDate": { "$ref": "#/$defs/count" },
+        "filteredByTopic": { "$ref": "#/$defs/count" },
+        "filteredWithParent": { "$ref": "#/$defs/count" },
+        "privacyFieldsRemoved": { "$ref": "#/$defs/count" },
+        "emailsRedacted": { "$ref": "#/$defs/count" },
+        "retries": { "$ref": "#/$defs/count" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "fallbackReason": { "enum": ["NONE", "FIXTURE_FORCED", "YELLOWDIG_CREDENTIAL_NOT_CONFIGURED", "YELLOWDIG_UNAUTHORIZED", "YELLOWDIG_FORBIDDEN", "YELLOWDIG_RATE_LIMITED", "YELLOWDIG_TEMPORARY_FAILURE"] },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "timezone", "startUtc", "endUtcExclusive"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" },
+        "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "startUtc": { "type": "string", "format": "date-time" },
+        "endUtcExclusive": { "type": "string", "format": "date-time" }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^u_[a-f0-9]{12}$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "type", "createdAt", "actor", "postId", "commentId", "parentCommentId", "title", "body", "topics"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["post", "comment", "reaction", "view"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "actor": { "oneOf": [{ "$ref": "#/$defs/actor" }, { "type": "null" }] },
+        "postId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "commentId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "parentCommentId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "title": { "type": ["string", "null"], "maxLength": 300 },
+        "body": { "type": ["string", "null"], "maxLength": 20000 },
+        "topics": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name"],
+            "properties": { "id": { "type": ["string", "null"], "maxLength": 128 }, "name": { "type": "string", "maxLength": 200 } }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "name": "02 - Yellowdig Normalize and Join",
+  "nodes": [
+    {
+      "id": "db828c49-cbf7-4ecd-855b-87cd8415d66c",
+      "name": "When Called by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "bf45ccaa-8468-458a-a37f-90d285e4b03f",
+      "name": "Validate Source Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (validateSourceMetadata) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{var m=class extends Error{constructor(s,u,y=null){super(\"[\"+s+\"] \"+u),this.name=\"SourceError\",this.code=s,this.httpStatus=y}};function w(t){if(t.liveSourceVerified!==(t.sourceModeUsed===\"yellowdig\"))throw new m(\"CONTRACT_VIOLATION\",\"liveSourceVerified does not match sourceModeUsed\");if(t.sourceModeUsed===\"fixture\"!=(t.provider===\"synthetic-fixture\"))throw new m(\"CONTRACT_VIOLATION\",\"provider does not match sourceModeUsed\");return t}var T=new Set([\"$schema\",\"$id\",\"$defs\",\"$comment\",\"title\",\"description\",\"examples\",\"default\"]),L=new Set([\"type\",\"const\",\"enum\",\"pattern\",\"minLength\",\"maxLength\",\"minimum\",\"maximum\",\"minItems\",\"maxItems\",\"uniqueItems\",\"items\",\"required\",\"properties\",\"additionalProperties\",\"oneOf\",\"$ref\",\"format\"]),l=t=>!!t&&typeof t==\"object\"&&!Array.isArray(t),h=t=>t===null?\"null\":Array.isArray(t)?\"array\":typeof t;function A(t){let s=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(t);if(!s)return!1;let u=new Date(Date.UTC(+s[1],+s[2]-1,+s[3]));return u.getUTCMonth()===+s[2]-1&&u.getUTCDate()===+s[3]}var R={date:A,\"date-time\":t=>{let s=/^(\\d{4}-\\d{2}-\\d{2})[Tt ]([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?([Zz]|[+-]([01]\\d|2[0-3]):?[0-5]\\d)$/.exec(t);return!!s&&A(s[1])},uri:t=>/^[A-Za-z][A-Za-z0-9+.-]*:[^\\s]*$/.test(t)};function O(t){let s=new Map;t.forEach(e=>s.set(String(e.$id),e));let u=new Map;function y(e,o){let[a,d=\"\"]=e.split(\"#\"),c=a?/^[a-z]+:\\/\\//i.test(a)?a:o.slice(0,o.lastIndexOf(\"/\")+1)+a:o,i=s.get(c);if(!i)throw new Error(\"unknown schema \"+c);let n=i;if(d.split(\"/\").filter(Boolean).forEach(r=>{let p=r.replace(/~1/g,\"/\").replace(/~0/g,\"~\");n=l(n)?n[p]:void 0}),n===void 0)throw new Error(\"unresolved $ref \"+e);return{schema:n,base:c}}function f(e,o,a,d,c){if(e===!0)return;if(e===!1){c.push({path:d,message:\"not allowed\"});return}for(let n of Object.keys(e))if(!L.has(n)&&!T.has(n))throw new Error(\"unsupported keyword \"+n);let i=n=>c.push({path:d,message:n});if(typeof e.$ref==\"string\"){let n=y(e.$ref,a);f(n.schema,o,n.base,d,c)}if(e.type!==void 0){let n=Array.isArray(e.type)?e.type:[e.type],r=h(o);if(!n.some(g=>g===r||g===\"integer\"&&r===\"number\"&&Number.isInteger(o))){i(\"must be \"+n.join(\"|\"));return}}if(\"const\"in e&&JSON.stringify(e.const)!==JSON.stringify(o)&&i(\"must equal constant\"),Array.isArray(e.enum)&&!e.enum.some(n=>JSON.stringify(n)===JSON.stringify(o))&&i(\"must be one of the allowed values\"),Array.isArray(e.oneOf)&&e.oneOf.filter(r=>{let p=[];return f(r,o,a,d,p),p.length===0}).length!==1&&i(\"must match exactly one schema in oneOf\"),typeof o==\"string\"){let n=[...o].length;if(typeof e.minLength==\"number\"&&n<e.minLength&&i(\"too short\"),typeof e.maxLength==\"number\"&&n>e.maxLength&&i(\"too long\"),typeof e.pattern==\"string\"){let r=u.get(e.pattern);r||(r=new RegExp(e.pattern,\"u\"),u.set(e.pattern,r)),r.test(o)||i(\"must match pattern\")}if(typeof e.format==\"string\"){let r=R[e.format];if(!r)throw new Error(\"unsupported format \"+e.format);r(o)||i(\"must be a valid \"+e.format)}}if(typeof o==\"number\"&&(typeof e.minimum==\"number\"&&o<e.minimum&&i(\"below minimum\"),typeof e.maximum==\"number\"&&o>e.maximum&&i(\"above maximum\")),Array.isArray(o)&&(typeof e.minItems==\"number\"&&o.length<e.minItems&&i(\"too few items\"),typeof e.maxItems==\"number\"&&o.length>e.maxItems&&i(\"too many items\"),e.uniqueItems===!0&&new Set(o.map(n=>JSON.stringify(n))).size!==o.length&&i(\"items must be unique\"),e.items!==void 0&&o.forEach((n,r)=>f(e.items,n,a,d+\"/\"+r,c))),l(o)){Array.isArray(e.required)&&e.required.forEach(r=>{r in o||i(\"missing \"+r)});let n=l(e.properties)?e.properties:{};for(let[r,p]of Object.entries(o))r in n?f(n[r],p,a,d+\"/\"+r,c):e.additionalProperties===!1?c.push({path:d+\"/\"+r,message:\"unexpected property\"}):l(e.additionalProperties)&&f(e.additionalProperties,p,a,d+\"/\"+r,c)}}return{errors(e,o){let a=[],[d]=e.split(\"#\");return f({$ref:e},o,d,\"\",a),a.slice(0,20)}}}var S={$schema:\"https://json-schema.org/draft/2020-12/schema\",$id:\"https://cis515-observatory/schemas/source-bundle.schema.json\",title:\"SourceBundle\",description:\"Output of workflow 01. Minimized, deduplicated and filtered events for one week, with how they were obtained. Contains no SIS ids, LTI fields, emails or raw user ids.\",type:\"object\",additionalProperties:!1,required:[\"schemaVersion\",\"sourceModeRequested\",\"sourceModeUsed\",\"liveSourceVerified\",\"fallbackReason\",\"provider\",\"fetchedAt\",\"network\",\"communityId\",\"week\",\"topic\",\"topicId\",\"window\",\"capabilities\",\"capability\",\"events\",\"diagnostics\"],properties:{schemaVersion:{const:\"1.0\"},sourceModeRequested:{enum:[\"fixture\",\"yellowdig\",\"auto\"]},sourceModeUsed:{enum:[\"fixture\",\"yellowdig\"]},liveSourceVerified:{type:\"boolean\",description:\"true only when this run's data came from a successful authorized Yellowdig request.\"},fallbackReason:{$ref:\"#/$defs/fallbackReason\"},provider:{enum:[\"yellowdig-api\",\"synthetic-fixture\"]},fetchedAt:{type:\"string\",format:\"date-time\"},network:{$ref:\"#/$defs/id\"},communityId:{$ref:\"#/$defs/id\"},week:{type:\"integer\",minimum:1,maximum:16},topic:{type:\"string\",minLength:1,maxLength:200},topicId:{type:[\"string\",\"null\"],maxLength:128},window:{$ref:\"#/$defs/window\"},capabilities:{type:\"object\",additionalProperties:!1,required:[\"reactionEvents\",\"viewEvents\"],properties:{reactionEvents:{type:\"boolean\"},viewEvents:{type:\"boolean\"}}},capability:{type:[\"object\",\"null\"],description:\"Sanitized capability-probe report (field names and types only) or null in fixture mode.\"},events:{type:\"array\",maxItems:1e5,items:{$ref:\"#/$defs/event\"}},diagnostics:{type:\"object\",additionalProperties:!1,required:[\"pagesFetched\",\"eventsFetched\",\"eventsAfterDeduplication\",\"duplicateEventsRemoved\",\"conflictingDuplicates\",\"posts\",\"comments\",\"reactions\",\"views\",\"otherKnownEvents\",\"unknownEventTypes\",\"unknownEventTypeNames\",\"filteredByDate\",\"filteredByTopic\",\"filteredWithParent\",\"privacyFieldsRemoved\",\"emailsRedacted\",\"retries\"],properties:{pagesFetched:{$ref:\"#/$defs/count\"},eventsFetched:{$ref:\"#/$defs/count\"},eventsAfterDeduplication:{$ref:\"#/$defs/count\"},duplicateEventsRemoved:{$ref:\"#/$defs/count\"},conflictingDuplicates:{$ref:\"#/$defs/count\"},posts:{$ref:\"#/$defs/count\"},comments:{$ref:\"#/$defs/count\"},reactions:{$ref:\"#/$defs/count\"},views:{$ref:\"#/$defs/count\"},otherKnownEvents:{$ref:\"#/$defs/count\"},unknownEventTypes:{$ref:\"#/$defs/count\"},unknownEventTypeNames:{type:\"array\",maxItems:50,items:{type:\"string\",maxLength:40}},filteredByDate:{$ref:\"#/$defs/count\"},filteredByTopic:{$ref:\"#/$defs/count\"},filteredWithParent:{$ref:\"#/$defs/count\"},privacyFieldsRemoved:{$ref:\"#/$defs/count\"},emailsRedacted:{$ref:\"#/$defs/count\"},retries:{$ref:\"#/$defs/count\"}}}},$defs:{id:{type:\"string\",minLength:1,maxLength:128,pattern:\"^[A-Za-z0-9._:-]+$\"},count:{type:\"integer\",minimum:0},fallbackReason:{enum:[\"NONE\",\"FIXTURE_FORCED\",\"YELLOWDIG_CREDENTIAL_NOT_CONFIGURED\",\"YELLOWDIG_UNAUTHORIZED\",\"YELLOWDIG_FORBIDDEN\",\"YELLOWDIG_RATE_LIMITED\",\"YELLOWDIG_TEMPORARY_FAILURE\"]},window:{type:\"object\",additionalProperties:!1,required:[\"start\",\"end\",\"timezone\",\"startUtc\",\"endUtcExclusive\"],properties:{start:{type:\"string\",format:\"date\"},end:{type:\"string\",format:\"date\"},timezone:{type:\"string\",minLength:1,maxLength:64},startUtc:{type:\"string\",format:\"date-time\"},endUtcExclusive:{type:\"string\",format:\"date-time\"}}},actor:{type:\"object\",additionalProperties:!1,required:[\"id\",\"displayName\"],properties:{id:{type:\"string\",pattern:\"^u_[a-f0-9]{12}$\"},displayName:{type:\"string\",minLength:1,maxLength:120}}},event:{type:\"object\",additionalProperties:!1,required:[\"eventId\",\"type\",\"createdAt\",\"actor\",\"postId\",\"commentId\",\"parentCommentId\",\"title\",\"body\",\"topics\"],properties:{eventId:{$ref:\"#/$defs/id\"},type:{enum:[\"post\",\"comment\",\"reaction\",\"view\"]},createdAt:{type:\"string\",format:\"date-time\"},actor:{oneOf:[{$ref:\"#/$defs/actor\"},{type:\"null\"}]},postId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},commentId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},parentCommentId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},title:{type:[\"string\",\"null\"],maxLength:300},body:{type:[\"string\",\"null\"],maxLength:2e4},topics:{type:\"array\",maxItems:20,items:{type:\"object\",additionalProperties:!1,required:[\"id\",\"name\"],properties:{id:{type:[\"string\",\"null\"],maxLength:128},name:{type:\"string\",maxLength:200}}}}}}}};var E=\"https://cis515-observatory/schemas/\",D={normalizedPost:E+\"normalized-post.schema.json\",sourceBundle:E+\"source-bundle.schema.json\",weekDataset:E+\"week-dataset.schema.json\"},I=null;function x(){return I??(I=O([S])),I}function k(t,s){if(t.length)throw new m(\"CONTRACT_VIOLATION\",s+\" does not match its schema: \"+t.slice(0,5).map(u=>(u.path||\"/\")+\" \"+u.message).join(\"; \"))}function v(t){k(x().errors(D.sourceBundle,t),\"source bundle\")}var _=t=>{if(t.items.length!==1)throw new Error(\"[CONTRACT_VIOLATION] expected exactly one source bundle, got \"+t.items.length);let s=t.items[0];return v(s),[w(s)]};__obsSet(_);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "a9906880-fb46-40f9-ab3c-dd95084fdaea",
+      "name": "Manual Test (fixture)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        220
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "9de9c3a4-8677-431d-8811-b97def6aa883",
+      "name": "Fixture Run Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (fixtureRunConfig) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{var s={id:\"topic-week-2\",name:\"WEEK 2 - WEEKLY WORKFLOW SHOW-AND-TELL ON YELLOWDIG\"};var e={sourceMode:\"fixture\",week:2,startDate:\"2026-10-23\",endDate:\"2026-10-28\",timezone:\"America/Phoenix\",network:\"carey-school-of-business\",communityId:\"6acd2896-76e7-400f-9a00-cfd657470859\",topic:s.name};var o={\"community/squuid\":e.communityId,\"community/title\":\"CIS 515 (synthetic)\",\"community/network\":e.network};var t=n=>[{...e,sourceMode:\"fixture\",...n.items[0]??{}}];__obsSet(t);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "33688047-32e4-4734-880a-ec8f5b2740be",
+      "name": "Run 01 Fetch Events",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        220
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "dHZoXDny6WU1v62y"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "f7d996fe-58e0-419c-9f79-e3d9531b219e",
+      "name": "Classify Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (classifyEvents) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{var s=[\"post\",\"comment\",\"reaction\",\"view\"];function c(e){let o={post:[],comment:[],reaction:[],view:[]},n=0;return e.forEach(t=>{s.includes(t.type)?o[t.type].push(t):n+=1}),{...o,unknownEventTypes:n}}function r(e){return{bundle:e,...c(e.events)}}var i=e=>[r(e.items[0])];__obsSet(i);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "adcfd2b0-d14f-4be1-b672-d6e580d7ff74",
+      "name": "Join Comments, Reactions and Views",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (joinToPosts) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{function f(n){return n.normalize(\"NFKC\").replace(/[‐-―−]/g,\"-\").replace(/\\s+/g,\" \").trim().toLowerCase()}function v(n,o,s){if(s)return n.topics.some(i=>i.id===s);let c=f(o);return n.topics.some(i=>f(i.name)===c)}function y(n,o,s){return null}var h=\"1.1\";var a=(n,o)=>n.createdAt<o.createdAt?-1:n.createdAt>o.createdAt?1:n.id<o.id?-1:n.id>o.id?1:0;function w(n){let{bundle:o}=n,s=[],c=0,i=0,u=0,d=new Map;[...n.post].sort((e,t)=>a({createdAt:e.createdAt,id:e.eventId},{createdAt:t.createdAt,id:t.eventId})).forEach(e=>{let t=e.postId??e.eventId;if(d.has(t)){c+=1;return}if(!e.actor){s.push({eventId:e.eventId,type:e.type,reason:\"MISSING_AUTHOR\"});return}let r=e.topics.find(E=>v({...e,topics:[E]},o.topic,o.topicId))??e.topics[0]??{id:null,name:o.topic},l=y(o.network,o.communityId,t);d.set(t,{schemaVersion:h,postId:t,week:o.week,topic:{id:r.id,name:r.name},title:e.title?.trim()||\"(untitled)\",author:e.actor,createdAt:e.createdAt,body:e.body??\"\",sourceUrl:l,source:{provider:o.provider,sourcePostId:t,communityId:o.communityId,sourceUrlVerified:!1},comments:[],metrics:{commentCount:0,uniqueCommenters:0,reactionCount:o.capabilities.reactionEvents?0:null,viewCount:o.capabilities.viewEvents?0:null},assets:{screenshots:[],workflowJson:null},sourceRefs:[\"post:\"+t]})});let p=e=>{if(!e.postId)return s.push({eventId:e.eventId,type:e.type,reason:\"MISSING_POST_ID\"}),null;let t=d.get(e.postId);return t||(s.push({eventId:e.eventId,type:e.type,reason:\"MISSING_PARENT_POST\"}),null)},I=new Set(n.comment.map(e=>e.commentId??e.eventId));n.comment.forEach(e=>{let t=p(e);if(!t)return;if(!e.actor){s.push({eventId:e.eventId,type:e.type,reason:\"MISSING_AUTHOR\"});return}let r=t.postId;e.parentCommentId&&e.parentCommentId!==t.postId&&(I.has(e.parentCommentId)?r=e.parentCommentId:i+=1),t.comments.push({commentId:e.commentId??e.eventId,parentId:r,author:e.actor,createdAt:e.createdAt,body:e.body??\"\"})}),[...n.reaction,...n.view].forEach(e=>{let t=p(e);if(t){if(e.commentId){u+=1;return}e.type===\"reaction\"?t.metrics.reactionCount=(t.metrics.reactionCount??0)+1:t.metrics.viewCount=(t.metrics.viewCount??0)+1}});let m=[...d.values()].sort((e,t)=>a({createdAt:e.createdAt,id:e.postId},{createdAt:t.createdAt,id:t.postId}));return m.forEach(e=>{e.comments.sort((t,r)=>a({createdAt:t.createdAt,id:t.commentId},{createdAt:r.createdAt,id:r.commentId})),e.metrics.commentCount=e.comments.length,e.metrics.uniqueCommenters=new Set(e.comments.map(t=>t.author.id)).size,e.sourceRefs=[\"post:\"+e.postId,...e.comments.map(t=>\"comment:\"+t.commentId)]}),{bundle:o,posts:m,orphans:s.sort((e,t)=>e.eventId<t.eventId?-1:e.eventId>t.eventId?1:0),counters:{unknownEventTypes:n.unknownEventTypes,duplicatePostEvents:c,missingParentComments:i,interactionsOnComments:u}}}var g=n=>[w(n.items[0])];__obsSet(g);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "5cfc9c8f-38e0-4270-98ff-fea7e94d3827",
+      "name": "Compute Deterministic Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (computeMetrics) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{var A=(t=>typeof require<\"u\"?require:typeof Proxy<\"u\"?new Proxy(t,{get:(e,n)=>(typeof require<\"u\"?require:e)[n]}):t)(function(t){if(typeof require<\"u\")return require.apply(this,arguments);throw Error('Dynamic require of \"'+t+'\" is not supported')});var g=A(\"crypto\");function f(t){if(t===null||typeof t!=\"object\")return JSON.stringify(t);if(Array.isArray(t))return\"[\"+t.map(f).join(\",\")+\"]\";let e=t;return\"{\"+Object.keys(e).filter(n=>e[n]!==void 0).sort().map(n=>JSON.stringify(n)+\":\"+f(e[n])).join(\",\")+\"}\"}function C(t){return(0,g.createHash)(\"sha256\").update(t,\"utf8\").digest(\"hex\")}function h(t){return C(f(t))}var m=(t,e)=>t<e?-1:t>e?1:0;function I(t){let e=t.filter(n=>typeof n==\"number\");return e.length===0?null:e.reduce((n,a)=>n+a,0)}function k(t,e){let n=new Set(t.map(c=>c.postId)),a=new Map;return[...e].sort((c,r)=>m(c.fileName,r.fileName)).forEach(c=>{c.postId&&n.has(c.postId)&&!a.has(c.postId)&&a.set(c.postId,c)}),a}function N(t){if(!t)return[];let e=t.signals,n=[];return e.codeChecks&&n.push(\"codeChecks\"),e.humanReview&&n.push(\"humanReview\"),e.boundedRetry.present&&n.push(\"boundedRetry\"),e.errorHandling&&n.push(\"errorHandling\"),e.llmJudge&&n.push(\"llmJudge\"),e.multiAgent&&n.push(\"multiAgent\"),e.fallback&&n.push(\"fallback\"),e.rag&&n.push(\"rag\"),e.memory&&n.push(\"memory\"),n}function y(t,e){let n=k(t,e),a=t.reduce((o,i)=>o+i.comments.length,0),c=new Set(t.map(o=>o.author.id)),r=new Set(t.flatMap(o=>o.comments.map(i=>i.author.id))),s=new Map;t.forEach(o=>s.set(o.topic.name,(s.get(o.topic.name)??0)+1));let u=[...s.entries()].map(([o,i])=>({topic:o,count:i})).sort((o,i)=>i.count-o.count||m(o.topic,i.topic)),l=[...n.values()],d=o=>l.filter(i=>N(i).includes(o)).length,p=new Map;l.forEach(o=>new Set(o.externalServices).forEach(i=>p.set(i,(p.get(i)??0)+1)));let E=[...p.entries()].map(([o,i])=>({name:o,builds:i})).sort((o,i)=>i.builds-o.builds||m(o.name,i.name));return{provenance:\"CODE-COUNTED\",posts:t.length,comments:a,uniqueAuthors:c.size,uniqueCommenters:r.size,reactions:I(t.map(o=>o.metrics.reactionCount)),views:I(t.map(o=>o.metrics.viewCount)),workflowFiles:n.size,screenshots:t.reduce((o,i)=>o+i.assets.screenshots.length,0),avgCommentsPerPost:t.length===0?0:Math.round(a/t.length*100)/100,topicCounts:u,signals:{profiledBuilds:l.length,codeChecks:d(\"codeChecks\"),humanReview:d(\"humanReview\"),boundedRetry:d(\"boundedRetry\"),errorHandling:d(\"errorHandling\"),llmJudge:d(\"llmJudge\"),multiAgent:d(\"multiAgent\"),fallback:d(\"fallback\")},externalServices:E}}function w(t,e=5){let n=t.filter(r=>r.comments.length>0).sort((r,s)=>s.comments.length-r.comments.length||m(r.createdAt,s.createdAt)||m(r.postId,s.postId)).slice(0,e).map(r=>({postId:r.postId,title:r.title,author:r.author.displayName,commentCount:r.comments.length})),a=new Map;t.forEach(r=>r.comments.forEach(s=>{if(s.author.id===r.author.id)return;let u=a.get(s.author.id)??{name:s.author.displayName,n:0};u.n+=1,a.set(s.author.id,u)}));let c=[...a.values()].sort((r,s)=>s.n-r.n||m(r.name,s.name)).slice(0,e).map(r=>({name:r.name,commentsOnOthers:r.n}));return{mostDiscussed:n,generousCommenters:c}}var T=\"1.0\";function S(t){let{bundle:e,posts:n,orphans:a,counters:c}=t,r=a.filter(s=>s.reason===\"MISSING_PARENT_POST\"||s.reason===\"MISSING_POST_ID\").length;return{schemaVersion:T,week:e.week,topic:e.topic,window:e.window,source:{provider:e.provider,sourceModeRequested:e.sourceModeRequested,sourceModeUsed:e.sourceModeUsed,liveSourceVerified:e.liveSourceVerified,fallbackReason:e.fallbackReason,fetchedAt:e.fetchedAt,network:e.network,communityId:e.communityId},inputHash:h({events:e.events,window:e.window,topic:e.topic,topicId:e.topicId}),posts:n,metrics:y(n,[]),discussion:w(n),orphans:a,diagnostics:{...e.diagnostics,unknownEventTypes:e.diagnostics.unknownEventTypes+c.unknownEventTypes,postsNormalized:n.length,commentsJoined:n.reduce((s,u)=>s+u.comments.length,0),reactionsJoined:n.reduce((s,u)=>s+(u.metrics.reactionCount??0),0),viewsJoined:n.reduce((s,u)=>s+(u.metrics.viewCount??0),0),missingParents:r,missingParentComments:c.missingParentComments,eventsMissingAuthor:a.filter(s=>s.reason===\"MISSING_AUTHOR\").length,duplicatePostEvents:c.duplicatePostEvents,interactionsOnComments:c.interactionsOnComments}}}var v=t=>[S(t.items[0])];__obsSet(v);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "7647ccfe-e98a-44a7-8dfe-90ed35c3c393",
+      "name": "Validate Against Contract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf02.ts (validateDataset) by web/scripts/build-n8n.ts. Do not edit in n8n.\nlet __run = null;\nconst __obsSet = (fn) => { __run = fn; };\n(()=>{var l=class extends Error{constructor(o,c,y=null){super(\"[\"+o+\"] \"+c),this.name=\"SourceError\",this.code=o,this.httpStatus=y}};var R=new Set([\"$schema\",\"$id\",\"$defs\",\"$comment\",\"title\",\"description\",\"examples\",\"default\"]),x=new Set([\"type\",\"const\",\"enum\",\"pattern\",\"minLength\",\"maxLength\",\"minimum\",\"maximum\",\"minItems\",\"maxItems\",\"uniqueItems\",\"items\",\"required\",\"properties\",\"additionalProperties\",\"oneOf\",\"$ref\",\"format\"]),f=r=>!!r&&typeof r==\"object\"&&!Array.isArray(r),D=r=>r===null?\"null\":Array.isArray(r)?\"array\":typeof r;function E(r){let o=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(r);if(!o)return!1;let c=new Date(Date.UTC(+o[1],+o[2]-1,+o[3]));return c.getUTCMonth()===+o[2]-1&&c.getUTCDate()===+o[3]}var N={date:E,\"date-time\":r=>{let o=/^(\\d{4}-\\d{2}-\\d{2})[Tt ]([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?([Zz]|[+-]([01]\\d|2[0-3]):?[0-5]\\d)$/.exec(r);return!!o&&E(o[1])},uri:r=>/^[A-Za-z][A-Za-z0-9+.-]*:[^\\s]*$/.test(r)};function w(r){let o=new Map;r.forEach(e=>o.set(String(e.$id),e));let c=new Map;function y(e,n){let[a,d=\"\"]=e.split(\"#\"),m=a?/^[a-z]+:\\/\\//i.test(a)?a:n.slice(0,n.lastIndexOf(\"/\")+1)+a:n,i=o.get(m);if(!i)throw new Error(\"unknown schema \"+m);let t=i;if(d.split(\"/\").filter(Boolean).forEach(s=>{let u=s.replace(/~1/g,\"/\").replace(/~0/g,\"~\");t=f(t)?t[u]:void 0}),t===void 0)throw new Error(\"unresolved $ref \"+e);return{schema:t,base:m}}function p(e,n,a,d,m){if(e===!0)return;if(e===!1){m.push({path:d,message:\"not allowed\"});return}for(let t of Object.keys(e))if(!x.has(t)&&!R.has(t))throw new Error(\"unsupported keyword \"+t);let i=t=>m.push({path:d,message:t});if(typeof e.$ref==\"string\"){let t=y(e.$ref,a);p(t.schema,n,t.base,d,m)}if(e.type!==void 0){let t=Array.isArray(e.type)?e.type:[e.type],s=D(n);if(!t.some($=>$===s||$===\"integer\"&&s===\"number\"&&Number.isInteger(n))){i(\"must be \"+t.join(\"|\"));return}}if(\"const\"in e&&JSON.stringify(e.const)!==JSON.stringify(n)&&i(\"must equal constant\"),Array.isArray(e.enum)&&!e.enum.some(t=>JSON.stringify(t)===JSON.stringify(n))&&i(\"must be one of the allowed values\"),Array.isArray(e.oneOf)&&e.oneOf.filter(s=>{let u=[];return p(s,n,a,d,u),u.length===0}).length!==1&&i(\"must match exactly one schema in oneOf\"),typeof n==\"string\"){let t=[...n].length;if(typeof e.minLength==\"number\"&&t<e.minLength&&i(\"too short\"),typeof e.maxLength==\"number\"&&t>e.maxLength&&i(\"too long\"),typeof e.pattern==\"string\"){let s=c.get(e.pattern);s||(s=new RegExp(e.pattern,\"u\"),c.set(e.pattern,s)),s.test(n)||i(\"must match pattern\")}if(typeof e.format==\"string\"){let s=N[e.format];if(!s)throw new Error(\"unsupported format \"+e.format);s(n)||i(\"must be a valid \"+e.format)}}if(typeof n==\"number\"&&(typeof e.minimum==\"number\"&&n<e.minimum&&i(\"below minimum\"),typeof e.maximum==\"number\"&&n>e.maximum&&i(\"above maximum\")),Array.isArray(n)&&(typeof e.minItems==\"number\"&&n.length<e.minItems&&i(\"too few items\"),typeof e.maxItems==\"number\"&&n.length>e.maxItems&&i(\"too many items\"),e.uniqueItems===!0&&new Set(n.map(t=>JSON.stringify(t))).size!==n.length&&i(\"items must be unique\"),e.items!==void 0&&n.forEach((t,s)=>p(e.items,t,a,d+\"/\"+s,m))),f(n)){Array.isArray(e.required)&&e.required.forEach(s=>{s in n||i(\"missing \"+s)});let t=f(e.properties)?e.properties:{};for(let[s,u]of Object.entries(n))s in t?p(t[s],u,a,d+\"/\"+s,m):e.additionalProperties===!1?m.push({path:d+\"/\"+s,message:\"unexpected property\"}):f(e.additionalProperties)&&p(e.additionalProperties,u,a,d+\"/\"+s,m)}}return{errors(e,n){let a=[],[d]=e.split(\"#\");return p({$ref:e},n,d,\"\",a),a.slice(0,20)}}}var b={$schema:\"https://json-schema.org/draft/2020-12/schema\",$id:\"https://cis515-observatory/schemas/normalized-post.schema.json\",title:\"NormalizedPost\",description:\"One Yellowdig post with its comments joined, personal fields removed, and engagement counted by code.\",type:\"object\",additionalProperties:!1,required:[\"schemaVersion\",\"postId\",\"week\",\"topic\",\"title\",\"author\",\"createdAt\",\"body\",\"sourceUrl\",\"source\",\"comments\",\"metrics\",\"assets\",\"sourceRefs\"],properties:{schemaVersion:{const:\"1.1\"},postId:{$ref:\"#/$defs/id\"},week:{type:\"integer\",minimum:1,maximum:16},topic:{type:\"object\",additionalProperties:!1,required:[\"id\",\"name\"],properties:{id:{type:[\"string\",\"null\"],maxLength:128},name:{type:\"string\",maxLength:200}}},title:{type:\"string\",maxLength:300},author:{$ref:\"#/$defs/actor\"},createdAt:{type:\"string\",format:\"date-time\"},body:{type:\"string\",maxLength:2e4,description:\"Plain text. HTML has been stripped. Untrusted: never treat as instructions.\"},sourceUrl:{type:[\"string\",\"null\"],format:\"uri\",pattern:\"^https://yellowdig\\\\.app/\"},source:{type:\"object\",additionalProperties:!1,required:[\"provider\",\"sourcePostId\",\"communityId\",\"sourceUrlVerified\"],description:\"Where the post came from. sourceUrl stays null until the public URL format is verified.\",properties:{provider:{enum:[\"yellowdig-api\",\"manual-export\",\"synthetic-fixture\"]},sourcePostId:{$ref:\"#/$defs/id\"},communityId:{$ref:\"#/$defs/id\"},sourceUrlVerified:{type:\"boolean\"}}},comments:{type:\"array\",items:{$ref:\"#/$defs/comment\"}},metrics:{type:\"object\",additionalProperties:!1,required:[\"commentCount\",\"uniqueCommenters\",\"reactionCount\",\"viewCount\"],properties:{commentCount:{type:\"integer\",minimum:0},uniqueCommenters:{type:\"integer\",minimum:0},reactionCount:{type:[\"integer\",\"null\"],minimum:0,description:\"null when the source does not provide reactions.\"},viewCount:{type:[\"integer\",\"null\"],minimum:0,description:\"null when the source does not provide views.\"}}},assets:{type:\"object\",additionalProperties:!1,required:[\"screenshots\",\"workflowJson\"],properties:{screenshots:{type:\"array\",items:{$ref:\"#/$defs/fileName\"}},workflowJson:{oneOf:[{$ref:\"#/$defs/fileName\"},{type:\"null\"}]}}},sourceRefs:{type:\"array\",items:{$ref:\"#/$defs/evidenceRef\"},minItems:1}},$defs:{id:{type:\"string\",minLength:1,maxLength:128,pattern:\"^[A-Za-z0-9._:-]+$\"},fileName:{type:\"string\",minLength:1,maxLength:120,pattern:\"^[A-Za-z0-9][A-Za-z0-9._-]*$\"},evidenceRef:{type:\"string\",pattern:\"^(post|comment|workflow|metric):[A-Za-z0-9._:-]+$\"},actor:{type:\"object\",additionalProperties:!1,required:[\"id\",\"displayName\"],description:\"Display name and a pseudonymous id only. No email, SIS id or profile data.\",properties:{id:{type:\"string\",pattern:\"^u_[a-f0-9]{12}$\"},displayName:{type:\"string\",minLength:1,maxLength:120}}},comment:{type:\"object\",additionalProperties:!1,required:[\"commentId\",\"parentId\",\"author\",\"createdAt\",\"body\"],properties:{commentId:{$ref:\"#/$defs/id\"},parentId:{$ref:\"#/$defs/id\"},author:{$ref:\"#/$defs/actor\"},createdAt:{type:\"string\",format:\"date-time\"},body:{type:\"string\",maxLength:1e4}}}}};var I={$schema:\"https://json-schema.org/draft/2020-12/schema\",$id:\"https://cis515-observatory/schemas/metrics.schema.json\",title:\"Metrics\",description:\"Code-counted metrics and discussion rankings. Shared by issue.schema.json and week-dataset.schema.json so they cannot drift.\",$defs:{issueMetrics:{type:\"object\",additionalProperties:!1,required:[\"provenance\",\"posts\",\"comments\",\"uniqueAuthors\",\"uniqueCommenters\",\"reactions\",\"views\",\"workflowFiles\",\"screenshots\",\"avgCommentsPerPost\",\"topicCounts\",\"signals\",\"externalServices\"],properties:{provenance:{const:\"CODE-COUNTED\"},posts:{type:\"integer\",minimum:0},comments:{type:\"integer\",minimum:0},uniqueAuthors:{type:\"integer\",minimum:0},uniqueCommenters:{type:\"integer\",minimum:0},reactions:{type:[\"integer\",\"null\"],minimum:0},views:{type:[\"integer\",\"null\"],minimum:0},workflowFiles:{type:\"integer\",minimum:0},screenshots:{type:\"integer\",minimum:0},avgCommentsPerPost:{type:\"number\",minimum:0},topicCounts:{type:\"array\",items:{type:\"object\",additionalProperties:!1,required:[\"topic\",\"count\"],properties:{topic:{type:\"string\",maxLength:200},count:{type:\"integer\",minimum:0}}}},signals:{type:\"object\",additionalProperties:!1,required:[\"profiledBuilds\",\"codeChecks\",\"humanReview\",\"boundedRetry\",\"errorHandling\",\"llmJudge\",\"multiAgent\",\"fallback\"],properties:{profiledBuilds:{type:\"integer\",minimum:0},codeChecks:{type:\"integer\",minimum:0},humanReview:{type:\"integer\",minimum:0},boundedRetry:{type:\"integer\",minimum:0},errorHandling:{type:\"integer\",minimum:0},llmJudge:{type:\"integer\",minimum:0},multiAgent:{type:\"integer\",minimum:0},fallback:{type:\"integer\",minimum:0}}},externalServices:{type:\"array\",items:{type:\"object\",additionalProperties:!1,required:[\"name\",\"builds\"],properties:{name:{type:\"string\",maxLength:60},builds:{type:\"integer\",minimum:0}}}}}},mostDiscussed:{type:\"array\",maxItems:5,items:{type:\"object\",additionalProperties:!1,required:[\"postId\",\"title\",\"author\",\"commentCount\"],properties:{postId:{$ref:\"#/$defs/id\"},title:{type:\"string\",maxLength:300},author:{type:\"string\",maxLength:120},commentCount:{type:\"integer\",minimum:0}}}},generousCommenters:{type:\"array\",maxItems:5,items:{type:\"object\",additionalProperties:!1,required:[\"name\",\"commentsOnOthers\"],properties:{name:{type:\"string\",maxLength:120},commentsOnOthers:{type:\"integer\",minimum:1}}}},id:{type:\"string\",minLength:1,maxLength:128,pattern:\"^[A-Za-z0-9._:-]+$\"}}};var L={$schema:\"https://json-schema.org/draft/2020-12/schema\",$id:\"https://cis515-observatory/schemas/source-bundle.schema.json\",title:\"SourceBundle\",description:\"Output of workflow 01. Minimized, deduplicated and filtered events for one week, with how they were obtained. Contains no SIS ids, LTI fields, emails or raw user ids.\",type:\"object\",additionalProperties:!1,required:[\"schemaVersion\",\"sourceModeRequested\",\"sourceModeUsed\",\"liveSourceVerified\",\"fallbackReason\",\"provider\",\"fetchedAt\",\"network\",\"communityId\",\"week\",\"topic\",\"topicId\",\"window\",\"capabilities\",\"capability\",\"events\",\"diagnostics\"],properties:{schemaVersion:{const:\"1.0\"},sourceModeRequested:{enum:[\"fixture\",\"yellowdig\",\"auto\"]},sourceModeUsed:{enum:[\"fixture\",\"yellowdig\"]},liveSourceVerified:{type:\"boolean\",description:\"true only when this run's data came from a successful authorized Yellowdig request.\"},fallbackReason:{$ref:\"#/$defs/fallbackReason\"},provider:{enum:[\"yellowdig-api\",\"synthetic-fixture\"]},fetchedAt:{type:\"string\",format:\"date-time\"},network:{$ref:\"#/$defs/id\"},communityId:{$ref:\"#/$defs/id\"},week:{type:\"integer\",minimum:1,maximum:16},topic:{type:\"string\",minLength:1,maxLength:200},topicId:{type:[\"string\",\"null\"],maxLength:128},window:{$ref:\"#/$defs/window\"},capabilities:{type:\"object\",additionalProperties:!1,required:[\"reactionEvents\",\"viewEvents\"],properties:{reactionEvents:{type:\"boolean\"},viewEvents:{type:\"boolean\"}}},capability:{type:[\"object\",\"null\"],description:\"Sanitized capability-probe report (field names and types only) or null in fixture mode.\"},events:{type:\"array\",maxItems:1e5,items:{$ref:\"#/$defs/event\"}},diagnostics:{type:\"object\",additionalProperties:!1,required:[\"pagesFetched\",\"eventsFetched\",\"eventsAfterDeduplication\",\"duplicateEventsRemoved\",\"conflictingDuplicates\",\"posts\",\"comments\",\"reactions\",\"views\",\"otherKnownEvents\",\"unknownEventTypes\",\"unknownEventTypeNames\",\"filteredByDate\",\"filteredByTopic\",\"filteredWithParent\",\"privacyFieldsRemoved\",\"emailsRedacted\",\"retries\"],properties:{pagesFetched:{$ref:\"#/$defs/count\"},eventsFetched:{$ref:\"#/$defs/count\"},eventsAfterDeduplication:{$ref:\"#/$defs/count\"},duplicateEventsRemoved:{$ref:\"#/$defs/count\"},conflictingDuplicates:{$ref:\"#/$defs/count\"},posts:{$ref:\"#/$defs/count\"},comments:{$ref:\"#/$defs/count\"},reactions:{$ref:\"#/$defs/count\"},views:{$ref:\"#/$defs/count\"},otherKnownEvents:{$ref:\"#/$defs/count\"},unknownEventTypes:{$ref:\"#/$defs/count\"},unknownEventTypeNames:{type:\"array\",maxItems:50,items:{type:\"string\",maxLength:40}},filteredByDate:{$ref:\"#/$defs/count\"},filteredByTopic:{$ref:\"#/$defs/count\"},filteredWithParent:{$ref:\"#/$defs/count\"},privacyFieldsRemoved:{$ref:\"#/$defs/count\"},emailsRedacted:{$ref:\"#/$defs/count\"},retries:{$ref:\"#/$defs/count\"}}}},$defs:{id:{type:\"string\",minLength:1,maxLength:128,pattern:\"^[A-Za-z0-9._:-]+$\"},count:{type:\"integer\",minimum:0},fallbackReason:{enum:[\"NONE\",\"FIXTURE_FORCED\",\"YELLOWDIG_CREDENTIAL_NOT_CONFIGURED\",\"YELLOWDIG_UNAUTHORIZED\",\"YELLOWDIG_FORBIDDEN\",\"YELLOWDIG_RATE_LIMITED\",\"YELLOWDIG_TEMPORARY_FAILURE\"]},window:{type:\"object\",additionalProperties:!1,required:[\"start\",\"end\",\"timezone\",\"startUtc\",\"endUtcExclusive\"],properties:{start:{type:\"string\",format:\"date\"},end:{type:\"string\",format:\"date\"},timezone:{type:\"string\",minLength:1,maxLength:64},startUtc:{type:\"string\",format:\"date-time\"},endUtcExclusive:{type:\"string\",format:\"date-time\"}}},actor:{type:\"object\",additionalProperties:!1,required:[\"id\",\"displayName\"],properties:{id:{type:\"string\",pattern:\"^u_[a-f0-9]{12}$\"},displayName:{type:\"string\",minLength:1,maxLength:120}}},event:{type:\"object\",additionalProperties:!1,required:[\"eventId\",\"type\",\"createdAt\",\"actor\",\"postId\",\"commentId\",\"parentCommentId\",\"title\",\"body\",\"topics\"],properties:{eventId:{$ref:\"#/$defs/id\"},type:{enum:[\"post\",\"comment\",\"reaction\",\"view\"]},createdAt:{type:\"string\",format:\"date-time\"},actor:{oneOf:[{$ref:\"#/$defs/actor\"},{type:\"null\"}]},postId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},commentId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},parentCommentId:{oneOf:[{$ref:\"#/$defs/id\"},{type:\"null\"}]},title:{type:[\"string\",\"null\"],maxLength:300},body:{type:[\"string\",\"null\"],maxLength:2e4},topics:{type:\"array\",maxItems:20,items:{type:\"object\",additionalProperties:!1,required:[\"id\",\"name\"],properties:{id:{type:[\"string\",\"null\"],maxLength:128},name:{type:\"string\",maxLength:200}}}}}}}};var v={$schema:\"https://json-schema.org/draft/2020-12/schema\",$id:\"https://cis515-observatory/schemas/week-dataset.schema.json\",title:\"WeekDataset\",description:\"Output of workflow 02. Normalized posts with comments, reactions and views joined, code-counted metrics, and diagnostics. Input to the Phase 3 and 4 pipelines.\",type:\"object\",additionalProperties:!1,required:[\"schemaVersion\",\"week\",\"topic\",\"window\",\"source\",\"inputHash\",\"posts\",\"metrics\",\"discussion\",\"orphans\",\"diagnostics\"],properties:{schemaVersion:{const:\"1.0\"},week:{type:\"integer\",minimum:1,maximum:16},topic:{type:\"string\",minLength:1,maxLength:200},window:{$ref:\"source-bundle.schema.json#/$defs/window\"},source:{type:\"object\",additionalProperties:!1,required:[\"provider\",\"sourceModeRequested\",\"sourceModeUsed\",\"liveSourceVerified\",\"fallbackReason\",\"fetchedAt\",\"network\",\"communityId\"],properties:{provider:{enum:[\"yellowdig-api\",\"synthetic-fixture\"]},sourceModeRequested:{enum:[\"fixture\",\"yellowdig\",\"auto\"]},sourceModeUsed:{enum:[\"fixture\",\"yellowdig\"]},liveSourceVerified:{type:\"boolean\"},fallbackReason:{$ref:\"source-bundle.schema.json#/$defs/fallbackReason\"},fetchedAt:{type:\"string\",format:\"date-time\"},network:{$ref:\"source-bundle.schema.json#/$defs/id\"},communityId:{$ref:\"source-bundle.schema.json#/$defs/id\"}}},inputHash:{type:\"string\",pattern:\"^[a-f0-9]{64}$\"},posts:{type:\"array\",items:{$ref:\"normalized-post.schema.json\"}},metrics:{$ref:\"metrics.schema.json#/$defs/issueMetrics\"},discussion:{type:\"object\",additionalProperties:!1,required:[\"mostDiscussed\",\"generousCommenters\"],properties:{mostDiscussed:{$ref:\"metrics.schema.json#/$defs/mostDiscussed\"},generousCommenters:{$ref:\"metrics.schema.json#/$defs/generousCommenters\"}}},orphans:{type:\"array\",items:{type:\"object\",additionalProperties:!1,required:[\"eventId\",\"type\",\"reason\"],properties:{eventId:{$ref:\"source-bundle.schema.json#/$defs/id\"},type:{type:\"string\",maxLength:40},reason:{enum:[\"MISSING_PARENT_POST\",\"MISSING_POST_ID\",\"MISSING_AUTHOR\"]}}}},diagnostics:{type:\"object\",description:\"Every source-bundle diagnostic plus join diagnostics. All values are code-counted.\",additionalProperties:!1,required:[\"pagesFetched\",\"eventsFetched\",\"eventsAfterDeduplication\",\"duplicateEventsRemoved\",\"conflictingDuplicates\",\"posts\",\"comments\",\"reactions\",\"views\",\"otherKnownEvents\",\"unknownEventTypes\",\"unknownEventTypeNames\",\"filteredByDate\",\"filteredByTopic\",\"filteredWithParent\",\"privacyFieldsRemoved\",\"emailsRedacted\",\"retries\",\"postsNormalized\",\"commentsJoined\",\"reactionsJoined\",\"viewsJoined\",\"missingParents\",\"missingParentComments\",\"eventsMissingAuthor\",\"duplicatePostEvents\",\"interactionsOnComments\"],properties:{pagesFetched:{$ref:\"source-bundle.schema.json#/$defs/count\"},eventsFetched:{$ref:\"source-bundle.schema.json#/$defs/count\"},eventsAfterDeduplication:{$ref:\"source-bundle.schema.json#/$defs/count\"},duplicateEventsRemoved:{$ref:\"source-bundle.schema.json#/$defs/count\"},conflictingDuplicates:{$ref:\"source-bundle.schema.json#/$defs/count\"},posts:{$ref:\"source-bundle.schema.json#/$defs/count\"},comments:{$ref:\"source-bundle.schema.json#/$defs/count\"},reactions:{$ref:\"source-bundle.schema.json#/$defs/count\"},views:{$ref:\"source-bundle.schema.json#/$defs/count\"},otherKnownEvents:{$ref:\"source-bundle.schema.json#/$defs/count\"},unknownEventTypes:{$ref:\"source-bundle.schema.json#/$defs/count\"},unknownEventTypeNames:{$ref:\"source-bundle.schema.json#/properties/diagnostics/properties/unknownEventTypeNames\"},filteredByDate:{$ref:\"source-bundle.schema.json#/$defs/count\"},filteredByTopic:{$ref:\"source-bundle.schema.json#/$defs/count\"},filteredWithParent:{$ref:\"source-bundle.schema.json#/$defs/count\"},privacyFieldsRemoved:{$ref:\"source-bundle.schema.json#/$defs/count\"},emailsRedacted:{$ref:\"source-bundle.schema.json#/$defs/count\"},retries:{$ref:\"source-bundle.schema.json#/$defs/count\"},postsNormalized:{$ref:\"source-bundle.schema.json#/$defs/count\"},commentsJoined:{$ref:\"source-bundle.schema.json#/$defs/count\"},reactionsJoined:{$ref:\"source-bundle.schema.json#/$defs/count\"},viewsJoined:{$ref:\"source-bundle.schema.json#/$defs/count\"},missingParents:{$ref:\"source-bundle.schema.json#/$defs/count\"},missingParentComments:{$ref:\"source-bundle.schema.json#/$defs/count\"},eventsMissingAuthor:{$ref:\"source-bundle.schema.json#/$defs/count\"},duplicatePostEvents:{$ref:\"source-bundle.schema.json#/$defs/count\"},interactionsOnComments:{$ref:\"source-bundle.schema.json#/$defs/count\"}}}}};var g=\"https://cis515-observatory/schemas/\",k={normalizedPost:g+\"normalized-post.schema.json\",sourceBundle:g+\"source-bundle.schema.json\",weekDataset:g+\"week-dataset.schema.json\"};var h=null;function P(){return h??(h=w([b,I,L,v])),h}function C(r,o){if(r.length)throw new l(\"CONTRACT_VIOLATION\",o+\" does not match its schema: \"+r.slice(0,5).map(c=>(c.path||\"/\")+\" \"+c.message).join(\"; \"))}function O(r){C(P().errors(k.weekDataset,r),\"week dataset\")}var A=r=>{let o=r.items[0];return O(o),[o]};__obsSet(A);})();\nconst __ctx = {\n  items: $input.all().map((i) => i.json),\n  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },\n  runIndex: $runIndex,\n  now: new Date().toISOString(),\n};\nreturn __run(__ctx).map((json) => ({ json }));\n"
+      }
+    },
+    {
+      "id": "32f7c2d3-d791-41c6-ad3a-3b5fda0fa0ca",
+      "name": "Sticky Note e6306486",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -96
+      ],
+      "parameters": {
+        "content": "## 02 · Yellowdig Normalize and Join\nInput: the source bundle from **01**. Output: one **week dataset** (schemas/week-dataset.schema.json).\n\nNo AI. Every number comes from `web/src/lib/metrics.ts` and `web/src/lib/source/normalize.ts`, bundled into these Code nodes.\nMissing parents and unknown event types are reported in `diagnostics` and `orphans`, never guessed.\n\nThe manual trigger runs 01 in **fixture** mode for testing.",
+        "color": 4,
+        "width": 608,
+        "height": 448
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Validate Source Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Source Metadata": {
+      "main": [
+        [
+          {
+            "node": "Classify Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test (fixture)": {
+      "main": [
+        [
+          {
+            "node": "Fixture Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fixture Run Config": {
+      "main": [
+        [
+          {
+            "node": "Run 01 Fetch Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 01 Fetch Events": {
+      "main": [
+        [
+          {
+            "node": "Validate Source Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Events": {
+      "main": [
+        [
+          {
+            "node": "Join Comments, Reactions and Views",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join Comments, Reactions and Views": {
+      "main": [
+        [
+          {
+            "node": "Compute Deterministic Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Deterministic Metrics": {
+      "main": [
+        [
+          {
+            "node": "Validate Against Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 300,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "nodeGroups": [
+    {
+      "id": "79d4e16b-5d88-482f-bece-8d8de879d95f",
+      "name": "Normalize and join",
+      "nodeNames": [
+        "Validate Source Metadata",
+        "Classify Events",
+        "Join Comments, Reactions and Views",
+        "Compute Deterministic Metrics",
+        "Validate Against Contract"
+      ],
+      "description": "Contract check, classify, join to posts, code-counted metrics, schema check. No AI nodes."
+    }
+  ],
+  "tags": [],
+  "meta": {
+    "observatory": {
+      "workflowId": "ZZoqGbrNSC3nAo3f",
+      "versionId": "c1405ade-8bef-45ab-9222-f09b178d96a3",
+      "sanitized": true,
+      "note": "Credentials, pinned data, webhook ids and instance metadata removed. Code nodes are generated; see web/scripts/build-n8n.ts."
+    }
+  }
+}

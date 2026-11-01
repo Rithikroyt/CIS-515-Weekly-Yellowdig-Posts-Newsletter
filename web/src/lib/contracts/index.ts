@@ -36,7 +36,7 @@ export const commentSchema = z
 
 export const normalizedPostSchema = z
   .object({
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.literal("1.1"),
     postId: id,
     week: z.number().int().min(1).max(16),
     topic: z.object({ id: z.string().max(128).nullable(), name: z.string().max(200) }).strict(),
@@ -45,6 +45,14 @@ export const normalizedPostSchema = z
     createdAt: isoDateTime,
     body: z.string().max(20000),
     sourceUrl,
+    source: z
+      .object({
+        provider: z.enum(["yellowdig-api", "manual-export", "synthetic-fixture"]),
+        sourcePostId: id,
+        communityId: id,
+        sourceUrlVerified: z.boolean(),
+      })
+      .strict(),
     comments: z.array(commentSchema),
     metrics: z
       .object({

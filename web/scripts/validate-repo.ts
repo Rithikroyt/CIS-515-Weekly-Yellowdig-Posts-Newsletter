@@ -5,6 +5,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadValidators, readJson, REPO_ROOT, type SchemaName } from "./schemas";
+import { generatedBundles } from "./export-n8n";
 
 const failures: string[] = [];
 const fail = (msg: string) => failures.push(msg);
@@ -21,7 +22,7 @@ function walk(dir: string, match: (p: string) => boolean): string[] {
 
 // 1. Schemas compile (loadValidators throws otherwise).
 const v = loadValidators();
-console.log("schemas compile: 4");
+console.log("schemas compile:", Object.keys(v).length);
 
 // 2. Published issues and fixtures validate.
 const check = (file: string, schema: SchemaName, many = false) => {
@@ -38,6 +39,7 @@ issueFiles.forEach((f) => check(f, "issue"));
 walk(join(REPO_ROOT, "fixtures"), (p) => p.endsWith("normalized-posts.json")).forEach((f) => check(f, "normalized-post", true));
 walk(join(REPO_ROOT, "fixtures"), (p) => p.endsWith("workflow-profiles.json")).forEach((f) => check(f, "workflow-profile", true));
 walk(join(REPO_ROOT, "fixtures"), (p) => p.endsWith("asset-manifest.json")).forEach((f) => check(f, "asset-manifest"));
+walk(join(REPO_ROOT, "fixtures"), (p) => p.endsWith("week-dataset.json")).forEach((f) => check(f, "week-dataset"));
 console.log("issue files validated:", issueFiles.length);
 
 // Published (non-fixture) issues must be approved and must not be synthetic.
@@ -49,9 +51,20 @@ walk(join(REPO_ROOT, "web", "public", "issues"), (p) => p.endsWith("issue.json")
 // 3. n8n exports: no credentials, no pinned data.
 const exports = walk(join(REPO_ROOT, "n8n", "workflows"), (p) => p.endsWith(".json"));
 exports.forEach((f) => {
-  const wf = readJson(f) as { nodes?: Array<{ name: string; credentials?: unknown }>; pinData?: Record<string, unknown> };
-  (wf.nodes ?? []).forEach((n) => { if (n.credentials && Object.keys(n.credentials).length) fail(rel(f) + ": node '" + n.name + "' has credentials"); });
+  const wf = readJson(f) as { nodes?: Array<{ name: string; type: string; credentials?: unknown; webhookId?: unknown; parameters?: { jsCode?: string } }>; pinData?: Record<string, unknown> };
+  (wf.nodes ?? []).forEach((n) => {
+    if (n.credentials && Object.keys(n.credentials).length) fail(rel(f) + ": node '" + n.name + "' has credentials");
+    if (n.webhookId) fail(rel(f) + ": node '" + n.name + "' has a webhookId");
+  });
   if (wf.pinData && Object.keys(wf.pinData).length) fail(rel(f) + ": has pinData");
+  // Current exports (NN-*.json, not archive/) must run exactly the generated bundles.
+  const m = /^(\d\d)-/.exec(f.split(/[\\/]/).pop() ?? "");
+  if (m && !/[\\/]archive[\\/]/.test(f)) {
+    const bundles = new Set(Object.values(Object.fromEntries(generatedBundles("wf" + m[1]))));
+    (wf.nodes ?? []).filter((n) => n.type === "n8n-nodes-base.code").forEach((n) => {
+      if (!bundles.has(n.parameters?.jsCode ?? "")) fail(rel(f) + ": Code node '" + n.name + "' differs from n8n/src/generated (rebuild and re-export)");
+    });
+  }
 });
 console.log("n8n exports checked:", exports.length);
 

@@ -1,0 +1,11 @@
+// CIS 515 Workflow Observatory · generated from web/src/n8n/nodes/wf01.ts (filterDateTopic) by web/scripts/build-n8n.ts. Do not edit in n8n.
+let __run = null;
+const __obsSet = (fn) => { __run = fn; };
+(()=>{var p=["post","comment","reaction","view","badge","points-granted"],E=["post","comment","reaction","view"],d=class extends Error{constructor(n,r,a=null){super("["+n+"] "+r),this.name="SourceError",this.code=n,this.httpStatus=a}};function f(t){return t.normalize("NFKC").replace(/[‐-―−]/g,"-").replace(/\s+/g," ").trim().toLowerCase()}function y(t,n,r){if(r)return t.topics.some(i=>i.id===r);let a=f(n);return t.topics.some(i=>f(i.name)===a)}function v(t,n){let r=Date.parse(n.window.startUtc),a=Date.parse(n.window.endUtcExclusive),i=e=>{let s=Date.parse(e.createdAt);return s>=r&&s<a},o={posts:0,comments:0,reactions:0,views:0,otherKnownEvents:0,unknownEventTypes:0,unknownEventTypeNames:[],filteredByDate:0,filteredByTopic:0,filteredWithParent:0},u=new Set,c=[],l=new Set;return t.forEach(e=>{if(e.type==="post"){if(!i(e)){o.filteredByDate+=1,e.postId&&u.add(e.postId);return}if(!y(e,n.topic,n.topicId)){o.filteredByTopic+=1,e.postId&&u.add(e.postId);return}c.push(e),o.posts+=1}}),c.forEach(e=>e.postId&&u.delete(e.postId)),t.forEach(e=>{if(e.type!=="post"){if(!E.includes(e.type)){p.includes(e.type)?o.otherKnownEvents+=1:(o.unknownEventTypes+=1,l.add(e.type.slice(0,40)));return}if(e.postId&&u.has(e.postId)){o.filteredWithParent+=1;return}if(!i(e)){o.filteredByDate+=1;return}c.push(e),e.type==="comment"?o.comments+=1:e.type==="reaction"?o.reactions+=1:o.views+=1}}),o.unknownEventTypeNames=[...l].sort(),c.sort((e,s)=>e.createdAt<s.createdAt?-1:e.createdAt>s.createdAt?1:e.eventId<s.eventId?-1:e.eventId>s.eventId?1:0),{events:c,diagnostics:o}}function m(t){let n=v(t.events,t.config);if(n.diagnostics.posts===0&&!t.config.allowEmpty)throw new d("NO_MATCHING_POSTS","no posts matched topic '"+t.config.topic+"' between "+t.config.window.start+" and "+t.config.window.end);return{...t,events:n.events,diagnostics:{...t.diagnostics,...n.diagnostics}}}var g=t=>[m(t.items[0])];__obsSet(g);})();
+const __ctx = {
+  items: $input.all().map((i) => i.json),
+  node: (name) => { try { return $(name).first().json; } catch (e) { return null; } },
+  runIndex: $runIndex,
+  now: new Date().toISOString(),
+};
+return __run(__ctx).map((json) => ({ json }));

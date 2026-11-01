@@ -1,6 +1,6 @@
 # Privacy and publishing
 
-> **Status: draft (Phase 1).** The rules below are enforced where marked **Enforced**. The publishing steps are finalized in Phase 5.
+> **Status: draft (updated in Phase 2).** The rules below are enforced where marked **Enforced**. The publishing steps are finalized in Phase 5.
 
 The repository is **public**. Anything committed is published.
 
@@ -13,6 +13,16 @@ The repository is **public**. Anything committed is published.
 | API keys, tokens, credentials | Kept in n8n credentials and server environment variables only. **Enforced:** `npm run validate` scans for secret-shaped strings. |
 | n8n credentials and pinned execution data | **Enforced:** `npm run validate` fails on any export with `credentials` or `pinData`. |
 | Unapproved drafts, comments and assets | Drafts stay in n8n data tables until approved. **Enforced:** `npm run validate` fails if a public `issue.json` isn't approved. |
+
+## Source privacy boundary (Phase 2)
+
+- **Allowlist only.** Raw Yellowdig events are mapped through an allowlist in `lib/source/fields.ts`. Everything else is dropped in the first n8n Code node after the HTTP request: SIS ids, LTI fields, emails, receiver data, community and network data, and profile fields.
+- **Pseudonymous ids.** User ids become `u_` + 12 hex characters using a salted hash. Live runs refuse to start without a server-side salt of 32+ characters. The salt is never copied into any output.
+- **Email redaction.** Email addresses inside post and comment text are replaced with `[email removed]`.
+- **Execution data.** Workflows 01 and 02 save no execution data for production runs (`saveDataSuccessExecution` and `saveDataErrorExecution` are `none`). Manual test runs are saved, and they use synthetic data only. Raw HTTP responses therefore don't persist in n8n for production runs.
+- **Nothing raw is stored.** No raw payloads go into n8n Data Tables or Git. The capability probe records field names and types only, never values.
+- **Attachments.** Multimedia attachments are not assumed to be available from the API. They arrive through the protected asset upload in Phase 3.
+- **Open item:** the server-side source of `pseudonymSalt` for live runs (n8n variable or protected data table) is decided in Phase 5, when an orchestrating workflow calls 01.
 
 ## Minimization
 

@@ -5,17 +5,17 @@ import Ajv2020, { type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 
 export const REPO_ROOT = join(__dirname, "..", "..");
-export const SCHEMA_NAMES = ["normalized-post", "workflow-profile", "asset-manifest", "issue"] as const;
+export const SCHEMA_NAMES = ["normalized-post", "workflow-profile", "asset-manifest", "metrics", "issue", "source-bundle", "week-dataset"] as const;
 export type SchemaName = (typeof SCHEMA_NAMES)[number];
 
 export function loadValidators(): Record<SchemaName, ValidateFunction> {
   const ajv = new Ajv2020({ allErrors: true, strict: true });
   addFormats(ajv);
+  // Register every schema first so cross-file $refs (e.g. issue → metrics) resolve.
+  const schemas = SCHEMA_NAMES.map((name) => JSON.parse(readFileSync(join(REPO_ROOT, "schemas", name + ".schema.json"), "utf8")));
+  schemas.forEach((s) => ajv.addSchema(s));
   const out = {} as Record<SchemaName, ValidateFunction>;
-  for (const name of SCHEMA_NAMES) {
-    const schema = JSON.parse(readFileSync(join(REPO_ROOT, "schemas", name + ".schema.json"), "utf8"));
-    out[name] = ajv.compile(schema);
-  }
+  SCHEMA_NAMES.forEach((name, i) => { out[name] = ajv.getSchema(schemas[i].$id) as ValidateFunction; });
   return out;
 }
 

@@ -43,56 +43,7 @@
         "provenance": { "const": "AI-DRAFTED" }
       }
     },
-    "metrics": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["provenance", "posts", "comments", "uniqueAuthors", "uniqueCommenters", "reactions", "views", "workflowFiles", "screenshots", "avgCommentsPerPost", "topicCounts", "signals", "externalServices"],
-      "properties": {
-        "provenance": { "const": "CODE-COUNTED" },
-        "posts": { "type": "integer", "minimum": 0 },
-        "comments": { "type": "integer", "minimum": 0 },
-        "uniqueAuthors": { "type": "integer", "minimum": 0 },
-        "uniqueCommenters": { "type": "integer", "minimum": 0 },
-        "reactions": { "type": ["integer", "null"], "minimum": 0 },
-        "views": { "type": ["integer", "null"], "minimum": 0 },
-        "workflowFiles": { "type": "integer", "minimum": 0 },
-        "screenshots": { "type": "integer", "minimum": 0 },
-        "avgCommentsPerPost": { "type": "number", "minimum": 0 },
-        "topicCounts": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["topic", "count"],
-            "properties": { "topic": { "type": "string", "maxLength": 200 }, "count": { "type": "integer", "minimum": 0 } }
-          }
-        },
-        "signals": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["profiledBuilds", "codeChecks", "humanReview", "boundedRetry", "errorHandling", "llmJudge", "multiAgent", "fallback"],
-          "properties": {
-            "profiledBuilds": { "type": "integer", "minimum": 0 },
-            "codeChecks": { "type": "integer", "minimum": 0 },
-            "humanReview": { "type": "integer", "minimum": 0 },
-            "boundedRetry": { "type": "integer", "minimum": 0 },
-            "errorHandling": { "type": "integer", "minimum": 0 },
-            "llmJudge": { "type": "integer", "minimum": 0 },
-            "multiAgent": { "type": "integer", "minimum": 0 },
-            "fallback": { "type": "integer", "minimum": 0 }
-          }
-        },
-        "externalServices": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["name", "builds"],
-            "properties": { "name": { "type": "string", "maxLength": 60 }, "builds": { "type": "integer", "minimum": 0 } }
-          }
-        }
-      }
-    },
+    "metrics": { "$ref": "metrics.schema.json#/$defs/issueMetrics" },
     "themes": {
       "type": "array",
       "maxItems": 8,
@@ -206,31 +157,8 @@
       "additionalProperties": false,
       "required": ["mostDiscussed", "generousCommenters", "synthesis"],
       "properties": {
-        "mostDiscussed": {
-          "type": "array",
-          "maxItems": 5,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["postId", "title", "author", "commentCount"],
-            "properties": {
-              "postId": { "$ref": "#/$defs/id" },
-              "title": { "type": "string", "maxLength": 300 },
-              "author": { "type": "string", "maxLength": 120 },
-              "commentCount": { "type": "integer", "minimum": 0 }
-            }
-          }
-        },
-        "generousCommenters": {
-          "type": "array",
-          "maxItems": 5,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["name", "commentsOnOthers"],
-            "properties": { "name": { "type": "string", "maxLength": 120 }, "commentsOnOthers": { "type": "integer", "minimum": 1 } }
-          }
-        },
+        "mostDiscussed": { "$ref": "metrics.schema.json#/$defs/mostDiscussed" },
+        "generousCommenters": { "$ref": "metrics.schema.json#/$defs/generousCommenters" },
         "synthesis": {
           "type": "array",
           "maxItems": 6,

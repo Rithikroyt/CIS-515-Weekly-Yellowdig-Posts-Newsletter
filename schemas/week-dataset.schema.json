@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cis515-observatory/schemas/week-dataset.schema.json",
+  "title": "WeekDataset",
+  "description": "Output of workflow 02. Normalized posts with comments, reactions and views joined, code-counted metrics, and diagnostics. Input to the Phase 3 and 4 pipelines.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "week",
+    "topic",
+    "window",
+    "source",
+    "inputHash",
+    "posts",
+    "metrics",
+    "discussion",
+    "orphans",
+    "diagnostics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "week": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "window": {
+      "$ref": "source-bundle.schema.json#/$defs/window"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "sourceModeRequested",
+        "sourceModeUsed",
+        "liveSourceVerified",
+        "fallbackReason",
+        "fetchedAt",
+        "network",
+        "communityId"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "yellowdig-api",
+            "synthetic-fixture"
+          ]
+        },
+        "sourceModeRequested": {
+          "enum": [
+            "fixture",
+            "yellowdig",
+            "auto"
+          ]
+        },
+        "sourceModeUsed": {
+          "enum": [
+            "fixture",
+            "yellowdig"
+          ]
+        },
+        "liveSourceVerified": {
+          "type": "boolean"
+        },
+        "fallbackReason": {
+          "$ref": "source-bundle.schema.json#/$defs/fallbackReason"
+        },
+        "fetchedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "network": {
+          "$ref": "source-bundle.schema.json#/$defs/id"
+        },
+        "communityId": {
+          "$ref": "source-bundle.schema.json#/$defs/id"
+        }
+      }
+    },
+    "inputHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "posts": {
+      "type": "array",
+      "items": {
+        "$ref": "normalized-post.schema.json"
+      }
+    },
+    "metrics": {
+      "$ref": "metrics.schema.json#/$defs/issueMetrics"
+    },
+    "discussion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mostDiscussed",
+        "generousCommenters"
+      ],
+      "properties": {
+        "mostDiscussed": {
+          "$ref": "metrics.schema.json#/$defs/mostDiscussed"
+        },
+        "generousCommenters": {
+          "$ref": "metrics.schema.json#/$defs/generousCommenters"
+        }
+      }
+    },
+    "orphans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "type",
+          "reason"
+        ],
+        "properties": {
+          "eventId": {
+            "$ref": "source-bundle.schema.json#/$defs/id"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "reason": {
+            "enum": [
+              "MISSING_PARENT_POST",
+              "MISSING_POST_ID",
+              "MISSING_AUTHOR"
+            ]
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "description": "Every source-bundle diagnostic plus join diagnostics. All values are code-counted.",
+      "additionalProperties": false,
+      "required": [
+        "pagesFetched",
+        "eventsFetched",
+        "eventsAfterDeduplication",
+        "duplicateEventsRemoved",
+        "conflictingDuplicates",
+        "posts",
+        "comments",
+        "reactions",
+        "views",
+        "otherKnownEvents",
+        "unknownEventTypes",
+        "unknownEventTypeNames",
+        "filteredByDate",
+        "filteredByTopic",
+        "filteredWithParent",
+        "privacyFieldsRemoved",
+        "emailsRedacted",
+        "retries",
+        "postsNormalized",
+        "commentsJoined",
+        "reactionsJoined",
+        "viewsJoined",
+        "missingParents",
+        "missingParentComments",
+        "eventsMissingAuthor",
+        "duplicatePostEvents",
+        "interactionsOnComments"
+      ],
+      "properties": {
+        "pagesFetched": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "eventsFetched": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "eventsAfterDeduplication": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "duplicateEventsRemoved": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "conflictingDuplicates": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "posts": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "comments": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "reactions": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "views": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "otherKnownEvents": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "unknownEventTypes": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "unknownEventTypeNames": {
+          "$ref": "source-bundle.schema.json#/properties/diagnostics/properties/unknownEventTypeNames"
+        },
+        "filteredByDate": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "filteredByTopic": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "filteredWithParent": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "privacyFieldsRemoved": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "emailsRedacted": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "retries": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "postsNormalized": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "commentsJoined": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "reactionsJoined": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "viewsJoined": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "missingParents": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "missingParentComments": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "eventsMissingAuthor": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "duplicatePostEvents": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        },
+        "interactionsOnComments": {
+          "$ref": "source-bundle.schema.json#/$defs/count"
+        }
+      }
+    }
+  }
+}
