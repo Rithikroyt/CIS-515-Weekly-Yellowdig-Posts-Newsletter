@@ -19,7 +19,20 @@ Professor Stone, on how the Week 2 reference issue was made:
 | Yellowdig internal GraphQL attachment automation (`FetchBoardPostDetail`) | **RESEARCHED BUT NOT REQUIRED.** Investigation stopped; no 01A workflow, no session handling. The temporary test workflow is archived. |
 | Local image insertion into the generated HTML (`npm run newsletter:finalize-images`) | **SELECTED IMPLEMENTATION.** |
 
-This choice is about privacy and matching the professor's method, not about technical inability. Class images are
+This choice is about privacy and matching the professor's method, not about technical inability.
+
+**API-key test of the GraphQL endpoint (local, one post, 2026-11-01, with the owner's approval):** `POST
+https://galactus.yellowdig.app/graphql` (`FetchBoardPostDetail`) answered **HTTP 404 "user not found"** both with the
+`apikey` header and with no authentication: the endpoint ignores the API key and resolves the user from the browser
+session. **SESSION_REQUIRED.** No cookie or session automation was built.
+
+**Getting original images locally.** `npm run newsletter:download-images -- --urls <urls.json> --out <folder>
+[--html <issue.html>]` downloads attachment images whose addresses were copied by hand (right-click the image in the
+post, "Copy image address"); they open without logging in. It runs only on the user's computer, sends no
+credentials or cookies, accepts only HTTPS URLs on `yellowdig.app` hosts (every redirect hop checked, at most 3),
+checks the real file type from its bytes, limits size to 25 MB, saves files unchanged as `spotlight-1.png` (or
+`spotlight-1-1.png` …), refuses folders inside the repository, prints no URLs, and updates `images.json` for
+`npm run newsletter:finalize-images`. Class images are
 chosen by a person and embedded on their own computer; they are never sent to an AI model, n8n, Vercel, cloud
 storage or GitHub. How it works is in `docs/newsletter-generator.md` (*Images*).
 
