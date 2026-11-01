@@ -13,6 +13,7 @@ export const ENTRIES = {
   wf02: ["fixtureRunConfig", "validateSourceMetadata", "classifyEvents", "joinToPosts", "computeMetrics", "validateDataset"],
   wf03: ["syntheticBatch", "checkFiles", "sanitize", "profile", "assembleAndValidate"],
   wf04: ["editorialStep", "mockModel", "attachGeminiState", "syntheticEditorialRun"],
+  wf05: ["syntheticRequest", "routeRequest", "decideRunStart", "queuedReply", "sourceConfig", "editorialRequest", "renderArtifact", "failRun", "statusReply"],
 } as const;
 
 const WORKFLOWS = [
@@ -20,6 +21,7 @@ const WORKFLOWS = [
   { key: "wf02", file: "02-normalize-and-join" },
   { key: "wf03", file: "03-profile-workflow-assets" },
   { key: "wf04", file: "04-editorial-intelligence" },
+  { key: "wf05", file: "05-generate-newsletter" },
 ] as const;
 
 // The bundle hands its entry to __obsSet instead of exporting it: the n8n task-runner sandbox drops the

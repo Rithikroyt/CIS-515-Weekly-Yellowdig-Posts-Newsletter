@@ -20,6 +20,7 @@ export const ENV_KEYS = [
   "REVIEWER_EMAIL",
   "N8N_GENERATE_WEBHOOK_URL", "N8N_REVIEW_WEBHOOK_URL", "N8N_WEBHOOK_SECRET",
   "PSEUDONYMIZATION_SALT",
+  "CHROMIUM_PACK_URL", "CHROME_EXECUTABLE_PATH",
 ] as const;
 
 /** Parses KEY=value lines. Comments and blank lines are ignored; surrounding quotes are removed. */

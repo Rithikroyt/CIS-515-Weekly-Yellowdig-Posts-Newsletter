@@ -91,6 +91,29 @@ exports.forEach((f) => {
     if (s.callerPolicy !== "workflowsFromSameOwner") fail(rel(f) + ": callerPolicy must be workflowsFromSameOwner");
     if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");
   }
+  // Workflow 05 is the only public entry point: exactly one POST webhook with header auth, no HTTP Request or AI
+  // nodes, sub-workflow calls only to 01, 02 and 04, Data Table access only to newsletter_runs, not callable as a
+  // sub-workflow, and no saved production execution data (the webhook request carries the secret header).
+  if (/[\\/]05-[^\\/]+$/.test(f)) {
+    const allowed = new Set(["n8n-nodes-base.webhook", "n8n-nodes-base.respondToWebhook", "n8n-nodes-base.manualTrigger", "n8n-nodes-base.code",
+      "n8n-nodes-base.if", "n8n-nodes-base.switch", "n8n-nodes-base.dataTable", "n8n-nodes-base.executeWorkflow", "n8n-nodes-base.noOp", "n8n-nodes-base.stickyNote"]);
+    const nodes = (wf.nodes ?? []) as Array<{ name: string; type: string; parameters?: Record<string, unknown> }>;
+    nodes.forEach((n) => { if (!allowed.has(n.type)) fail(rel(f) + ": node '" + n.name + "' has disallowed type " + n.type); });
+    const hooks = nodes.filter((n) => n.type === "n8n-nodes-base.webhook");
+    if (hooks.length !== 1) fail(rel(f) + ": exactly one webhook is allowed");
+    hooks.forEach((n) => { if (n.parameters?.authentication !== "headerAuth" || n.parameters?.httpMethod !== "POST") fail(rel(f) + ": webhook must be POST with header auth"); });
+    const ids = readJson(join(REPO_ROOT, "n8n", "workflow-ids.json")) as Record<string, string>;
+    const subs = new Set([ids.wf01, ids.wf02, ids.wf04]);
+    nodes.filter((n) => n.type === "n8n-nodes-base.executeWorkflow").forEach((n) => {
+      if (!subs.has(String((n.parameters?.workflowId as { value?: unknown })?.value))) fail(rel(f) + ": '" + n.name + "' calls a workflow other than 01, 02 or 04");
+    });
+    nodes.filter((n) => n.type === "n8n-nodes-base.dataTable").forEach((n) => {
+      if ((n.parameters?.dataTableId as { cachedResultName?: unknown })?.cachedResultName !== "newsletter_runs") fail(rel(f) + ": '" + n.name + "' uses a table other than newsletter_runs");
+    });
+    const s = wf.settings ?? {};
+    if (s.callerPolicy !== "none") fail(rel(f) + ": callerPolicy must be none");
+    if (s.saveDataSuccessExecution !== "none" || s.saveDataErrorExecution !== "none") fail(rel(f) + ": production execution data must not be saved");
+  }
   // Current exports (NN-*.json, not archive/) must run exactly the generated bundles.
   const m = /^(\d\d)-/.exec(f.split(/[\\/]/).pop() ?? "");
   if (m && !/[\\/]archive[\\/]/.test(f)) {

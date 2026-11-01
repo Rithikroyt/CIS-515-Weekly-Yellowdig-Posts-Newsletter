@@ -39,3 +39,6 @@ n8n/executions/
 .env.local
 .vercel/
 coverage/
+
+# Private reference material (real class content). Never commit.
+reference-private/
