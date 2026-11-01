@@ -11,6 +11,10 @@ const FAILED = "Newsletter generation failed. Please try again.";
 const POLL_MS = 3000;
 const MAX_POLL_ERRORS = 3;
 type Done = { runId: string; week: number; omitted: number };
+// Only the server's fixed safe codes (or the HTTP status) are shown, so failures can be diagnosed without dev tools.
+const SAFE_CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
+const failed = (code: unknown, httpStatus?: number) =>
+  FAILED + (typeof code === "string" && SAFE_CODE.test(code) ? " (Error code: " + code + ")" : httpStatus ? " (HTTP " + httpStatus + ")" : "");
 
 export function NewsletterGenerator({ defaultWeek }: { defaultWeek: number }) {
   const [week, setWeek] = useState(defaultWeek);
@@ -30,7 +34,7 @@ export function NewsletterGenerator({ defaultWeek }: { defaultWeek: number }) {
       const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ week }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || typeof body.runId !== "string") {
-        throw new Error(body.error === "WEEK_NOT_CONFIGURED" ? "Week " + week + " is not available yet. Its Yellowdig topic has not been set up." : FAILED);
+        throw new Error(body.error === "WEEK_NOT_CONFIGURED" ? "Week " + week + " is not available yet. Its Yellowdig topic has not been set up." : failed(body.error, res.status));
       }
       setRunning({ runId: body.runId, week });
       setStage(typeof body.status === "string" ? body.status : "queued");
@@ -57,12 +61,12 @@ export function NewsletterGenerator({ defaultWeek }: { defaultWeek: number }) {
     const poll = async () => {
       try {
         const res = await fetch("/api/generate/" + running.runId, { cache: "no-store" });
-        if (res.status === 404) return finish(FAILED);
+        if (res.status === 404) return finish(failed("RUN_NOT_FOUND"));
         if (!res.ok) throw new Error("poll");
         const s = await res.json();
         errors = 0;
         if (s.status === "ready" || s.status === "ready_with_omissions") return finish(null, { runId: running.runId, week: running.week, omitted: s.omittedClaims ?? 0 });
-        if (s.status === "failed") return finish(FAILED);
+        if (s.status === "failed") return finish(failed(s.errorCode));
         if (!stopped) setStage(s.status);
       } catch {
         if (++errors >= MAX_POLL_ERRORS) return finish(FAILED);
