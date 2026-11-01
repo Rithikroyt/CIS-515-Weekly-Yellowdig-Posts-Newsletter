@@ -1,9 +1,13 @@
 // The privacy boundary. Raw Yellowdig events are mapped through an allowlist into SourceEvent;
 // every other field (SIS ids, LTI fields, emails, profile data, network data) is dropped here.
 //
-// NOT VERIFIED: the Yellowdig API spec documents event *types* but not the fields inside an event.
-// The candidate names below are assumptions. The capability probe reports which candidates a real
-// response actually uses, and FIELD_MAPPING_UNVERIFIED stops a live run if required fields are absent.
+// LIVE VERIFIED (one 10-event probe, 2026-11-01; post and view events): live events are FLAT. Post
+// fields sit on the event itself, the post's id is its own event/squuid, timestamps are date/iso and
+// system/created-at, the actor is event/actor (user/firstname, user/lastname), topics are
+// [{ db/id, topic/label }], and a view points at its post through view/post: [{ db/id, event/squuid }].
+// Comments and reactions were NOT OBSERVED: post/parent and reaction/post are documented candidates.
+// The nested candidates (event/post, event/user, …) are kept for the synthetic fixture.
+// FIELD_MAPPING_UNVERIFIED stops a live run if required fields are absent.
 import { SourceError } from "./constants";
 import { pseudonymousId } from "../ids";
 import { canonicalIso, parseTimestamp } from "./time";
@@ -12,23 +16,27 @@ type Path = string[];
 export const FIELD_MAP = {
   eventId: [["event/squuid"], ["event/id"], ["squuid"], ["id"]],
   type: [["event/type"], ["type"]],
-  createdAt: [["event/created-at"], ["event/time"], ["event/timestamp"], ["created-at"], ["timestamp"]],
-  user: [["event/user"], ["user"], ["event/actor"]],
+  createdAt: [["date/iso"], ["system/created-at"], ["event/created-at"], ["event/time"], ["event/timestamp"], ["created-at"], ["timestamp"]],
+  user: [["event/actor"], ["event/user"], ["user"]],
   userId: [["user/squuid"], ["user/id"]],
   userDisplayName: [["user/display-name"], ["user/name"]],
-  userFirstName: [["user/first-name"]],
-  userLastName: [["user/last-name"]],
+  userFirstName: [["user/firstname"], ["user/first-name"]],
+  userLastName: [["user/lastname"], ["user/last-name"]],
+  // Nested container (fixture shape). Live events are flat, so the event itself is the container.
   post: [["event/post"], ["post"]],
   postId: [["post/squuid"], ["post/id"]],
   postTitle: [["post/title"]],
-  postBody: [["post/body"], ["post/text"], ["post/content"]],
+  postBody: [["post/body-text"], ["post/body"], ["post/text"], ["post/content"]],
   postTopics: [["post/topics"], ["post/topic"]],
-  topicId: [["topic/squuid"], ["topic/id"]],
-  topicName: [["topic/name"], ["topic/title"]],
+  topicId: [["topic/squuid"], ["topic/id"], ["db/id"]],
+  topicName: [["topic/label"], ["topic/name"], ["topic/title"]],
   comment: [["event/comment"], ["comment"]],
   commentId: [["comment/squuid"], ["comment/id"]],
-  commentBody: [["comment/body"], ["comment/text"]],
+  commentBody: [["comment/body"], ["comment/text"], ["post/body-text"]],
   commentParent: [["comment/parent"], ["comment/parent-squuid"]],
+  // The post an interaction or comment points at (live: view/post; documented: post/parent).
+  target: [["view/post"], ["reaction/post"], ["post/parent"]],
+  targetRef: [["event/squuid"], ["post/squuid"]],
 } satisfies Record<string, Path[]>;
 export type FieldKey = keyof typeof FIELD_MAP;
 
@@ -143,7 +151,14 @@ function topicsFrom(post: unknown): Topic[] {
     .filter((t): t is Topic => t !== null);
 }
 
-export type MinimizeResult = { event: SourceEvent; sensitiveFieldsRemoved: number; emailsRedacted: number };
+/** Resolves an interaction's target post: a list of refs (first wins), a ref object, or a plain id. */
+function targetOf(raw: unknown): string | null {
+  let v = get(raw, "target").value;
+  if (Array.isArray(v)) v = v[0];
+  return isObj(v) ? idOf(get(v, "targetRef").value) : idOf(v);
+}
+
+export type MinimizeResult ={ event: SourceEvent; sensitiveFieldsRemoved: number; emailsRedacted: number };
 
 /** Maps one raw event through the allowlist. Throws on events without an id, type or valid timestamp. */
 export function minimizeEvent(raw: unknown, salt: string): MinimizeResult {
@@ -155,9 +170,16 @@ export function minimizeEvent(raw: unknown, salt: string): MinimizeResult {
   const ms = parseTimestamp(get(raw, "createdAt").value);
   if (!Number.isFinite(ms)) throw new SourceError("UNEXPECTED_RESPONSE_SHAPE", "event " + eventId + " has no valid timestamp");
 
-  const post = get(raw, "post").value;
-  const comment = get(raw, "comment").value;
+  // Fixture events nest post/comment objects; live events are flat (the event is the container).
+  const nestedPost = get(raw, "post").value;
+  const nestedComment = get(raw, "comment").value;
+  const post = isObj(nestedPost) ? nestedPost : raw;
+  const comment = isObj(nestedComment) ? nestedComment : raw;
   const t = type.toLowerCase();
+  // A post's id: explicit post id, else its own event id (live). Others: nested post id, else the target reference.
+  const postId = t === "post"
+    ? idOf(get(post, "postId").value) ?? eventId
+    : (isObj(nestedPost) ? idOf(nestedPost, "postId") : null) ?? targetOf(raw);
   const title = t === "post" ? cleanText(get(post, "postTitle").value, 300) : { text: null, emails: 0 };
   const body = t === "post" ? cleanText(get(post, "postBody").value, 20000) : t === "comment" ? cleanText(get(comment, "commentBody").value, 10000) : { text: null, emails: 0 };
   const scan = scanSensitive(raw);
@@ -168,8 +190,8 @@ export function minimizeEvent(raw: unknown, salt: string): MinimizeResult {
       type: t,
       createdAt: canonicalIso(ms),
       actor: actorFrom(raw, salt),
-      postId: idOf(post, "postId"),
-      commentId: t === "comment" || t === "reaction" || t === "view" ? idOf(comment, "commentId") : null,
+      postId,
+      commentId: t === "comment" || t === "reaction" || t === "view" ? (isObj(nestedComment) ? idOf(comment, "commentId") : null) : null,
       parentCommentId: t === "comment" ? idOf(get(comment, "commentParent").value, "commentId") : null,
       title: title.text,
       body: body.text,
@@ -219,14 +241,16 @@ export function capabilityProbe(rawEvents: unknown[]): CapabilityReport {
   });
   const mapping = {} as Record<FieldKey, string | null>;
   (Object.keys(FIELD_MAP) as FieldKey[]).forEach((k) => {
-    const container = k.startsWith("user") && k !== "user" ? "user" : k.startsWith("post") && k !== "post" ? "post" : k.startsWith("comment") && k !== "comment" ? "comment" : k.startsWith("topic") ? null : undefined;
+    const container = k.startsWith("user") && k !== "user" ? "user" : k.startsWith("post") && k !== "post" ? "post" : k.startsWith("comment") && k !== "comment" ? "comment" : k.startsWith("topic") || k === "targetRef" ? null : undefined;
+    // Nested containers when present (fixture), otherwise the flat event itself (live).
+    const within = (ev: unknown, c: FieldKey) => { const v = get(ev, c).value; return isObj(v) ? v : c === "user" ? undefined : ev; };
     let found: string | null = null;
     for (const ev of rawEvents) {
       if (container === null) {
-        const topics = get(get(ev, "post").value, "postTopics").value;
-        const first = Array.isArray(topics) ? topics[0] : topics;
+        const list = k === "targetRef" ? get(ev, "target").value : get(within(ev, "post"), "postTopics").value;
+        const first = Array.isArray(list) ? list[0] : list;
         found = get(first, k).path;
-      } else found = get(container ? get(ev, container).value : ev, k).path;
+      } else found = get(container ? within(ev, container) : ev, k).path;
       if (found) break;
     }
     mapping[k] = found;

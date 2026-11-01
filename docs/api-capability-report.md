@@ -1,14 +1,54 @@
 # Yellowdig API capability report
 
-> **Live verification: NOT VERIFIED.** No authorized request to the Yellowdig API has been made. The n8n credential does not exist yet, and `.env.local` has no key yet. Everything below marked IMPLEMENTED or TESTED WITH FIXTURE used synthetic data and mocks only. A pinned synthetic HTTP page in n8n is **not** a live run.
+> **Live verification: LIVE VERIFIED for authentication, community access and post/view event structure** (one capability probe, 10 events, 2026-11-01, run locally with `web/scripts/probe-yellowdig.ts`). Comments and reactions were **NOT OBSERVED** in that sample. The raw response was analysed in memory only: it was never written to disk, Git, fixtures, docs or n8n. No live student content, names or ids appear in this report.
 
 ## Status legend
 
 - **DOCUMENTED**: stated in Yellowdig's public API spec (`https://data.yellowdig.app/swagger.json`, Engage API v0.6.0, read 2026-10-31 without credentials).
 - **IMPLEMENTED**: code exists and passes unit tests with synthetic data or mocks.
 - **TESTED WITH FIXTURE**: ran end to end in n8n Cloud on the synthetic fixture, or on pinned synthetic HTTP pages.
-- **LIVE VERIFIED**: confirmed by a real, authorized request. Nothing is in this state yet.
+- **LIVE VERIFIED**: confirmed by a real, authorized request (the probe of 2026-11-01).
+- **NOT OBSERVED**: documented, but absent from the 10-event probe sample.
 - **NOT VERIFIED**: an assumption that must be checked against a real response.
+
+
+## Live probe results (2026-11-01)
+
+`GET /network/<configured>/community/<configured>/events?limit=10` with the `apikey` header from `.env.local`, in `yellowdig` mode with no fallback.
+
+- **Response:** HTTP 200. 10 events: **3 post, 7 view**.
+- **Page keys:** `data`, `limit`, `offset`, `record-count`, `cursor`, `at-end`. In this response `at-end` was false and a `cursor` was present.
+- **Not followed:** the cursor was not followed, by design. This was not a full fetch.
+
+| Capability | Status | Live structure (shapes only) |
+|---|---|---|
+| API authentication (`apikey` header) | LIVE VERIFIED | HTTP 200 |
+| CIS 515 community access | LIVE VERIFIED | configured network and community accepted |
+| Event id | LIVE VERIFIED | `event/squuid`: string (uuid). Every event also has `db/id`: integer. |
+| Event type | LIVE VERIFIED | `event/type`: string (`post`, `view` observed) |
+| ISO timestamp | LIVE VERIFIED | `date/iso`: ISO-8601 string with offset |
+| System timestamp | LIVE VERIFIED | `system/created-at`: integer, epoch ms |
+| Community reference | LIVE VERIFIED | `event/community`: object (`community/squuid`, `community/title`, `community/created-at`, `db/id`, plus sensitive LTI and Canvas fields) |
+| Actor | LIVE VERIFIED | `event/actor`: object (`user/squuid` uuid, `user/firstname`, `user/lastname`, `user/community-role`, `db/id`, plus sensitive `user/username`, `user/primary-email`, `user/sis-ids`). There is no display-name field, so the display name is first + last. |
+| Receiver | LIVE VERIFIED | `event/receiver`: same shape as the actor. Dropped by the privacy layer. |
+| Post shape | LIVE VERIFIED | **Flat**: post fields sit on the event itself. The post's id is the post event's own `event/squuid`. |
+| Post title | LIVE VERIFIED | `post/title`: string |
+| Body text | LIVE VERIFIED | `post/body-text`: plain-text string |
+| Post status, visibility, word count | LIVE VERIFIED | `post/status`: string; `post/visibility`: string; `post/word-count`: integer. Not used yet. Whether to exclude non-published or private posts is an open item. |
+| Topics | LIVE VERIFIED | `post/topics`: array of `{ db/id: integer, topic/label: string }`. Present on 1 of the 3 sampled posts. Filter on `topic/label` (normalized), or pin the integer `db/id` once the Week 4 topic is identified. Whether `db/id` is stable over time is NOT VERIFIED. |
+| View relationship | LIVE VERIFIED | `view/post`: array of `{ db/id, event/squuid }`. Its `event/squuid` is the target post's event id. |
+| Comment and parent relationship | NOT OBSERVED | `post/parent` is documented but did not appear in the sample. The adapter treats it as the target post (candidate). |
+| Reaction relationship | NOT OBSERVED | `reaction/post` is assumed by analogy with `view/post` (candidate). |
+| Sensitive-field stripping | LIVE VERIFIED (detection) | The probe detected SIS-id, primary-email, username, Canvas course id and saved LTI 1.3 fields. They never pass the allowlist. |
+| Attachments | NOT AVAILABLE THROUGH API | Handled through the protected upload (Phase 3) |
+
+**Phase 2 adapter result.** The Phase 2 assumptions failed on live data. They expected nested `event/post` / `event/user` objects and `event/created-at`.
+
+The minimization layer stopped the run with `UNEXPECTED_RESPONSE_SHAPE` ("no valid timestamp"). It failed loudly rather than passing bad data through, which is the intended behaviour. The probe saw the first gap; the adapter then also corrected the user, post, topic and view-target paths.
+
+The centralized adapter (`lib/source/fields.ts`) now maps the live names listed above. Tests in the live shape use invented values only. The two affected n8n Code nodes (Check Capability, Collect Pages and Minimize) were rebuilt and reloaded, and the export was refreshed.
+
+The corrected adapter has **not** been re-run against live data, because this task allowed exactly one request. The next live run (a capability probe or a Week 4 fetch) is its first live check.
 
 ## Endpoint and access
 
@@ -33,13 +73,15 @@
 | Loop protection | IMPLEMENTED | Fails on a repeated cursor, a repeated page fingerprint, more than 2 empty pages in a row, or the page limit (`maxPages`, default 400). |
 | Duplicates across pages | IMPLEMENTED | Removed by event id. A later copy with different content is counted as `conflictingDuplicates`. |
 
-## Event fields
+## Event fields (Phase 2 assumptions, superseded)
+
+> Superseded by **Live probe results** above. Kept to show what was assumed before the live probe. The adapter keeps these names only as fallbacks for the synthetic fixture.
 
 The spec documents the event **types** (`post`, `comment`, `reaction`, `view`, `badge`, `points-granted`) but not the fields inside an event. Every field name below is an assumption, kept in one place (`lib/source/fields.ts → FIELD_MAP`) with fallbacks.
 
 | Need | Assumed field (first candidate) | Status |
 |---|---|---|
-| Event id | `event/squuid` | NOT VERIFIED |
+| Event id | `event/squuid` | LIVE VERIFIED |
 | Event type | `event/type` | NOT VERIFIED |
 | Created timestamp | `event/created-at` (ISO with offset, or epoch) | NOT VERIFIED |
 | Actor / display name | `event/user` → `user/squuid`, `user/display-name` (or first + last name) | NOT VERIFIED |

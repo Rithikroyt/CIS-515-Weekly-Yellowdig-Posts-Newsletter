@@ -468,3 +468,72 @@ describe("lite validator agrees with Ajv", () => {
     }
   });
 });
+
+// Shape observed in the live 10-event probe (2026-11-01). All values here are invented.
+describe("live Yellowdig event shape (flat events)", () => {
+  const W4 = "WEEK 4 - WEEKLY WORKFLOW SHOW-AND-TELL ON YELLOWDIG";
+  const person = (id: string, first: string, last: string) => ({
+    "db/id": 17592186000000 + id.length, "user/squuid": id, "user/username": first.toLowerCase() + "x99",
+    "user/firstname": first, "user/lastname": last, "user/primary-email": first.toLowerCase() + "@example.edu",
+    "user/community-role": "learner", "user/sis-ids": ["SIS-INVENTED-1"],
+  });
+  const community = {
+    "db/id": 1, "community/squuid": "c0000000-0000-4000-8000-000000000001", "community/title": "Invented course",
+    "community/canvas-course-id": "999", "community/created-at": "2026-08-01T00:00:00.000-07:00", "community/saved-lti-3-fields": { k: "v" },
+  };
+  const livePost = {
+    "db/id": 101, "event/squuid": "e0000000-0000-4000-8000-0000000000a1", "event/type": "post",
+    "date/iso": "2026-11-10T09:15:00.000-07:00", "system/created-at": 1794327300000,
+    "event/actor": person("u-invented-1", "Pat", "Example"), "event/receiver": person("u-invented-1", "Pat", "Example"), "event/community": community,
+    "post/title": "Invented title", "post/body-text": "Invented body. Contact pat@example.edu.", "post/status": "published",
+    "post/visibility": "public", "post/word-count": 4, "post/topics": [{ "db/id": 123456, "topic/label": W4 }],
+  };
+  const liveView = {
+    "db/id": 102, "event/squuid": "e0000000-0000-4000-8000-0000000000b2", "event/type": "view",
+    "date/iso": "2026-11-10T10:00:00.000-07:00", "system/created-at": 1794330000000,
+    "event/actor": person("u-invented-2", "Sam", "Sample"), "event/receiver": person("u-invented-1", "Pat", "Example"), "event/community": community,
+    "view/post": [{ "db/id": 101, "event/squuid": "e0000000-0000-4000-8000-0000000000a1" }],
+  };
+
+  it("maps a flat post: own event id as post id, date/iso, first + last name, body-text, topic label and db/id", () => {
+    const m = minimizeEvent(livePost, "salt");
+    expect(m.event).toMatchObject({
+      eventId: livePost["event/squuid"], type: "post", postId: livePost["event/squuid"], createdAt: "2026-11-10T16:15:00Z",
+      title: "Invented title", body: "Invented body. Contact [email removed].", topics: [{ id: "123456", name: W4 }],
+    });
+    expect(m.event.actor).toEqual({ id: pseudonymousId("u-invented-1", "salt"), displayName: "Pat Example" });
+    // username, primary-email, sis-ids on actor and receiver (6) + canvas-course-id, saved-lti-3-fields (2)
+    expect(m.sensitiveFieldsRemoved).toBe(8);
+    expect(m.emailsRedacted).toBe(1);
+    expect(JSON.stringify(m.event)).not.toMatch(/x99|@example\.edu|SIS-INVENTED|999|learner|Invented course/);
+  });
+  it("maps a view to its post through view/post[].event/squuid", () => {
+    const m = minimizeEvent(liveView, "salt");
+    expect(m.event).toMatchObject({ type: "view", postId: livePost["event/squuid"], commentId: null, title: null, body: null });
+    expect(m.event.actor?.displayName).toBe("Sam Sample");
+  });
+  it("accepts system/created-at (epoch ms) when date/iso is absent", () => {
+    const { ["date/iso"]: _iso, ...noIso } = livePost;
+    void _iso;
+    expect(minimizeEvent(noIso, "s").event.createdAt).toBe("2026-11-10T16:15:00Z");
+  });
+  it("capability probe resolves the live field names", () => {
+    const r = capabilityProbe([livePost, liveView]);
+    expect(r.missingRequired).toEqual([]);
+    expect(r.mapping).toMatchObject({
+      eventId: "event/squuid", type: "event/type", createdAt: "date/iso", user: "event/actor", userId: "user/squuid",
+      userFirstName: "user/firstname", userLastName: "user/lastname", postTitle: "post/title", postBody: "post/body-text",
+      postTopics: "post/topics", topicName: "topic/label", topicId: "db/id", target: "view/post", targetRef: "event/squuid",
+    });
+    expect(r.detected.sisIdFields).toBeGreaterThan(0);
+    expect(JSON.stringify(r)).not.toMatch(/Pat|Sam|@example\.edu|SIS-INVENTED|Invented/);
+  });
+  it("runs the whole pipeline: Week 4 structured-topic filter, view joined, reactions null when absent", () => {
+    const cfg4 = validateRunConfig({ ...SYNTHETIC_WEEK2_RUN, week: 4, startDate: "2026-11-06", endDate: "2026-11-12", topic: W4 });
+    const ds = normalizeBundle(buildSourceBundle(cfg4, meta(), [livePost, liveView], 1, "salt"));
+    expect(ds.posts).toHaveLength(1);
+    expect(ds.posts[0].metrics).toEqual({ commentCount: 0, uniqueCommenters: 0, reactionCount: null, viewCount: 1 });
+    expect(ds.posts[0].topic).toEqual({ id: "123456", name: W4 });
+    expect(ds.orphans).toEqual([]);
+  });
+});
