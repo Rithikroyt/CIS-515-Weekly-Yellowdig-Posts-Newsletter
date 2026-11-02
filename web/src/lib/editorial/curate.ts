@@ -1,6 +1,7 @@
 // Deterministic curation between model stages: build groups, claim screening and spotlight selection.
 // The model proposes; code decides. Nothing here invents text: every claim kept comes from a validated stage.
 import { LABEL_REQUIRES, WITHHELD_TEXT, checkClaim, type RefIndex, type StageIssue } from "./checks";
+export { GROUP_MAX, OTHER_BUILDS, OTHER_MAX, validateBuildGroups } from "./groups";
 import type { BuildGroups, Claim, Discussion, ImageChoice, ImageClass, ImageCuration, ImageEvaluation, InputPost, InputProfile, PostNote, Selection, SpotlightLabel } from "./types";
 
 export const SPOTLIGHT_MIN = 4;
@@ -9,8 +10,6 @@ const MAX_PER_LABEL = 2;
 const MAX_PER_GROUP = 2;
 /** A post this well evidenced may exceed the label and group caps once the minimum is met. */
 const STRONG_SCORE = 12;
-export const GROUP_MAX = 7;
-export const OTHER_BUILDS = "Other builds";
 /** A comment this long or longer counts as substantive for spotlight scoring. */
 const SUBSTANTIVE_COMMENT_CHARS = 60;
 
@@ -50,50 +49,6 @@ export function screenDiscussion(idx: RefIndex, d: Discussion): { discussion: Di
     return !r;
   });
   return { discussion: { insights }, issues };
-}
-
-/**
- * Every post exactly once. Unknown or repeated refs are dropped; a title that names a student, ranks, uses hype or
- * contains a number drops its group; beyond GROUP_MAX the smallest groups merge; leftovers go to "Other builds".
- * With no model output (stage skipped) every post lands in "Other builds".
- */
-export function validateBuildGroups(idx: RefIndex, out: BuildGroups | null): { buildGroups: BuildGroups; issues: StageIssue[] } {
-  const issues: StageIssue[] = [];
-  const order = new Map(idx.input.posts.map((p, i) => [p.postRef, i]));
-  const seen = new Set<string>();
-  let groups: BuildGroups["groups"] = [];
-  (out?.groups ?? []).forEach((g, i) => {
-    const title = g.title.trim();
-    const r = checkClaim(idx, "buildGroups[" + i + "].title", { text: title, evidenceRefs: [] });
-    const bad = /\d/.test(title) || r.codes.some((c) => c !== "MODEL_CAPABILITY_CONFLICT" && c !== "MODEL_UNSUPPORTED_CLAIM");
-    if (bad) { issues.push({ stage: "build-categorizer", code: "MODEL_STYLE_VIOLATION", detail: "group title rejected; its posts moved to " + OTHER_BUILDS }); return; }
-    const refs = g.postRefs.filter((ref) => {
-      if (!order.has(ref)) { issues.push({ stage: "build-categorizer", code: "MODEL_UNKNOWN_REFERENCE", detail: "unknown post ref dropped" }); return false; }
-      if (seen.has(ref)) return false;
-      seen.add(ref);
-      return true;
-    });
-    if (refs.length) groups.push({ title, postRefs: refs });
-  });
-  const other = (gs: BuildGroups["groups"]) => gs.find((g) => g.title.toLowerCase() === OTHER_BUILDS.toLowerCase());
-  if (groups.length > GROUP_MAX) {
-    const keep = [...groups].filter((g) => g !== other(groups)).sort((a, b) => b.postRefs.length - a.postRefs.length).slice(0, GROUP_MAX - 1);
-    const merged = groups.filter((g) => !keep.includes(g)).flatMap((g) => g.postRefs);
-    groups = groups.filter((g) => keep.includes(g));
-    groups.push({ title: OTHER_BUILDS, postRefs: merged });
-    issues.push({ stage: "build-categorizer", code: "MODEL_SCHEMA_INVALID", detail: "more than " + GROUP_MAX + " groups; the smallest were merged into " + OTHER_BUILDS });
-  }
-  const leftovers = idx.input.posts.map((p) => p.postRef).filter((r) => !seen.has(r));
-  if (leftovers.length) {
-    const o = other(groups);
-    if (o) o.postRefs.push(...leftovers);
-    else groups.push({ title: OTHER_BUILDS, postRefs: leftovers });
-  }
-  groups.forEach((g) => g.postRefs.sort((a, b) => order.get(a)! - order.get(b)!));
-  // "Other builds" always comes last.
-  const o = other(groups);
-  if (o) groups = [...groups.filter((g) => g !== o), o];
-  return { buildGroups: { groups }, issues };
 }
 
 const live = (c: Claim | null | undefined): c is Claim => !!c && c.text !== WITHHELD_TEXT && !!c.text.trim();

@@ -61,12 +61,13 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     outputShape: '{"themes": [{"themeId": "kebab-case", "title": string, "summary": ' + CLAIM + ', "supportingPostRefs": ["post:…"], "supportingWorkflowRefs": ["workflow:…"], "support": "multi-source"|"notable-single-example", "confidence": "high"|"medium"|"low"}]}',
   },
   "build-categorizer": {
-    promptId: "build-categorizer", promptVersion: "1.0.0", purpose: "Group every post into use-case categories for the every-build list.",
+    promptId: "build-categorizer", promptVersion: "1.1.0", purpose: "Group every post into use-case categories for the every-build list.",
     inputSchemaVersion: "1.0", outputSchemaVersion: "1.0", outputDef: "buildGroupsOutput",
     instructions: [
-      "TASK: group every post into 4 to 7 categories that emerge from this week's builds, by the job the workflow does or the domain it serves (for example \"Hiring and HR\" or \"Customer support triage\").",
-      "Every postRef appears in exactly one group. Titles are 2 to 6 plain words: no numbers, no student names, no rankings, no hype.",
-      "Use the title \"Other builds\" only for posts that fit no other group. Do not make a group for a single post unless it fits nowhere else.",
+      "TASK: group every post into 5 to 8 named categories that emerge from this week's builds, by the job the workflow does or the domain it serves. Style examples (not assignments): \"Meeting and Notes Assistants\", \"Finance and Trading Workflows\", \"Career and Job Search Tools\", \"Customer and Business Operations\".",
+      "Every postRef appears in exactly one group, and every post should belong to a meaningful named group. Titles are 2 to 6 plain words: no numbers, no student names, no rankings, no hype, no catch-all words such as misc, various or general.",
+      "\"Other builds\" is a last resort for at most two posts that genuinely fit no group. Avoid single-post groups when a post fits a broader group.",
+      "If the task says secondPass: assign each listed post to one of existingGroups (copy its title exactly), or put two or more of them that share a clear pattern into one new group; use \"Other builds\" for at most two posts.",
     ].join("\n"),
     outputShape: '{"groups": [{"title": string, "postRefs": ["post:…"]}]}',
   },

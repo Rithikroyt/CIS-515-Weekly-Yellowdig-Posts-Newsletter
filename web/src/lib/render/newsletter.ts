@@ -4,6 +4,7 @@
 // Deterministic: the same draft, input and images give the same bytes. Every value is escaped; model text is data
 // and never markup. Claims withheld by evidence review are omitted. No scripts, handlers or external resources.
 import { WITHHELD_TEXT } from "../editorial/checks";
+import { shortenWords } from "../text/shorten";
 import { OTHER_BUILDS, SPOTLIGHT_MIN } from "../editorial/curate";
 import type { EditorialDraft } from "../editorial/machine";
 import type { Claim, EditorialInput, PostNote, StepCategory } from "../editorial/types";
@@ -46,7 +47,8 @@ export function esc(v: unknown): string {
 
 const trunc = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
 const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
-const clipWords = (s: string, n: number) => { const w = s.trim().split(/\s+/); return w.length > n ? w.slice(0, n).join(" ").replace(/[,;:.]$/, "") + "…" : s.trim(); };
+/** One-liner length: complete sentences within n words (shortenWords), never a half sentence where avoidable. */
+const clipWords = (s: string, n: number) => shortenWords(s, n);
 const safeHref = (u: string | undefined) => (u && /^https:\/\/yellowdig\.app\/[^\s"'<>]*$/.test(u) ? esc(u) : null);
 const safeImage = (i: RenderImage | null | undefined) =>
   i && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(i.src) ? { src: i.src, alt: trunc(String(i.alt ?? ""), 200) } : null;

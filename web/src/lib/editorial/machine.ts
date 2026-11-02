@@ -12,6 +12,7 @@ import {
 } from "./curate";
 import { finalizeIntroduction, type IntroSource } from "./intro";
 import { finalizeLessons, type LessonsSource } from "./lessons";
+import { OTHER_MAX, acceptProposal, emptyDiagnostics, finalizeGroups, type GroupDiagnostics } from "./groups";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
 import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
 import type { BuildGroups, Discussion, EditorialCode, ImageChoice, ImageCuration, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
@@ -54,6 +55,10 @@ export type RunState = {
   capabilityChecks: CapabilityCheck[];
   themes: Theme[];
   buildGroups: BuildGroups;
+  /** Grouping: pass 2 reassigns posts that the first pass left without a named group. Diagnostics are not published. */
+  groupPass: 1 | 2;
+  groupFirst: { groups: BuildGroups["groups"]; leftovers: string[] } | null;
+  groupDiagnostics: GroupDiagnostics;
   /** Image curator batches (post refs), its validated evaluations, and code's final image choices. */
   imageBatches: string[][];
   imageBatchIndex: number;
@@ -121,7 +126,7 @@ export function startRun(o: StartOptions): RunState {
   return {
     v: 1, input: o.input, inputHash: hash, idempotencyKey: key, runId, parentRunId: o.parentRunId ?? null, feedback: o.feedback ?? null,
     provider: o.provider, model: o.model, startedAt: o.now, phase: batches.length ? "extract" : "done",
-    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], buildGroups: { groups: [] }, imageBatches: [], imageBatchIndex: 0, imageCuration: [], imageChoices: [], heroImage: null, selection: { spotlights: [], failurePath: null, patterns: [] },
+    batches, batchIndex: 0, notes: [], capabilityChecks: [], themes: [], buildGroups: { groups: [] }, groupPass: 1, groupFirst: null, groupDiagnostics: emptyDiagnostics(), imageBatches: [], imageBatchIndex: 0, imageCuration: [], imageChoices: [], heroImage: null, selection: { spotlights: [], failurePath: null, patterns: [] },
     discussion: { insights: [] }, newsletter: null, review: [], reviewedByModel: false, revisionCount: 0, stageIssues: [], modelCalls: [],
     statusHistory: ["draft"], status: "draft", steps: 0, errorCode: null,
     errorSummary: batches.length ? null : "No eligible posts in this week; nothing to draft.", pending: null,
@@ -181,8 +186,18 @@ export function nextRequest(state: RunState, now: string): RunState {
       break;
     case "groups": {
       const noteOf = new Map(s.notes.map((n) => [n.postRef, n]));
-      const posts = s.input.posts.map((p) => ({ postRef: p.postRef, title: p.title, summary: noteOf.get(p.postRef)?.summary.text ?? p.body.slice(0, 300) }));
-      s.pending = request(s, "build-categorizer", "build-categorizer", { week: s.input.week, topic: s.input.topic, groupEveryPost: posts.length }, { posts });
+      const summary = (ref: string) => { const t = noteOf.get(ref)?.summary.text; return t && t !== WITHHELD_TEXT ? t : s.input.posts.find((p) => p.postRef === ref)!.body.slice(0, 300); };
+      const posts = s.input.posts.map((p) => ({ postRef: p.postRef, title: p.title, summary: summary(p.postRef) }));
+      if (s.groupPass === 2 && s.groupFirst) {
+        // Second pass: only the posts left without a named group, with the accepted groups to choose from.
+        const left = new Set(s.groupFirst.leftovers);
+        const existingGroups = s.groupFirst.groups.map((g) => ({ title: g.title, examples: g.postRefs.slice(0, 4).map((r) => posts.find((p) => p.postRef === r)!.title) }));
+        s.pending = request(s, "build-categorizer-second-pass", "build-categorizer",
+          { week: s.input.week, secondPass: true, assignEachOfThese: [...left], existingGroups: existingGroups.map((g) => g.title), otherBuildsAtMost: OTHER_MAX },
+          { posts: posts.filter((p) => left.has(p.postRef)), existingGroups });
+      } else {
+        s.pending = request(s, "build-categorizer", "build-categorizer", { week: s.input.week, topic: s.input.topic, groupEveryPost: posts.length, otherBuildsAtMost: OTHER_MAX }, { posts });
+      }
       break;
     }
     case "images": {
@@ -293,9 +308,18 @@ export function acceptResponse(state: RunState, response: ModelResponse, now: st
       return s;
     }
     case "groups": {
-      const r = validateBuildGroups(idx, v as BuildGroups);
-      s.buildGroups = r.buildGroups; s.stageIssues.push(...r.issues);
-      return enterImages(s);
+      if (s.groupPass === 2 && s.groupFirst) {
+        const r = acceptProposal(idx, v as BuildGroups, 2, s.groupFirst.groups, new Set(s.groupFirst.leftovers));
+        s.groupDiagnostics.titles.push(...r.titles); s.stageIssues.push(...r.issues);
+        const before = new Set(s.groupFirst.groups.flatMap((g) => g.postRefs));
+        r.groups.forEach((g) => g.postRefs.filter((p) => !before.has(p)).forEach((p) => s.groupDiagnostics.reassigned.push({ postRef: p, to: g.title, method: "second-pass" })));
+        return finishGroups(s, r.groups, r.leftovers);
+      }
+      const r = acceptProposal(idx, v as BuildGroups, 1);
+      s.groupDiagnostics.titles.push(...r.titles); s.stageIssues.push(...r.issues);
+      s.groupDiagnostics.fellThrough = r.leftovers;
+      if (r.leftovers.length > OTHER_MAX && r.groups.length) { s.groupFirst = { groups: r.groups, leftovers: r.leftovers }; s.groupPass = 2; return s; }
+      return finishGroups(s, r.groups, r.leftovers);
     }
     case "images": {
       const r = validateImageCuration(idx, v as ImageCuration, s.imageBatches[s.imageBatchIndex]);
@@ -349,7 +373,14 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
   switch (s.phase) {
     case "extract": skip(); s.batchIndex += 1; if (s.batchIndex >= s.batches.length) s.phase = "themes"; return s;
     case "themes": skip(); s.phase = "groups"; return s;
-    case "groups": { skip(); const r = validateBuildGroups(indexInput(s.input), null); s.buildGroups = r.buildGroups; return enterImages(s); }
+    case "groups": {
+      skip();
+      // A failed second pass keeps the first pass; a failed first pass falls back to domain vocabulary.
+      if (s.groupPass === 2 && s.groupFirst) return finishGroups(s, s.groupFirst.groups, s.groupFirst.leftovers);
+      const r = validateBuildGroups(indexInput(s.input), null, s.notes);
+      s.buildGroups = r.buildGroups; s.groupDiagnostics = r.diagnostics;
+      return enterImages(s);
+    }
     // A failed curator batch never fails the run: those posts get the deterministic image choice.
     case "images": skip(); return nextImageBatch(s);
     case "selection": skip(); return afterSelection(s);
@@ -358,6 +389,13 @@ function giveUpOnStage(s: RunState, now: string, stage: string, code: EditorialC
     case "review": skip(); return finish(s);
     default: return fail(s, now, code, stage + ": " + detail);
   }
+}
+
+/** Final groups (similarity reassignment and caps), then the image stage. */
+function finishGroups(s: RunState, groups: BuildGroups["groups"], leftovers: string[]): RunState {
+  s.buildGroups = finalizeGroups(indexInput(s.input), groups, leftovers, s.notes, s.groupDiagnostics);
+  s.groupFirst = null;
+  return enterImages(s);
 }
 
 /**
@@ -416,7 +454,7 @@ const spotlightImages = (s: RunState) => s.selection.spotlights.map((sp) => {
  */
 function afterSelection(s: RunState): RunState {
   const idx = indexInput(s.input);
-  if (!s.buildGroups.groups.length) s.buildGroups = validateBuildGroups(idx, null).buildGroups;
+  if (!s.buildGroups.groups.length) { const r = validateBuildGroups(idx, null, s.notes); s.buildGroups = r.buildGroups; s.groupDiagnostics = r.diagnostics; }
   const choices = new Map(s.imageChoices.map((c) => [c.postRef, c]));
   const r = chooseSpotlights(idx, s.notes, s.buildGroups, s.selection.spotlights, choices);
   s.selection = { ...s.selection, spotlights: r.spotlights };
@@ -491,7 +529,7 @@ export function buildDraft(s: RunState, now: string) {
   const body = {
     schemaVersion: "1.0" as const, issueId: s.input.issueId, week: s.input.week, status: s.status, inputHash: s.inputHash, idempotencyKey: s.idempotencyKey,
     metrics: s.input.metrics, postNotes: s.notes, capabilityChecks: s.capabilityChecks, themes: s.themes, selection: s.selection,
-    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource, lessonsSource,
+    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, buildGroupDiagnostics: s.groupDiagnostics, introSource, lessonsSource,
     images: { curation: { posts: s.imageCuration }, choices: s.imageChoices, hero: s.heroImage }, review,
   };
   const usedPrompts = [...new Map(s.modelCalls.map((c) => [c.promptId, c.promptVersion])).entries()].map(([promptId, promptVersion]) => ({ promptId, promptVersion }));

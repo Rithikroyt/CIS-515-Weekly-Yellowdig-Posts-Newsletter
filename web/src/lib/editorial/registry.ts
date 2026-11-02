@@ -1,5 +1,6 @@
 // Lite validators for the editorial schemas. Used by the local runner and by n8n workflow 04 (no Ajv or Zod in n8n).
 import { createLiteValidator, type LiteError } from "../contracts/validate-lite";
+import { shortenProse } from "../text/shorten";
 import workflowProfile from "../../../../schemas/workflow-profile.schema.json";
 import editorialInput from "../../../../schemas/editorial-input.schema.json";
 import editorialDraft from "../../../../schemas/editorial-draft.schema.json";
@@ -19,7 +20,7 @@ export function editorialLite() {
 
 /**
  * Structural repair of model output, driven by the validator's own errors: unexpected properties are dropped, strings
- * over maxLength are shortened, arrays over maxItems are cut, and an array element that is otherwise invalid is
+ * over maxLength are shortened to their last complete sentence, arrays over maxItems are cut, and an array element that is otherwise invalid is
  * removed. Nothing is invented; the evidence checks still run on whatever remains. Returns how many fixes were made.
  */
 export function repairToSchema(id: string, value: unknown): number {
@@ -37,7 +38,7 @@ export function repairToSchema(id: string, value: unknown): number {
       const target = at(path);
       const max = /\(max (\d+)\)$/.exec(e.message);
       if (e.message === "unexpected property" && parent && !Array.isArray(parent)) { delete parent[key]; fixed = true; break; }
-      if (max && typeof target === "string") { (parent as Record<string, unknown>)[key] = [...target].slice(0, Number(max[1]) - 1).join("").trimEnd() + "…"; fixed = true; break; }
+      if (max && typeof target === "string") { (parent as Record<string, unknown>)[key] = shortenProse(target, Number(max[1])); fixed = true; break; }
       if (max && Array.isArray(target)) { target.length = Number(max[1]); fixed = true; break; }
       // Anything else: drop the innermost array element that contains the error.
       for (let i = path.length - 1; i >= 0; i--) {

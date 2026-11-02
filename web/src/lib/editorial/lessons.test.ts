@@ -52,7 +52,9 @@ describe("closing lessons", () => {
     // Every item cites a spotlight post and quotes or acts on validated evidence from it.
     const spots = new Set(draft.selection.spotlights.map((x) => x.postRef));
     [...t.map((x) => x.text), ...s].forEach((c) => expect(c.evidenceRefs.some((r) => spots.has(r))).toBe(true));
-    const validated = draft.postNotes.flatMap((n) => [n.reusableLesson, n.testPerformed, n.interestingPattern, n.humanControl, n.summary]).filter(Boolean).map((c) => c!.text.replace(/[.!?]+$/, ""));
+    // Validated evidence: screened notes and the editor's spotlight lines that passed review.
+    const reviewedSpot = draft.newsletter!.spotlights.flatMap((x) => [x.worthBorrowing, x.testResult, x.threadInsight]);
+    const validated = [...draft.postNotes.flatMap((n) => [n.reusableLesson, n.testPerformed, n.interestingPattern, n.humanControl, n.summary]), ...reviewedSpot].filter(Boolean).map((c) => c!.text.replace(/[.!?]+$/, ""));
     t.forEach((x) => expect(validated.some((v) => x.text.text.startsWith(v)), x.text.text).toBe(true));
     // No numbers, names or capabilities beyond the evidence: every item passes the same checks, fully supported.
     [...t.map((x) => x.text), ...s].forEach((c, i) => expect(checkClaim(idx, "f" + i, c)).toMatchObject({ status: "supported", codes: [] }));

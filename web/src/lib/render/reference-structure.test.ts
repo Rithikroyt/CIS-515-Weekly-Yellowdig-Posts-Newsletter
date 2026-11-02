@@ -92,7 +92,7 @@ describe("every build", () => {
     expect(draft.buildGroups.groups.at(-1)!.title).toBe("Other builds");
   });
 
-  it("rejects bad group titles and unknown or repeated posts, and puts leftovers in Other builds", () => {
+  it("rejects bad group titles and unknown or repeated posts; every post still appears once", () => {
     const input = E.syntheticEditorialInput();
     const idx = indexInput(input);
     const refs = input.posts.map((p) => p.postRef);
@@ -101,16 +101,17 @@ describe("every build", () => {
       { title: "Planning", postRefs: [refs[1], refs[1], "post:nope"] },
       { title: "The best workflows", postRefs: [refs[2]] },
     ] });
-    expect(r.buildGroups.groups.map((g) => g.title)).toEqual(["Planning", "Other builds"]);
+    expect(r.buildGroups.groups.map((g) => g.title)).toContain("Planning");
+    expect(r.buildGroups.groups.map((g) => g.title)).not.toContain("Top 3 builds");
+    expect(r.diagnostics.titles.filter((t) => !t.accepted).map((t) => t.reason)).toEqual(["contains a number", expect.stringMatching(/names a student, ranks or uses hype/)]);
     expect(r.buildGroups.groups.flatMap((g) => g.postRefs).sort()).toEqual([...refs].sort());
-    expect(validateBuildGroups(idx, null).buildGroups.groups).toEqual([{ title: "Other builds", postRefs: refs }]);
   });
 
-  it("merges groups beyond seven", () => {
+  it("caps the number of groups at eight", () => {
     const input = E.syntheticEditorialInput();
-    const groups = input.posts.map((p, i) => ({ title: "Group " + "abcdefgh"[i], postRefs: [p.postRef] }));
+    const groups = input.posts.map((p, i) => ({ title: ["Recipes", "Calendars", "News feeds", "Expenses", "Support desks", "Flights", "Lectures", "Meetings"][i], postRefs: [p.postRef] }));
     const r = validateBuildGroups(indexInput(input), { groups });
-    expect(r.buildGroups.groups.length).toBeLessThanOrEqual(7);
+    expect(r.buildGroups.groups.length).toBeLessThanOrEqual(8);
     expect(r.buildGroups.groups.flatMap((g) => g.postRefs)).toHaveLength(input.posts.length);
   });
 });

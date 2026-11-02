@@ -35,6 +35,17 @@
     "discussion": { "$ref": "#/$defs/discussionOutput" },
     "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
     "buildGroups": { "$ref": "#/$defs/buildGroupsOutput" },
+    "buildGroupDiagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["titles", "fellThrough", "reassigned", "fallback"],
+      "properties": {
+        "titles": { "type": "array", "maxItems": 60, "items": { "type": "object", "additionalProperties": false, "required": ["pass", "proposed", "normalized", "accepted", "reason", "posts"], "properties": { "pass": { "enum": [1, 2] }, "proposed": { "type": "string", "maxLength": 120 }, "normalized": { "type": "string", "maxLength": 120 }, "accepted": { "type": "boolean" }, "reason": { "type": ["string", "null"], "maxLength": 160 }, "posts": { "type": "integer", "minimum": 0 } } } },
+        "fellThrough": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/postRef" } },
+        "reassigned": { "type": "array", "maxItems": 200, "items": { "type": "object", "additionalProperties": false, "required": ["postRef", "to", "method"], "properties": { "postRef": { "$ref": "#/$defs/postRef" }, "to": { "type": "string", "maxLength": 120 }, "method": { "enum": ["second-pass", "similarity", "single-post-merge", "domain-group"] } } } },
+        "fallback": { "enum": ["none", "domain-vocabulary"] }
+      }
+    },
     "introSource": { "enum": ["ai", "repaired", "deterministic", null] },
     "lessonsSource": { "enum": ["ai", "validated_ai", "deterministic_fallback", null] },
     "images": {

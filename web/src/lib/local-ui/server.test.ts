@@ -35,7 +35,7 @@ async function fakeCdn() {
     const u = new URL(String(url));
     if (u.hostname === "galactus.yellowdig.app") return new Response(null, { status: 302, headers: { location: "https://cdn-v2.yellowdig.app" + u.pathname } });
     const body = files[u.pathname];
-    return body ? new Response(body, { status: 200 }) : new Response("nope", { status: 404 });
+    return body ? new Response(new Uint8Array(body), { status: 200 }) : new Response("nope", { status: 404 });
   }) as typeof fetch;
 }
 
