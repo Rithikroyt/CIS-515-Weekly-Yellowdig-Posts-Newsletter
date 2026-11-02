@@ -293,7 +293,7 @@ const saveFailure = node({
     name: 'Save Failure', position: [3500, 420], executeOnce: true,
     parameters: {
       resource: 'row', operation: 'update', dataTableId: { __rl: true, mode: 'id', value: 'uWls7HHm5Ek7u1SQ', cachedResultName: 'newsletter_runs' }, matchType: 'allConditions', filters: { conditions: [{ keyName: 'run_id', condition: 'eq', keyValue: expr("{{ $('Route Request').first().json.runId }}") }] },
-      columns: { mappingMode: 'defineBelow', value: { status: 'failed', error_code: expr('{{ $json.errorCode }}') }, schema: [{ id: 'status', displayName: 'status', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }, { id: 'error_code', displayName: 'error_code', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }] }
+      columns: { mappingMode: 'defineBelow', value: { status: 'failed', error_code: expr('{{ $json.errorCode }}'), error_detail: expr('{{ $json.errorDetail }}') }, schema: [{ id: 'status', displayName: 'status', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }, { id: 'error_code', displayName: 'error_code', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }, { id: 'error_detail', displayName: 'error_detail', required: false, defaultMatch: false, display: true, type: 'string', canBeUsedToMatch: true }] }
     }
   },
   output: [{ id: 1 }]

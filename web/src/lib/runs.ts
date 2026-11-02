@@ -54,6 +54,15 @@ export function failureCode(message: unknown): string {
   return m && SAFE_CODE.test(m[1]) ? m[1] : "GENERATION_FAILED";
 }
 
+/**
+ * Operator-only failure detail for the newsletter_runs row: the code-generated summary (stage, code, schema path),
+ * reduced to plain characters and capped. Error messages here never carry post text; this is a second safeguard.
+ * Never returned to the browser.
+ */
+export function failureDetail(message: unknown): string {
+  return String(message ?? "").replace(/[^A-Za-z0-9 _/.:;,()#\[\]<>=-]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+}
+
 /** The status or artifact reply for one run. HTML is included only for `artifact` on a finished run. */
 export function statusReply(rows: RunRow[], req: { action: "status" | "artifact"; runId: string }, now: string): Record<string, unknown> {
   const r = rows.find((x) => x.run_id === req.runId);

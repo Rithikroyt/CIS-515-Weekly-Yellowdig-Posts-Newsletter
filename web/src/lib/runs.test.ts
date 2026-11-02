@@ -1,6 +1,6 @@
 // Workflow 05 bookkeeping: request routing, duplicate runs, stale runs, safe codes and replies.
 import { describe, expect, it } from "vitest";
-import { decideStart, failureCode, routeRequest, statusReply } from "./runs";
+import { decideStart, failureCode, failureDetail, routeRequest, statusReply } from "./runs";
 import { WEEK_TOPICS } from "./weeks";
 
 const RUN = "r_0123456789abcdef01234567";
@@ -64,3 +64,13 @@ describe("failureCode", () => {
     expect(failureCode(undefined)).toBe("GENERATION_FAILED");
   });
 });
+
+describe("failureDetail", () => {
+  it("keeps the code-generated summary in plain characters, capped, for operators only", () => {
+    expect(failureDetail("[MODEL_SCHEMA_INVALID] newsletter-editor: /takeaways missing")).toBe("[MODEL_SCHEMA_INVALID] newsletter-editor: /takeaways missing");
+    expect(failureDetail("a“quoted” café \n\t x")).toBe("a quoted caf x");
+    expect(failureDetail("x".repeat(500))).toHaveLength(240);
+    expect(failureDetail(undefined)).toBe("");
+  });
+});
+

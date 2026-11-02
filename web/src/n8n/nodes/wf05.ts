@@ -12,7 +12,7 @@ import { buildEditorialInput } from "../../lib/editorial/input";
 import type { EditorialDraft } from "../../lib/editorial/machine";
 import type { EditorialInput } from "../../lib/editorial/types";
 import { assertPublicationQuality, renderNewsletter } from "../../lib/render/newsletter";
-import { MIN_SALT_LENGTH, decideStart, failureCode, routeRequest as route, statusReply as reply, type RunRow } from "../../lib/runs";
+import { MIN_SALT_LENGTH, decideStart, failureCode, failureDetail, routeRequest as route, statusReply as reply, type RunRow } from "../../lib/runs";
 import { SYNTHETIC_WEEK2_RUN } from "../../lib/source/synthetic-week2";
 import type { WeekDataset } from "../../lib/source/normalize";
 import { COURSE, YELLOWDIG_SOURCE, weekConfig, type Week } from "../../lib/weeks";
@@ -112,7 +112,7 @@ export const renderArtifact: NodeEntry = (ctx) => {
 export const failRun: NodeEntry = (ctx) => {
   const e = (ctx.items[0] ?? {}) as { error?: unknown; message?: unknown };
   const msg = typeof e.error === "object" && e.error ? (e.error as { message?: unknown }).message : e.error ?? e.message;
-  return [{ status: "failed", errorCode: failureCode(msg) }];
+  return [{ status: "failed", errorCode: failureCode(msg), errorDetail: failureDetail(msg) }];
 };
 
 export const statusReply: NodeEntry = (ctx) => {
