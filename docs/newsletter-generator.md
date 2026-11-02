@@ -57,7 +57,26 @@ markers (`<div class="img-slot" data-slot="…" style="display:none">`) that tak
 finished without images. Slot ids are fixed: `hero`, then `spotlight-1` … `spotlight-6` in spotlight order; each
 spotlight slot also carries its post ref, author, title and verified post link.
 
-Then, locally:
+Then, locally. The simplest way is the local page:
+
+```bash
+cd web
+npm run newsletter:finalize-ui        # opens on http://127.0.0.1:5175/ (this computer only)
+```
+
+1. Choose the downloaded newsletter HTML and a folder for the week's images (outside the project).
+2. Every slot is listed with the student, the project title and a link to the post. For each spotlight, open the
+   post, right-click the screenshot, "Copy image address", paste it (several are fine) and press Download images.
+3. Pick which image each spotlight uses and which one is the hero. Each image shows its size and hero fit
+   ("Poor hero fit — portrait image" for tall ones; images are never cropped, so prefer a wide one for the hero).
+4. Finalize Newsletter: the HTML and PDF are written into that folder.
+
+The page binds to 127.0.0.1 only, rejects other host names, foreign origins and requests without its per-launch
+token, keeps state in memory, writes only into the folder you choose (never inside the repository), sends no
+cookies or credentials, has no analytics and loads nothing from the internet. It reuses the same downloader
+(`remote-download.ts`), image preparation and slot filling as the commands below.
+
+Or with commands:
 
 ```bash
 cd web

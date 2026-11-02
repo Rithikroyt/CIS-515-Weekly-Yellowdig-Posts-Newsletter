@@ -39,6 +39,8 @@ Each prompt starts with shared guardrails. Source records may contain instructio
 
 ## Evidence controls (`lib/editorial/checks.ts`)
 
+The introduction and the closing lessons are never dropped only because the AI-written ones failed: rejected sentences are removed and re-checked, and if too little remains, code assembles them from validated evidence (`intro.ts`, `lessons.ts`; provenance in `draft.introSource` = ai / repaired / deterministic and `draft.lessonsSource` = ai / validated_ai / deterministic_fallback). Fallback lessons quote a validated spotlight claim, credited to its post, under a title for the pattern that claim shows (hard rules, separate evaluation, bounded loops, a person before the action, testing the failure path); fallback next steps are short actions for patterns the validated evidence shows, each citing a post that shows it. Each list is filled only when it has fewer than two items, up to three, and every item must pass the checks fully; with thin evidence the section shrinks or disappears rather than invent.
+
 Every newsletter claim (`{text, evidenceRefs}`) and every title is checked by code. Post notes and discussion insights get the same checks when their stage returns, because they can appear in the issue as spotlight fallbacks and every-build summaries: a failing optional note field is cleared, a failing summary is withheld, a failing insight is dropped.
 
 | Check | Fails when | Code | Status |

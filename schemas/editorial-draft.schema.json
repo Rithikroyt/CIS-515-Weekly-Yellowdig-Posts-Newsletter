@@ -36,6 +36,7 @@
     "newsletter": { "oneOf": [{ "$ref": "#/$defs/newsletterOutput" }, { "type": "null" }] },
     "buildGroups": { "$ref": "#/$defs/buildGroupsOutput" },
     "introSource": { "enum": ["ai", "repaired", "deterministic", null] },
+    "lessonsSource": { "enum": ["ai", "validated_ai", "deterministic_fallback", null] },
     "images": {
       "type": "object",
       "additionalProperties": false,

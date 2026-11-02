@@ -14,6 +14,7 @@
     "assets:upload": "tsx scripts/assets-upload.ts",
     "newsletter:finalize-images": "tsx scripts/finalize-newsletter-images.ts",
     "newsletter:download-images": "tsx scripts/download-yellowdig-images.ts",
+    "newsletter:finalize-ui": "tsx scripts/finalize-ui.ts",
     "env:check": "tsx scripts/env-config.ts"
   },
   "dependencies": {

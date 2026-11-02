@@ -11,6 +11,7 @@ import {
   CURATOR_LIMITS, candidateImages, chooseHero, chooseImage, chooseSpotlights, scorePost, screenDiscussion, screenNotes, validateBuildGroups, validateImageCuration,
 } from "./curate";
 import { finalizeIntroduction, type IntroSource } from "./intro";
+import { finalizeLessons, type LessonsSource } from "./lessons";
 import { PROMPTS, systemPrompt, userPrompt, type PromptId } from "./prompts";
 import { EDITORIAL_IDS, repairToSchema, schemaErrors } from "./registry";
 import type { BuildGroups, Discussion, EditorialCode, ImageChoice, ImageCuration, EditorialInput, Newsletter, PostNote, ProviderName, RunStatus, Selection, Theme, Verdict } from "./types";
@@ -446,7 +447,8 @@ export function buildDraft(s: RunState, now: string) {
   }
   // The introduction is never left blank: rejected sentences are removed and re-checked, else code assembles one
   // from checked evidence (intro.ts). Rejected originals stay in review.unresolved for the human reviewer.
-  const isIntro = (id: string) => id.startsWith("executiveSummary[");
+  const isIntro = (id: string) => id.startsWith("executiveSummary[") || id.startsWith("takeaways[") || id.startsWith("nextSteps[");
+  let lessonsSource: LessonsSource | null = null;
   let introSource: IntroSource | null = null;
   const introClaims: Array<{ claimId: string; method: "ai-drafted" | "code-generated"; evidenceRefs: string[]; reviewStatus: ClaimStatus; codes: EditorialCode[] }> = [];
   if (newsletter && s.newsletter) {
@@ -458,6 +460,23 @@ export function buildDraft(s: RunState, now: string) {
       const id = "executiveSummary[" + i + "]";
       const r = intro.source === "ai" ? reviewById.get(id) : checkClaim(idx, id, c);
       introClaims.push({ claimId: id, method: intro.source === "deterministic" ? "code-generated" : "ai-drafted", evidenceRefs: c.evidenceRefs, reviewStatus: r?.status ?? "supported", codes: r?.codes ?? [] });
+    });
+    // Lessons and next steps follow the same rule (lessons.ts): the closing section is never dropped only because
+    // the AI-written items failed review; it shrinks or disappears only when validated evidence is too thin.
+    const lessons = finalizeLessons(idx, s.newsletter, reviewById, { notes: s.notes, selection: s.selection });
+    newsletter.takeaways = lessons.takeaways;
+    newsletter.nextSteps = lessons.nextSteps;
+    lessonsSource = lessons.source;
+    const aiTakeaways = lessons.takeaways.length - lessons.fallbackTakeaways, aiSteps = lessons.nextSteps.length - lessons.fallbackSteps;
+    lessons.takeaways.forEach((t, i) => {
+      const id = "takeaways[" + i + "].text";
+      const r = checkClaim(idx, id, t.text);
+      introClaims.push({ claimId: id, method: i < aiTakeaways ? "ai-drafted" : "code-generated", evidenceRefs: t.text.evidenceRefs, reviewStatus: r.status, codes: r.codes });
+    });
+    lessons.nextSteps.forEach((c, i) => {
+      const id = "nextSteps[" + i + "]";
+      const r = checkClaim(idx, id, c);
+      introClaims.push({ claimId: id, method: i < aiSteps ? "ai-drafted" : "code-generated", evidenceRefs: c.evidenceRefs, reviewStatus: r.status, codes: r.codes });
     });
   }
   const review = {
@@ -472,7 +491,7 @@ export function buildDraft(s: RunState, now: string) {
   const body = {
     schemaVersion: "1.0" as const, issueId: s.input.issueId, week: s.input.week, status: s.status, inputHash: s.inputHash, idempotencyKey: s.idempotencyKey,
     metrics: s.input.metrics, postNotes: s.notes, capabilityChecks: s.capabilityChecks, themes: s.themes, selection: s.selection,
-    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource,
+    discussion: s.discussion, newsletter, buildGroups: s.buildGroups, introSource, lessonsSource,
     images: { curation: { posts: s.imageCuration }, choices: s.imageChoices, hero: s.heroImage }, review,
   };
   const usedPrompts = [...new Map(s.modelCalls.map((c) => [c.promptId, c.promptVersion])).entries()].map(([promptId, promptVersion]) => ({ promptId, promptVersion }));

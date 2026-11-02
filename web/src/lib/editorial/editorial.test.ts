@@ -154,10 +154,12 @@ describe("4–8: evidence controls", () => {
     nl.takeaways[0].text.evidenceRefs = ["post:syn-w2-p99"];
     const { draft } = await run({ "newsletter-editor": [{ json: nl }], "newsletter-reviser": [{ json: nl }] });
     expect(draft.run.errorCode).toBe("REVISION_LIMIT_REACHED");
-    expect(claimsNot(draft)[0]).toMatchObject({ claimId: "takeaways[0].text", reviewStatus: "unsupported" });
-    expect(claimsNot(draft)[0].codes).toContain("MODEL_UNKNOWN_REFERENCE");
-    expect(draft.newsletter!.takeaways[0].text.text).toBe(E.WITHHELD_TEXT);
+    // The rejected lesson is recorded for the human reviewer and never reaches the issue.
     expect(draft.review.unresolved[0]).toMatchObject({ claimId: "takeaways[0].text", reviewStatus: "unsupported" });
+    expect(draft.review.unresolved[0].codes).toContain("MODEL_UNKNOWN_REFERENCE");
+    expect(draft.newsletter!.takeaways.map((t) => t.text.text)).not.toContain(E.WITHHELD_TEXT);
+    expect(draft.newsletter!.takeaways.flatMap((t) => t.text.evidenceRefs)).not.toContain("post:syn-w2-p99");
+    expect(draft.lessonsSource).toBe("validated_ai");
     const notes = copy(F.postNotes);
     notes.notes[0].postRef = "post:invented";
     const r2 = await run({ "post-extractor": [{ json: notes }] });

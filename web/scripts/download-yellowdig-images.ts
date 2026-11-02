@@ -12,38 +12,14 @@
 // folder is created or updated to use the first image of each slot, ready for `npm run newsletter:finalize-images`.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
-import { SLOT_ID, isAllowedAssetUrl, localName, sniffImage } from "../src/lib/assets/remote-image";
+import { downloadAsset } from "../src/lib/assets/remote-download";
+import { SLOT_ID, isAllowedAssetUrl, localName } from "../src/lib/assets/remote-image";
 import { findSlots } from "../src/lib/render/finalize";
 import { REPO_ROOT } from "./schemas";
-
-const MAX_BYTES = 25 * 1024 * 1024;
-const MAX_REDIRECTS = 3;
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf("--" + name);
   return i > 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith("--") ? process.argv[i + 1] : null;
-}
-
-/** GET with manual redirects: every hop must be HTTPS on a Yellowdig host. No credentials or cookies are sent. */
-async function download(url: string): Promise<{ buf: Buffer; host: string }> {
-  let current = url;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (!isAllowedAssetUrl(current)) throw new Error("[URL_NOT_ALLOWED] only https URLs on yellowdig.app hosts are downloaded");
-    const r = await fetch(current, { redirect: "manual", credentials: "omit", headers: { accept: "image/*" }, signal: AbortSignal.timeout(60000) });
-    if (r.status >= 300 && r.status < 400) {
-      const next = r.headers.get("location");
-      if (!next) throw new Error("[DOWNLOAD_FAILED] redirect without a location");
-      current = new URL(next, current).toString();
-      continue;
-    }
-    if (!r.ok) throw new Error("[DOWNLOAD_FAILED] HTTP " + r.status);
-    const declared = Number(r.headers.get("content-length") ?? "0");
-    if (declared > MAX_BYTES) throw new Error("[IMAGE_TOO_LARGE] over " + MAX_BYTES / 1024 / 1024 + " MB");
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.length > MAX_BYTES) throw new Error("[IMAGE_TOO_LARGE] over " + MAX_BYTES / 1024 / 1024 + " MB");
-    return { buf, host: new URL(current).hostname };
-  }
-  throw new Error("[DOWNLOAD_FAILED] more than " + MAX_REDIRECTS + " redirects");
 }
 
 async function main() {
@@ -65,9 +41,7 @@ async function main() {
   for (const [slot, value] of Object.entries(raw)) {
     const list = Array.isArray(value) ? value : [value];
     for (let i = 0; i < list.length; i++) {
-      const { buf, host } = await download(list[i]);
-      const kind = sniffImage(buf);
-      if (!kind) throw new Error("[NOT_AN_IMAGE] " + slot + " #" + (i + 1) + ": the file is not a PNG, JPEG, WebP or GIF image");
+      const { buf, host, kind } = await downloadAsset(list[i]);
       const name = localName(slot, i, list.length, kind.ext);
       writeFileSync(join(out, name), buf);
       if (i === 0) first[slot] = name;
