@@ -44,6 +44,8 @@ code { background:#F2F2F2; padding:1px 4px; }
 <section id="step-final" hidden><h2>3 · Finalize</h2>
 <label for="name">File name for the finished newsletter</label><input id="name" type="text">
 <label><input id="pdf" type="checkbox" checked> Also make a PDF</label>
+<label><input id="reviewed" type="checkbox"> I have read and reviewed this issue</label>
+<label for="reviewer">Reviewer name (shown as “reviewed by …” only when the box above is ticked)</label><input id="reviewer" type="text" autocomplete="name">
 <div id="hero-warn"></div>
 <button id="finalize">Finalize Newsletter</button><div id="final-msg" class="msg"></div></section>
 </main>
@@ -58,6 +60,8 @@ async function api(path, body) {
   return j;
 }
 const state = { slots: [], images: {}, use: {}, hero: null, heroFrom: null, heroTouched: false };
+// The reviewer name is remembered in this browser only.
+try { $("reviewer").value = localStorage.getItem("reviewerName") || ""; } catch (e) {}
 
 function slotLabel(s) { return s.slot === "hero" ? "Hero image" : s.slot.replace("spotlight-", "Spotlight "); }
 
@@ -145,11 +149,15 @@ $("open").onclick = async () => {
 $("finalize").onclick = async () => {
   const btn = $("finalize"), msg = $("final-msg"); btn.disabled = true; msg.className = "msg"; msg.textContent = "Embedding images…";
   try {
-    const r = await api("finalize", { spotlights: state.use, hero: state.hero ? { file: state.hero, from: state.heroFrom } : null, name: $("name").value, pdf: $("pdf").checked });
+    const reviewed = $("reviewed").checked, reviewer = $("reviewer").value.trim();
+    if (reviewed && !reviewer) throw new Error("Enter the reviewer's name, or untick the review box.");
+    if (reviewed) { try { localStorage.setItem("reviewerName", reviewer); } catch (e) {} }
+    const r = await api("finalize", { spotlights: state.use, hero: state.hero ? { file: state.hero, from: state.heroFrom } : null, name: $("name").value, pdf: $("pdf").checked, reviewed, reviewer });
     msg.textContent = "";
     const done = el("div", { class: "done" });
     done.appendChild(el("div", { text: "Saved: " + r.html }));
     if (r.pdf) done.appendChild(el("div", { text: "Saved: " + r.pdf }));
+    done.appendChild(el("div", { text: r.reviewedBy ? "Credited: reviewed by " + r.reviewedBy : "No review credit added (box not ticked)." }));
     if (r.pdfError) done.appendChild(el("div", { class: "err", text: "PDF not made: " + r.pdfError }));
     done.appendChild(el("div", { text: "Images embedded: " + r.images + " · filled: " + (r.filled.join(", ") || "none") + " · left empty: " + (r.empty.join(", ") || "none") + " · remote images: " + r.remoteImages }));
     msg.appendChild(done);

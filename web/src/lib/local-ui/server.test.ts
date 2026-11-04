@@ -151,6 +151,18 @@ describe("local finalize UI: finalize", () => {
     expect(Buffer.from(html).toString("latin1")).not.toContain("Synthetic Student");
   });
 
+  it("adds the review credit only when the review box is ticked", async () => {
+    const { call } = await start();
+    await call("/api/open", { html: await issue(4), workdir: workdir() });
+    const plain = await call("/api/finalize", { spotlights: {}, hero: null, pdf: false, name: "plain" });
+    expect(plain.json.reviewedBy).toBeNull();
+    expect(readFileSync(String(plain.json.html), "utf8")).not.toMatch(/reviewed by [A-Z]/);
+    expect((await call("/api/finalize", { spotlights: {}, hero: null, pdf: false, reviewed: true, reviewer: "" })).json.error).toMatch(/BAD_REVIEWER/);
+    const ok = await call("/api/finalize", { spotlights: {}, hero: null, pdf: false, name: "reviewed", reviewed: true, reviewer: "Rithik Roy Thati" });
+    expect(ok.json.reviewedBy).toBe("Rithik Roy Thati");
+    expect(readFileSync(String(ok.json.html), "utf8")).toContain("reviewed by Rithik Roy Thati before sending");
+  });
+
   it("leaves slots without a chosen image invisible and still finishes", async () => {
     const { call } = await start();
     await call("/api/open", { html: await issue(5), workdir: workdir() });

@@ -50,6 +50,17 @@ Matches the instructor's Week 2 reference (audit: [`newsletter-quality-gap.md`](
 - Each spotlight: group and label, title, author, comment count, "pipeline read from the workflow file" or "as described in the post", screenshot (max 340 px tall, linked to the post), architecture text, pipeline chips (only from a workflow file), control note, What the test showed, From the thread, Worth borrowing, Read the post link. Missing editor copy falls back to the evidence-screened post notes and discussion insights; the section is never dropped.
 - Images: only `data:image/png|jpeg|webp` URIs of real post images, each shown only for its own post, scaled to fit the 544 px column and a height cap (never cropped), with the curator's or the intake alt text. No stock, decorative or AI-generated images.
 
+## Design additions
+
+On top of the reference layout: a **"This week in 60 seconds"** box under the metrics (an "In this issue" line counted
+from what is rendered, plus the titles of the checked closing lessons); a **lead spotlight** (the first one: a taller
+image, 420px, and its checked thread insight as a pull quote); and **compact text** (spotlight descriptions about 70
+words, every-build lines about 32, both cut at complete sentences).
+
+**Review credit.** A generated issue never claims a review. The credibility line ("…checked by code against the
+week's posts") and the footer change to "reviewed by <name> before sending" only when the person finalizing ticks
+"I have read and reviewed this issue" on the local page (or passes `--reviewer "Name"` to the finalize command).
+
 ## Images: inserted locally after generation (selected method)
 
 Class images never leave the user's computer. Workflow 05 generates the full issue with **image slots**: invisible

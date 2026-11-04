@@ -2,7 +2,7 @@
 // cloud storage, no n8n, no Vercel. The professor added class photos to the final HTML by hand for the same reason.
 //
 // Usage (from web/):
-//   npm run newsletter:finalize-images -- --html <issue.html> --assets <folder> [--out <final.html>] [--pdf <final.pdf>]
+//   npm run newsletter:finalize-images -- --html <issue.html> --assets <folder> [--out <final.html>] [--pdf <final.pdf>] [--reviewer "Name"]
 //
 // <folder>/images.json maps files (relative to the folder) to slots. Keys are a slot id ("hero", "spotlight-1" …) or
 // a spotlight's post ref ("post:…"); list the slots of an issue with --list.
@@ -12,7 +12,7 @@
 // except the git-ignored visual-compare/ folder).
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
-import { defaultAlt, fillSlots, findSlots, type SlotImage } from "../src/lib/render/finalize";
+import { applyReviewer, defaultAlt, fillSlots, findSlots, type SlotImage } from "../src/lib/render/finalize";
 import { prepareLocalImage } from "../src/lib/render/local-images";
 import { REPO_ROOT } from "./schemas";
 
@@ -62,6 +62,9 @@ async function main() {
   const heroFrom = typeof manifest.hero === "object" ? manifest.hero.from ?? null : null;
   const r = fillSlots(html, { images, heroFrom });
   if (r.unknown.length) throw new Error("[UNKNOWN_SLOT] not in this issue: " + r.unknown.join(", ") + " (use --list)");
+  // --reviewer "Name": the person running this confirms they reviewed the issue; only then is it credited.
+  const reviewer = arg("reviewer");
+  if (reviewer) r.html = applyReviewer(r.html, reviewer);
   writeFileSync(out, r.html);
   console.log("filled:", r.filled.join(", ") || "none", "| left empty:", r.missing.join(", ") || "none", "| wrote", out);
 

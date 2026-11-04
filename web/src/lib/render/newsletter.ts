@@ -100,6 +100,13 @@ const imgTag = (i: { src: string; alt: string }, maxH: number) =>
   '<div style="text-align:center;background:#F7F7F7;border:1px solid ' + RULE + '"><img src="' + i.src + '" alt="' + esc(i.alt) +
   '" style="display:inline-block;max-width:100%;max-height:' + maxH + 'px;width:auto;height:auto;border:0;vertical-align:top"></div>';
 
+/** Credibility line and footer sentence before anyone has reviewed the issue (escaped HTML, as rendered). */
+export const UNREVIEWED_CREDIBILITY = "Built with n8n &mdash; drafted by AI, checked by code against the week&#39;s posts.";
+export const UNREVIEWED_FOOTER = "Summaries are AI-drafted and evidence-checked against the posts; they have not been reviewed by an instructor.";
+/** Lead spotlight image height cap (the other spotlights use 340px). */
+export const LEAD_IMAGE_MAX = 420;
+const SPOT_WORDS = 70, BRIEF_WORDS = 32;
+
 /** The hero image with its credit line; shared with the local image finalizer so both produce identical markup. */
 export function heroBlock(img: { src: string; alt: string }, credit: string | null, href: string | null): string {
   return '<div class="keep" style="margin:6px 0 18px">' + (href ? '<a href="' + href + '" style="text-decoration:none">' + imgTag(img, 360) + "</a>" : imgTag(img, 360)) +
@@ -107,8 +114,8 @@ export function heroBlock(img: { src: string; alt: string }, credit: string | nu
 }
 
 /** A spotlight's image, linked to its post when the link is verified; shared with the local image finalizer. */
-export function spotlightImageBlock(img: { src: string; alt: string }, href: string | null): string {
-  return '<div style="margin:0 0 16px">' + (href ? '<a href="' + href + '" style="text-decoration:none">' + imgTag(img, 340) + "</a>" : imgTag(img, 340)) + "</div>";
+export function spotlightImageBlock(img: { src: string; alt: string }, href: string | null, maxH = 340): string {
+  return '<div style="margin:0 0 16px">' + (href ? '<a href="' + href + '" style="text-decoration:none">' + imgTag(img, maxH) + "</a>" : imgTag(img, maxH)) + "</div>";
 }
 
 /** Credit line under the hero: "From <author>'s post, <title>". Inputs are plain text and escaped here. */
@@ -206,7 +213,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
     push(heroBlock(hero, heroCredit(author(heroChoice!.postRef), posts.get(heroChoice!.postRef)!.title), href(heroChoice!.postRef)));
     imagesShown++;
   } else push(slotMarker("hero", {}));
-  push('<p style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';margin:0 0 24px">Built with n8n &mdash; drafted by AI, checked by code against the week&#39;s posts.</p>');
+  push('<p style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ';margin:0 0 24px">' + UNREVIEWED_CREDIBILITY + "</p>");
   push("</td></tr>");
 
   // 8. Four metrics, all computed by code. Unknown coverage shows a dash, never zero.
@@ -223,6 +230,10 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
       '<div class="lbl" style="font-family:' + SANS + ";font-size:11px;letter-spacing:1px;text-transform:uppercase;color:" + MUTED + ';padding-top:6px">' + esc(label) + "</div></td>");
   });
   push("</tr></table></td></tr>");
+
+  // 8b. "This week in 60 seconds": counts from code and the checked lesson titles. Filled in once the sections below
+  // are built, so every number is the one actually rendered.
+  push("__BRIEF__");
 
   // 9. Narrative introduction.
   const intro = nl.executiveSummary.filter(ok).map((c) => c.text).join(" ");
@@ -257,14 +268,17 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
     b.push('<h2 style="font-family:' + SERIF + ";font-weight:normal;font-size:27px;line-height:1.15;color:" + INK + ';margin:4px 0 6px">' + esc(trunc(p.title, 140)) + "</h2>");
     b.push('<div style="font-family:' + SANS + ";font-size:13px;color:" + MUTED + ';margin:0 0 16px">' + esc(trunc(p.authorName, 80)) + " &middot; " + esc(p.commentCount) + (p.commentCount === 1 ? " comment" : " comments") +
       " &middot; " + (prof ? "pipeline read from the workflow file" : "pipeline as described in the post") + "</div>");
-    if (img) { b.push(spotlightImageBlock(img, link)); imagesShown++; }
-    else b.push(slotMarker("spotlight-" + (shown.length + 1), { "post-ref": s.postRef, author: p.authorName, title: p.title, href: link ? o.postUrls![s.postRef] : null }));
+    const lead = shown.length === 0;
+    if (img) { b.push(spotlightImageBlock(img, link, lead ? LEAD_IMAGE_MAX : 340)); imagesShown++; }
+    else b.push(slotMarker("spotlight-" + (shown.length + 1), { "post-ref": s.postRef, author: p.authorName, title: p.title, href: link ? o.postUrls![s.postRef] : null, size: lead ? "lead" : null }));
     b.push("</div>");
-    b.push(para(text, 15));
+    b.push(para(clipWords(text, SPOT_WORDS), lead ? 16 : 15));
     if (prof) b.push(chips(prof.mainPath));
     if (control) b.push('<p style="font-family:' + SANS + ";font-size:12px;font-style:italic;color:" + MUTED + ';margin:0 0 18px">' + esc(control) + "</p>");
     if (test) b.push('<div class="keep">' + smallHead("What the test showed") + para(test) + "</div>");
-    if (thread) b.push('<div class="keep">' + smallHead("From the thread") + para(thread) + "</div>");
+    // The lead spotlight shows its checked thread insight as a pull quote; the others as a labelled paragraph.
+    if (thread && lead) b.push('<div class="keep" style="border-left:3px solid ' + MAROON + ';margin:4px 0 18px;padding:2px 0 2px 16px"><p style="font-family:' + SERIF + ";font-size:19px;line-height:1.45;font-style:italic;color:" + INK + ';margin:0 0 6px">' + esc(clipWords(thread, 45)) + '</p><div style="font-family:' + SANS + ";font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:" + MUTED + '">From the thread</div></div>');
+    else if (thread) b.push('<div class="keep">' + smallHead("From the thread") + para(thread) + "</div>");
     if (borrow) b.push('<p style="font-family:' + SERIF + ";font-size:16px;font-style:italic;color:" + BODY2 + ';margin:6px 0 14px">Worth borrowing: ' + esc(borrow) + "</p>");
     if (link) b.push('<a href="' + link + '" style="font-family:' + SANS + ";font-size:13px;font-weight:bold;color:" + MAROON + ';text-decoration:none">Read ' + esc(firstName(p.authorName)) + "&#39;s post &rarr;</a>");
     b.push("</td></tr>");
@@ -299,7 +313,7 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
         const link = href(ref);
         const name = link ? '<a href="' + link + '" style="font-weight:bold;color:' + INK + ';text-decoration:none">' + esc(trunc(p.authorName, 80)) + "</a>" : "<b>" + esc(trunc(p.authorName, 80)) + "</b>";
         const sum = notes.get(ref)?.summary;
-        const line = usable(sum) ? " " + esc(clipWords(sum.text, 45)) : "";
+        const line = usable(sum) ? " " + esc(clipWords(sum.text, BRIEF_WORDS)) : "";
         const entry = '<div style="padding:10px 0;border-bottom:1px solid #E5E5E5;font-family:' + SANS + ";font-size:13px;line-height:1.5;color:" + INK + '">' + name +
           " &mdash; <i>" + esc(trunc(p.title, 160)) + "</i>." + line + (spotlightRefs.has(ref) ? ' <span style="color:' + MAROON + '">See the spotlight above.</span>' : "") +
           (p.commentCount ? ' <span style="color:' + MAROON + '">' + esc(p.commentCount) + "</span>" : "") + "</div>";
@@ -343,12 +357,21 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
   const posts_ = metric("metric:posts"), comments = metric("metric:comments");
   const prov = [
     "Generated from " + (posts_ ?? input.posts.length) + " Week " + week + " posts" + (comments !== null ? " and " + comments + " comments" : "") + (synthetic ? " in a synthetic test dataset." : " on Yellowdig."),
-    "Numbers are counted in code. Summaries are AI-drafted and evidence-checked against the posts; they have not been reviewed by an instructor.",
+    "Numbers are counted in code. " + UNREVIEWED_FOOTER,
     draft.introSource === "deterministic" ? "The introduction was assembled by code from checked facts because the AI-written one did not pass evidence review." : "",
     draft.lessonsSource === "deterministic_fallback" ? "Some closing lessons were assembled by code from checked statements in the spotlights." : "",
     omitted ? omitted + (omitted === 1 ? " statement that did" : " statements that did") + " not pass evidence review " + (omitted === 1 ? "was" : "were") + " left out." : "",
   ].filter(Boolean).join(" ");
   push('<tr><td style="border-top:1px solid ' + INK + ";padding:14px 0 0;font-family:" + SANS + ";font-size:11px;line-height:1.6;color:" + MUTED + '">' + esc(prov) + "</td></tr>");
+
+  const briefAt = out.indexOf("__BRIEF__");
+  const briefLessons = nl.takeaways.filter((t) => usable(t.text)).slice(0, 3).map((t) => t.title);
+  const issueLine = [shown.length ? shown.length + (shown.length === 1 ? " spotlight" : " spotlights") : "", everyBuild + " builds in " + groups.length + (groups.length === 1 ? " group" : " groups"), briefLessons.length ? briefLessons.length + (briefLessons.length === 1 ? " lesson" : " lessons") + " to carry forward" : ""].filter(Boolean).join(" · ");
+  out[briefAt] = '<tr><td style="padding:22px 0 0"><div class="keep" style="border:1px solid ' + INK + ';padding:14px 18px">' +
+    '<div style="font-family:' + SANS + ";font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:" + MAROON + ';margin:0 0 4px">This week in 60 seconds</div>' +
+    '<div style="font-family:' + SANS + ";font-size:12px;color:" + MUTED + ";margin:0 0 " + (briefLessons.length ? "10px" : "0") + '">In this issue: ' + esc(issueLine) + "</div>" +
+    (briefLessons.length ? '<ol style="font-family:' + SERIF + ";font-size:16px;line-height:1.55;color:" + INK + ';margin:0;padding-left:22px">' + briefLessons.map((t) => "<li>" + esc(trunc(t, 90)) + "</li>").join("") + "</ol>" : "") +
+    "</div></td></tr>";
 
   push("</table></td></tr></table></td></tr></table></body></html>");
   const quality: QualityReport = {

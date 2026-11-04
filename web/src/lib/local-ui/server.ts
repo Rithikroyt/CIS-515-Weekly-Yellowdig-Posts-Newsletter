@@ -8,7 +8,7 @@ import { isAbsolute, join, resolve, sep } from "node:path";
 import sharp from "sharp";
 import { downloadAsset, heroFit } from "../assets/remote-download";
 import { SLOT_ID, isAllowedAssetUrl, localName } from "../assets/remote-image";
-import { defaultAlt, fillSlots, findSlots, type Slot, type SlotImage } from "../render/finalize";
+import { applyReviewer, defaultAlt, fillSlots, findSlots, type Slot, type SlotImage } from "../render/finalize";
 import { prepareLocalImage } from "../render/local-images";
 import { PAGE } from "./page";
 
@@ -130,6 +130,8 @@ export function createFinalizeServer(o: FinalizeServerOptions) {
         images.hero = { src: (await prepareLocalImage(readFileSync(join(s.workdir, pick(hero.file))))).src, alt: defaultAlt(s.slots.find((x) => x.slot === heroFrom) ?? null) };
       }
       const r = fillSlots(s.html, { images, heroFrom });
+      // The review credit is added only when the person confirms they reviewed this issue.
+      if (b.reviewed === true) r.html = applyReviewer(r.html, String(b.reviewer ?? ""));
       const name = typeof b.name === "string" && OUT_NAME.test(b.name.trim()) ? b.name.trim().replace(/\.html?$/i, "") : "newsletter-final";
       const htmlPath = join(s.workdir, name + ".html");
       writeFileSync(htmlPath, r.html);
@@ -138,7 +140,7 @@ export function createFinalizeServer(o: FinalizeServerOptions) {
         try { pdfPath = join(s.workdir, name + ".pdf"); writeFileSync(pdfPath, await (o.pdf ?? defaultPdf)(r.html)); }
         catch (e) { pdfPath = null; pdfError = e instanceof Error ? e.message : "PDF failed"; }
       }
-      return { html: htmlPath, pdf: pdfPath, pdfError, filled: r.filled, empty: r.missing, images: (r.html.match(/<img /g) ?? []).length, remoteImages: (r.html.match(/src="https?:/g) ?? []).length };
+      return { html: htmlPath, pdf: pdfPath, pdfError, reviewedBy: b.reviewed === true ? String(b.reviewer).trim() : null, filled: r.filled, empty: r.missing, images: (r.html.match(/<img /g) ?? []).length, remoteImages: (r.html.match(/src="https?:/g) ?? []).length };
     },
   };
 
