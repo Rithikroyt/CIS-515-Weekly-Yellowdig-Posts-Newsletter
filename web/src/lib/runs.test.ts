@@ -30,7 +30,7 @@ describe("routeRequest", () => {
   });
 
   it("maps only weeks whose topic was observed live", () => {
-    expect(Object.values(WEEK_TOPICS).filter((w) => w.topic).map((w) => w.week)).toEqual([1, 2]);
+    expect(Object.values(WEEK_TOPICS).filter((w) => w.topic).map((w) => w.week)).toEqual([1, 2, 3]);
   });
 });
 

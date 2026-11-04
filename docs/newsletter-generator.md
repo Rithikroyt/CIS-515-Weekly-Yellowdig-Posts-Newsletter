@@ -158,7 +158,8 @@ Posts are selected by the structured `post/topics` label. Labels come only from 
 |---|---|---|
 | 1 | `Week 1 - Weekly Workflow Show-and-Tell on Yellowdig` | verified live (posts 2026-10-14 … 10-28) |
 | 2 | `Week 2 - Weekly Workflow Show-and-Tell on Yellowdig` | verified live (posts 2026-10-24 … 10-28) |
-| 3–5 | not set | the topics do not exist in Yellowdig yet → `WEEK_NOT_CONFIGURED` |
+| 3 | `Week 3 - Weekly Workflow Show-and-Tell on Yellowdig` | verified live 2026-11-04 (20 posts so far, 2026-11-02 … 11-04; window 2026-10-29 … 11-11) |
+| 4–5 | not set | the topics do not exist in Yellowdig yet → `WEEK_NOT_CONFIGURED`. To add one: run `npx tsx scripts/probe-yellowdig-topics.ts`, copy the exact label into `web/src/lib/weeks.ts`, rebuild and sync workflow 05, and redeploy the website. |
 
 ## Yellowdig verification (second controlled probe)
 

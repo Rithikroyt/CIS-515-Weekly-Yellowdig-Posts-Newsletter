@@ -1,6 +1,7 @@
 // The one place that maps a course week to its Yellowdig topic. Posts are selected by the structured
 // post/topics label, never by searching post text for a week number.
-// Labels are recorded only after they were observed in live data (scripts/probe-yellowdig-topics.ts, 2026-11-01).
+// Labels are recorded only after they were observed in live data (scripts/probe-yellowdig-topics.ts; weeks 1-2 on
+// 2026-11-01, week 3 on 2026-11-04).
 // Weeks whose topic has not been observed yet stay null, and generation refuses them with WEEK_NOT_CONFIGURED.
 // Date windows are generous on purpose (late posts still carry the week's topic); the topic is the real filter.
 
@@ -19,7 +20,7 @@ export type WeekConfig = {
 export const WEEK_TOPICS: Record<Week, WeekConfig> = {
   1: { week: 1, topic: "Week 1 - Weekly Workflow Show-and-Tell on Yellowdig", startDate: "2026-10-14", endDate: "2026-10-28", verifiedOn: "2026-11-01" },
   2: { week: 2, topic: "Week 2 - Weekly Workflow Show-and-Tell on Yellowdig", startDate: "2026-10-23", endDate: "2026-10-28", verifiedOn: "2026-11-01" },
-  3: { week: 3, topic: null, startDate: null, endDate: null, verifiedOn: null },
+  3: { week: 3, topic: "Week 3 - Weekly Workflow Show-and-Tell on Yellowdig", startDate: "2026-10-29", endDate: "2026-11-11", verifiedOn: "2026-11-04" },
   4: { week: 4, topic: null, startDate: null, endDate: null, verifiedOn: null },
   5: { week: 5, topic: null, startDate: null, endDate: null, verifiedOn: null },
 };
