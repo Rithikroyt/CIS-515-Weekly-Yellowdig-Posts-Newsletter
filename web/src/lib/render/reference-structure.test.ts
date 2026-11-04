@@ -14,7 +14,7 @@ async function draftFor(scenario: E.MockScenario = E.NAMED_SCENARIOS.clean) {
   const draft = await E.runEditorial({ input, provider: E.createMockProvider(scenario), now: NOW });
   return { input, draft };
 }
-const headings = (html: string) => [...html.matchAll(/letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:#8C1D40">([^<]+)</g)].map((m) => m[1]);
+const headings = (html: string) => [...html.matchAll(/data-section="([^"]+)"/g)].map((m) => m[1]);
 
 describe("reference section order", () => {
   it("renders the reference sections, in order, with no separate themes or discussion sections", async () => {
@@ -32,7 +32,7 @@ describe("reference section order", () => {
   it("keeps a structural snapshot", async () => {
     const { input, draft } = await draftFor();
     const { html } = renderNewsletter({ input, draft });
-    const outline = [...html.matchAll(/<(h1|h2)[^>]*>([^<]+)<|(\d\d — [^<]+)<|font-size:21px;color:#1A1A1A">([^<]+) </g)].map((m) => (m[2] ?? m[3] ?? m[4]).trim());
+    const outline = [...html.matchAll(/<(h1|h2)[^>]*>([^<]+)<|data-section="(\d\d — [^"]+)"|class="grp"[^>]*><span[^>]*><\/span>([^<]+) </g)].map((m) => (m[2] ?? m[3] ?? m[4]).trim());
     expect(outline).toMatchSnapshot();
   });
 
@@ -117,13 +117,17 @@ describe("every build", () => {
 });
 
 describe("metrics and images", () => {
-  it("shows a dash, not zero, when no assets were supplied", async () => {
+  it("shows other code-counted totals, never zero, when no assets were supplied, and a dash only when none exist", async () => {
     const { input, draft } = await draftFor();
-    input.metrics.forEach((m) => { if (m.ref === "metric:workflowFiles" || m.ref === "metric:screenshots") m.value = null; });
-    const { html } = renderNewsletter({ input, draft });
-    const row = html.slice(html.indexOf(">builds<") - 400, html.indexOf(">images<"));
-    expect(row.match(/&ndash;<\/div>/g)).toHaveLength(2);
-    expect(html).toMatch(/>workflow files</);
+    const m = (ref: string) => input.metrics.find((x) => x.ref === ref)!.value;
+    input.metrics.forEach((x) => { if (x.ref === "metric:workflowFiles" || x.ref === "metric:screenshots") x.value = null; });
+    const cells = (html: string) => [...html.slice(html.indexOf('class="num"'), html.indexOf(">commenters<")).matchAll(/class="num"[^>]*>([^<]+)</g)].map((x) => x[1]);
+    let html = renderNewsletter({ input, draft }).html;
+    expect(html).not.toMatch(/>workflow files<|>images</);
+    expect(cells(html).slice(2)).toEqual([String(m("metric:uniqueAuthors")), String(m("metric:uniqueCommenters"))]);
+    input.metrics.forEach((x) => { if (x.ref === "metric:uniqueAuthors" || x.ref === "metric:uniqueCommenters") x.value = null; });
+    html = renderNewsletter({ input, draft }).html;
+    expect(cells(html).slice(2)).toEqual(["&ndash;", "&ndash;"]);
   });
 
   it("marks spotlight and every-build blocks to stay on one PDF page", async () => {

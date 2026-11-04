@@ -114,7 +114,7 @@ describe("reference-quality synthetic week", () => {
 });
 
 describe("partial asset coverage", () => {
-  it("keeps week totals as a dash while still showing the known spotlight images", async () => {
+  it("replaces unknown week totals with other counted totals while still showing the known spotlight images", async () => {
     const week = referenceWeek();
     const input = E.buildEditorialInput({ dataset: week.dataset, manifest: week.manifest, profiles: week.profiles, images: week.images, course: { ...E.SYNTHETIC_COURSE }, coverageComplete: false });
     const m = (ref: string) => input.metrics.find((x) => x.ref === ref)!.value;
@@ -123,8 +123,8 @@ describe("partial asset coverage", () => {
     const imageBank = bankFor(week);
     const draft = await E.runEditorial({ input, provider: E.createMockProvider(week.scenario), imageBank, now: NOW });
     const r = renderNewsletter({ input, draft, imageBank });
-    const row = r.html.slice(r.html.indexOf('class="num"'), r.html.indexOf(">images<"));
-    expect([...row.matchAll(/class="num"[^>]*>([^<]+)</g)].map((x) => x[1])).toEqual(["27", String(m("metric:comments")), "&ndash;", "&ndash;"]);
+    const row = r.html.slice(r.html.indexOf('class="num"'), r.html.indexOf(">commenters<"));
+    expect([...row.matchAll(/class="num"[^>]*>([^<]+)</g)].map((x) => x[1])).toEqual(["27", String(m("metric:comments")), String(m("metric:uniqueAuthors")), String(m("metric:uniqueCommenters"))]);
     expect(r.quality.images).toBe(r.quality.spotlights + 1);
     expect(() => assertPublicationQuality(input, r)).not.toThrow();
   });

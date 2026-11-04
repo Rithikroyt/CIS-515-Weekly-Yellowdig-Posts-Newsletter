@@ -19,7 +19,7 @@ describe("renderNewsletter", () => {
     expect(a.omittedClaims).toBe(0);
     expect(a.html).toContain("ASU &middot; CIS 515 &middot; Community Dispatch");
     expect(a.html).toContain("max-width:640px");
-    expect(a.html).toContain("background:#F2F2F2");
+    expect(a.html).toContain("background:#ECE8E1");
     expect(a.html).toContain("Week " + input.week);
     expect(a.html).toContain("In brief: every build this week");
     expect(a.html).toContain("Synthetic test issue.");

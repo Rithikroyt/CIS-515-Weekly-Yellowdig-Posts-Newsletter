@@ -33,6 +33,27 @@ const CAPABILITY_PHRASES: Array<[CapabilityKey, string]> = [
   ["hasFallback", "a fallback path"], ["hasCodeValidation", "validation in code"], ["usesMultipleAgents", "more than one agent"],
 ];
 
+/** Past-tense verbs a post summary often opens with ("Built a…"), beyond the regular "-ed" forms. */
+const IRREGULAR_PAST = new Set(["built", "made", "gave", "wrote", "set", "took", "ran", "brought", "put", "sent", "kept", "led", "found", "began", "chose", "drew", "got", "grew", "held", "let", "rebuilt", "split", "taught", "won"]);
+
+/**
+ * One introduction sentence for a spotlight, worded from its screened summary without adding facts:
+ * "Built a desk that…" → "Ana Ruiz built a desk that…"; "Ana built…" → "Ana Ruiz built…";
+ * "A desk that…" → "Ana Ruiz shared “Title”, a desk that…"; anything else keeps the "shared “Title”:" form.
+ */
+export function introSentence(authorName: string, title: string, summary: string): string {
+  const name = authorName.trim();
+  const body = summary.trim().replace(/[.!?]+$/, "");
+  const first = name.split(/\s+/)[0];
+  const lead = body.split(/\s+/)[0] ?? "";
+  if (body.startsWith(name + " ")) return body + ".";
+  if (first.length >= 2 && lead === first) return name + body.slice(first.length) + ".";
+  const w = lead.toLowerCase();
+  if (/^[A-Z][a-z]+$/.test(lead) && (IRREGULAR_PAST.has(w) || (/ed$/.test(w) && w.length > 4))) return name + " " + w + body.slice(lead.length) + ".";
+  if (/^(A|An|The) /.test(body)) return name + " shared “" + title.trim() + "”, " + body[0].toLowerCase() + body.slice(1) + ".";
+  return name + " shared “" + title.trim() + "”: " + body + ".";
+}
+
 /**
  * An introduction assembled only from checked evidence: the code-counted post and comment totals, the screened
  * summaries of up to three spotlights (each with its author and post ref), one multi-source theme summary, and the
@@ -56,8 +77,7 @@ export function deterministicIntroduction(idx: RefIndex, notes: PostNote[], sele
     const p = idx.posts.get(s.postRef);
     const sum = noteOf.get(s.postRef)?.summary;
     if (!p || !live(sum)) continue;
-    const body = sum.text.trim().replace(/[.!?]+$/, "");
-    add({ text: p.authorName + " shared “" + p.title.trim() + "”: " + body.replace(/^(A|An|The) /, (a) => a.toLowerCase()) + ".", evidenceRefs: [...new Set([s.postRef, ...sum.evidenceRefs])].slice(0, 12) });
+    add({ text: introSentence(p.authorName, p.title, sum.text), evidenceRefs: [...new Set([s.postRef, ...sum.evidenceRefs])].slice(0, 12) });
   }
   const theme = themes.find((t) => t.support === "multi-source" && live(t.summary));
   if (theme) add({ text: theme.summary.text, evidenceRefs: theme.summary.evidenceRefs });

@@ -22,7 +22,8 @@ describe("60-second brief", () => {
     const { draft, r } = await issue();
     const html = r.html;
     const box = html.slice(html.indexOf("This week in 60 seconds"), html.indexOf("</ol>", html.indexOf("This week in 60 seconds")));
-    expect(html.indexOf(">images<")).toBeLessThan(html.indexOf("This week in 60 seconds"));
+    expect(html.indexOf(">commenters<")).toBeGreaterThan(-1);
+    expect(html.indexOf(">commenters<")).toBeLessThan(html.indexOf("This week in 60 seconds"));
     expect(html.indexOf("This week in 60 seconds")).toBeLessThan(html.indexOf("01 — Spotlights"));
     expect(box).toContain("In this issue: " + r.quality.spotlights + " spotlights · 27 builds in " + r.quality.groups + " groups · 3 lessons to carry forward");
     draft.newsletter!.takeaways.slice(0, 3).forEach((t) => expect(box).toContain("<li>" + t.title.replace(/'/g, "&#39;") + "</li>"));
@@ -49,12 +50,14 @@ describe("lead spotlight and compact text", () => {
     expect(filled).toContain("max-height:340px");
     const lead = draft.selection.spotlights[0].postRef;
     const thread = draft.newsletter!.spotlights.find((s) => s.postRef === lead)?.threadInsight;
-    if (thread) expect(r.html).toMatch(/border-left:3px solid #8C1D40[^>]*><p style="[^"]*font-style:italic/);
+    if (thread) expect(r.html).toMatch(/class="keep pull" style="border-left:4px solid #8C1D40[^>]*><p style="[^"]*font-style:italic/);
   });
 
   it("keeps spotlight descriptions to about seventy words and every-build lines to about thirty, at sentence ends", async () => {
     const { r } = await issue();
-    for (const m of r.html.matchAll(/<p style="font-family:Arial[^"]*font-size:1[56]px;line-height:1.55;color:#1A1A1A;margin:0 0 14px">([^<]*)<\/p>/g)) expect(words(m[1])).toBeLessThanOrEqual(70);
+    const texts = [...r.html.matchAll(/<p class="spot-text"[^>]*>([^<]*)<\/p>/g)].map((m) => m[1]);
+    expect(texts).toHaveLength(r.quality.spotlights);
+    for (const t of texts) expect(words(t)).toBeLessThanOrEqual(70);
     const brief = r.html.slice(r.html.indexOf("02 — In brief"), r.html.indexOf("Most discussed"));
     for (const m of brief.matchAll(/<\/i>\.([^<]*)</g)) expect(words(m[1])).toBeLessThanOrEqual(32);
   });

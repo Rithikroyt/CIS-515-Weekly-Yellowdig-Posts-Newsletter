@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import * as E from ".";
 import { checkClaim, indexInput } from "./checks";
-import { deterministicIntroduction, finalizeIntroduction, repairClaim, sentences } from "./intro";
+import { deterministicIntroduction, finalizeIntroduction, introSentence, repairClaim, sentences } from "./intro";
 import { renderNewsletter } from "../render/newsletter";
 
 const NOW = () => "2026-11-01T12:00:00Z";
@@ -85,6 +85,16 @@ describe("introduction", () => {
     // Capability sentence only from a cited capability metric.
     const cap = intro.find((c) => /workflow files profiled/.test(c.text));
     expect(cap?.evidenceRefs.some((r) => r.startsWith("metric:capabilities."))).toBe(true);
+  });
+
+  it("words fallback sentences around the author instead of quoting a verb-first summary", () => {
+    expect(introSentence("Ana Ruiz", "Desk", "Built a desk that sorts tickets.")).toBe("Ana Ruiz built a desk that sorts tickets.");
+    expect(introSentence("Ana Ruiz", "Desk", "Created an agent using a knowledge tool")).toBe("Ana Ruiz created an agent using a knowledge tool.");
+    expect(introSentence("Ana Ruiz", "Desk", "Ana built a desk.")).toBe("Ana Ruiz built a desk.");
+    expect(introSentence("Ana Ruiz", "Desk", "Ana Ruiz built a desk.")).toBe("Ana Ruiz built a desk.");
+    expect(introSentence("Ana Ruiz", "Desk", "A desk that sorts tickets.")).toBe("Ana Ruiz shared “Desk”, a desk that sorts tickets.");
+    expect(introSentence("Ana Ruiz", "Desk", "Ticket sorting with rules.")).toBe("Ana Ruiz shared “Desk”: Ticket sorting with rules.");
+    expect(introSentence("Ana Ruiz", "Desk", "Need help sorting.")).toBe("Ana Ruiz shared “Desk”: Need help sorting.");
   });
 
   it("repairClaim and finalizeIntroduction on their own", () => {

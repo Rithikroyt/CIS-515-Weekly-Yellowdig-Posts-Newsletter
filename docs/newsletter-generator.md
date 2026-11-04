@@ -36,7 +36,7 @@ Code entries: `web/src/n8n/nodes/wf05.ts`, logic in `web/src/lib/runs.ts`, `web/
 
 - One POST webhook, path `cis515-newsletter`, Header Auth, `responseMode: responseNode`. Actions: `generate {week, runId}`, `status {runId}`, `artifact {runId}`. Only the body is read.
 - Production source mode is `yellowdig`: no fixture fallback. A dataset from the fixture is refused (`SOURCE_FALLBACK`).
-- **Find Week Assets** (read-only) and **Collect Assets** gather the week's real assets in one canonical form (see *Images* below). The manifest and workflow profiles go into the editorial input, image metadata goes onto each post, and the image bytes travel beside the input as an image bank. No rows means coverage is unknown: workflow files and images show "–", not 0, and there are no profile-based claims. The synthetic test path uses the synthetic fixture's manifest and profiles instead.
+- **Find Week Assets** (read-only) and **Collect Assets** gather the week's real assets in one canonical form (see *Images* below). The manifest and workflow profiles go into the editorial input, image metadata goes onto each post, and the image bytes travel beside the input as an image bank. No rows means coverage is unknown: workflow files and images are never shown as 0 (their stat cards give way to people posting and commenters), and there are no profile-based claims. The synthetic test path uses the synthetic fixture's manifest and profiles instead.
 - **Render Artifact** links posts only through the verified URL format, then applies the publication gate: every post must appear once in the every-build list, and a week with 4 or more posts needs at least 4 spotlights. Otherwise the run fails with `NEEDS_ASSETS` (no workflow files or screenshots for the week) or `NEWSLETTER_QUALITY_INCOMPLETE`, and the page says the week needs screenshots or workflow files.
 - Provider is `gemini` for real data; the mock runs only on synthetic input from the manual trigger.
 - Failures from the source config, 01, 02, editorial input, 04 or render go to **Fail Run**, which stores `failed` with a bracketed safe code or `GENERATION_FAILED`.
@@ -56,6 +56,18 @@ On top of the reference layout: a **"This week in 60 seconds"** box under the me
 from what is rendered, plus the titles of the checked closing lessons); a **lead spotlight** (the first one: a taller
 image, 420px, and its checked thread insight as a pull quote); and **compact text** (spotlight descriptions about 70
 words, every-build lines about 32, both cut at complete sentences).
+
+**Dispatch magazine design** (section order and content unchanged; still email-safe tables and inline styles, no
+scripts or remote resources). ASU maroon hero band with a gold rule, "Issue NN" tag, white headline and dek; a cover
+image under the band; four stat cards (when asset coverage is unknown, workflow files and images give way to the
+code-counted "people posting" and "commenters", and a dash appears only when no counted value exists); a gold
+60-second card; a drop-cap introduction; numbered section heads (`data-section` carries the label); spotlight cards
+(lead in maroon with a "Lead story" tag, others in gold) with an initials badge, colour-coded pipeline chips (models
+blue, tools and storage teal, logic gold, people maroon, actions black, fallbacks red), "What the test showed" and
+"From the thread" side by side, a "Worth borrowing" callout and a button link; a **build map** bar of the groups
+(widths from the code counts, summing to 100%); ranked bars for most discussed and most generous; a dark closing panel
+with gold-numbered lessons and a "Try this week" list. The deterministic introduction now words each spotlight
+sentence around its author ("Ana Ruiz built …") instead of quoting a verb-first summary after a colon.
 
 **Review credit.** A generated issue never claims a review. The credibility line ("…checked by code against the
 week's posts") and the footer change to "reviewed by <name> before sending" only when the person finalizing ticks
