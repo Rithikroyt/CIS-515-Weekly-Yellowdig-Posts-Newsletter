@@ -7,6 +7,7 @@
 // and never markup. Claims withheld by evidence review are omitted.
 import { WITHHELD_TEXT } from "../editorial/checks";
 import { shortenWords } from "../text/shorten";
+import { describedPipeline } from "./described-pipeline";
 import { OTHER_BUILDS, SPOTLIGHT_MIN } from "../editorial/curate";
 import type { EditorialDraft } from "../editorial/machine";
 import type { Claim, EditorialInput, PostNote, StepCategory } from "../editorial/types";
@@ -78,29 +79,35 @@ export function formatRange(start: string, end: string): string {
   return MONTHS[a.m - 1] + " " + a.d + "–" + b.d + ", " + b.y;
 }
 
-/** Pipeline chip label and colours per step category: models blue, tools teal, logic gold, people maroon. */
-const CHIP: Record<StepCategory, { label: string; bg: string; fg: string }> = {
-  trigger: { label: "Trigger", bg: "#EFEFEF", fg: "#333333" },
-  ai: { label: "Model", bg: "#E8EEFB", fg: "#1F3F8F" }, judge: { label: "Judge", bg: "#E8EEFB", fg: "#1F3F8F" },
-  code: { label: "Logic", bg: GOLD_SOFT, fg: "#7A5300" }, validator: { label: "Logic", bg: GOLD_SOFT, fg: "#7A5300" }, gate: { label: "Logic", bg: GOLD_SOFT, fg: "#7A5300" },
-  approval: { label: "Human", bg: MAROON, fg: "#FFFFFF" },
-  action: { label: "Action", bg: INK, fg: "#FFFFFF" },
-  storage: { label: "Storage", bg: "#E2F3EF", fg: "#0B6B5D" }, tool: { label: "Tool", bg: "#E2F3EF", fg: "#0B6B5D" },
-  errorPath: { label: "Fallback", bg: "#FBE9E7", fg: "#9A2A1A" }, other: { label: "Step", bg: "#EFEFEF", fg: "#333333" },
+/** Flow step type and colour per step category: models blue, tools and storage teal, logic gold, people maroon. */
+const CHIP: Record<StepCategory, { label: string; color: string }> = {
+  trigger: { label: "Start", color: "#6B6B6B" },
+  ai: { label: "Model", color: "#2F55B5" }, judge: { label: "Judge", color: "#2F55B5" },
+  code: { label: "Logic", color: "#B07D00" }, validator: { label: "Check", color: "#B07D00" }, gate: { label: "Logic", color: "#B07D00" },
+  approval: { label: "Human", color: MAROON },
+  action: { label: "Result", color: INK },
+  storage: { label: "Data", color: "#0F8A78" }, tool: { label: "Tool", color: "#0F8A78" },
+  errorPath: { label: "Fallback", color: "#C0392B" }, other: { label: "Step", color: "#6B6B6B" },
 };
 
-function chips(path: Array<{ category: StepCategory; label: string }>): string {
-  const items = path.slice(0, 7).map((c) => {
+/**
+ * The spotlight's workflow as a numbered flow: one card per step, coloured by type, joined by arrows; it wraps on
+ * narrow screens. `source` says where the steps come from, and the caption says so plainly.
+ */
+function chips(path: Array<{ category: StepCategory; label: string }>, source: "file" | "text"): string {
+  const items = path.slice(0, 7).map((c, i) => {
     const k = CHIP[c.category] ?? CHIP.other;
-    return '<span style="display:inline-block;vertical-align:middle;background:' + k.bg + ";color:" + k.fg + ';border-radius:6px;padding:6px 10px;margin:0 0 6px">' +
-      '<span style="display:block;font-family:' + SANS + ';font-size:9px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;opacity:0.8">' + esc(k.label) + "</span>" +
-      '<span style="display:block;font-family:' + SANS + ';font-size:12px;font-weight:bold">' + esc(trunc(c.label, 40)) + "</span></span>";
+    const human = c.category === "approval";
+    return '<span style="display:inline-block;vertical-align:top;min-width:70px;background:' + (human ? MAROON : "#FFFFFF") + ";border:1px solid " + (human ? MAROON : RULE) + ";border-top:3px solid " + k.color + ';border-radius:6px;padding:6px 10px 7px;margin:0 0 8px">' +
+      '<span style="display:block;font-family:' + SANS + ";font-size:9px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:" + (human ? "#F3D2DD" : k.color) + '">' + String(i + 1).padStart(2, "0") + " &middot; " + esc(k.label) + "</span>" +
+      '<span style="display:block;font-family:' + SANS + ";font-size:13px;font-weight:bold;line-height:1.3;color:" + (human ? "#FFFFFF" : INK) + '">' + esc(trunc(c.label, 40)) + "</span></span>";
   });
-  const arrow = '<span style="display:inline-block;vertical-align:middle;font-family:' + SANS + ";font-size:14px;color:#A89F94;padding:0 5px 6px\">&rsaquo;</span>";
+  const arrow = '<span style="display:inline-block;vertical-align:top;font-family:' + SANS + ';font-size:16px;font-weight:bold;color:#B0A79B;padding:12px 5px 0">&rarr;</span>';
   return items.length
-    ? '<div style="background:' + CREAM + ";border:1px solid " + RULE + ';border-radius:8px;padding:12px 14px 8px;margin:0 0 16px">' +
-      '<div style="font-family:' + SANS + ";font-size:10px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:" + MUTED + ';margin:0 0 8px">Pipeline &middot; read from the workflow file</div>' +
-      items.join(arrow) + "</div>"
+    ? '<div class="keep flow" style="background:' + CREAM + ";border:1px solid " + RULE + ';border-radius:8px;padding:12px 14px 6px;margin:0 0 16px">' +
+      '<div style="font-family:' + SANS + ";font-size:10px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:" + MUTED + ';margin:0 0 10px">How it works &middot; ' +
+      (source === "file" ? "read from the workflow file" : "as the post describes it") + "</div>" + items.join(arrow) +
+      (source === "text" ? '<div style="font-family:' + SANS + ";font-size:11px;font-style:italic;color:" + MUTED + ';margin:2px 0 6px">Reconstructed by code from the post&#39;s text, not a copy of the n8n canvas.</div>' : "") + "</div>"
     : "";
 }
 
@@ -300,6 +307,8 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
     const e = nlSpot.get(s.postRef);
     const nt = notes.get(s.postRef);
     const prof = p.workflowProfileRef ? profiles.get(p.workflowProfileRef) : undefined;
+    // The workflow file's path when there is one; otherwise the steps the post itself describes, when it names enough.
+    const flow = prof ? prof.mainPath : describedPipeline(p.body);
     const fp = nl.failurePath && nl.failurePath.postRef === s.postRef ? nl.failurePath : null;
     const pickText = (...cs: Array<Claim | null | undefined>) => cs.find((c, i) => (i === 0 ? ok(c) : usable(c)))?.text ?? null;
     const text = pickText(e?.text, nt?.workflowPurpose, nt?.summary);
@@ -324,14 +333,14 @@ export function renderNewsletter(o: RenderOptions): RenderResult {
       (lead ? '<td align="right" valign="top" style="padding-left:8px">' + pill("Lead story", GOLD, INK) + "</td>" : "") + "</tr></table>");
     b.push('<h2 class="' + (lead ? "lead-h2" : "h2") + '" style="font-family:' + SERIF + ";font-weight:normal;font-size:" + (lead ? 32 : 26) + "px;line-height:1.15;color:" + INK + ';margin:4px 0 12px">' + esc(trunc(p.title, 140)) + "</h2>");
     b.push('<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px"><tr>' +
-      '<td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:17px;background:' + MAROON + ";color:#FFFFFF;font-family:" + SANS + ';font-size:12px;font-weight:bold;letter-spacing:0.5px">' + esc(initials(p.authorName)) + "</td>" +
+      '<td width="34" valign="top" style="width:34px"><div style="width:34px;height:34px;line-height:34px;border-radius:17px;text-align:center;background:' + MAROON + ";color:#FFFFFF;font-family:" + SANS + ';font-size:12px;font-weight:bold;letter-spacing:0.5px">' + esc(initials(p.authorName)) + "</div></td>" +
       '<td style="padding-left:10px;font-family:' + SANS + ";font-size:13px;line-height:1.35;color:" + MUTED + '"><b style="color:' + INK + '">' + esc(trunc(p.authorName, 80)) + "</b><br>" +
-      esc(p.commentCount) + (p.commentCount === 1 ? " comment" : " comments") + " &middot; " + (prof ? "pipeline read from the workflow file" : "pipeline as described in the post") + "</td></tr></table>");
+      esc(p.commentCount) + (p.commentCount === 1 ? " comment" : " comments") + (prof ? " &middot; pipeline read from the workflow file" : flow.length ? " &middot; pipeline as described in the post" : "") + "</td></tr></table>");
     if (img) { b.push(spotlightImageBlock(img, link, lead ? LEAD_IMAGE_MAX : 340)); imagesShown++; }
     else b.push(slotMarker("spotlight-" + (shown.length + 1), { "post-ref": s.postRef, author: p.authorName, title: p.title, href: link ? o.postUrls![s.postRef] : null, size: lead ? "lead" : null }));
     b.push("</div>");
     b.push(para(clipWords(text, SPOT_WORDS), lead ? 16 : 15, "spot-text"));
-    if (prof) b.push(chips(prof.mainPath));
+    if (flow.length) b.push(chips(flow, prof ? "file" : "text"));
     if (control) b.push('<p style="font-family:' + SANS + ";font-size:13px;font-style:italic;line-height:1.5;color:" + MUTED + ";border-left:2px solid " + GOLD + ';padding:0 0 0 10px;margin:0 0 18px">' + esc(control) + "</p>");
     // The lead spotlight shows its checked thread insight as a pull quote; the others pair test and thread side by side.
     if (lead) {

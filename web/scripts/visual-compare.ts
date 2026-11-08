@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
-import { htmlToPdf } from "../src/lib/server/pdf";
+import { htmlToPdf, localBrowserEnv } from "../src/lib/server/pdf";
 import { REPO_ROOT } from "./schemas";
 
 async function main() {
@@ -13,7 +13,7 @@ async function main() {
   if (!exe) throw new Error("set CHROME_EXECUTABLE_PATH to a local Chrome or Edge");
   const outDir = join(REPO_ROOT, "visual-compare");
   mkdirSync(outDir, { recursive: true });
-  const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ["--disable-gpu"] });
+  const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ["--disable-gpu"], env: localBrowserEnv() });
   try {
     for (const pair of process.argv.slice(2)) {
       const [name, file] = pair.split("=");

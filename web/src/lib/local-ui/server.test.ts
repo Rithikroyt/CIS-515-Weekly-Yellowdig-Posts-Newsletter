@@ -119,6 +119,27 @@ describe("local finalize UI: slots, downloads and hero", () => {
     expect((await sharp(readFileSync(join(dir, "spotlight-1-1.jpg"))).metadata()).exif).toBeTruthy();
   });
 
+  it("adds the user's own screenshots beside downloads, refuses non-images, and embeds them without metadata", async () => {
+    const { call } = await start();
+    const dir = workdir();
+    await call("/api/open", { html: await issue(4), workdir: dir });
+    const shot = await sharp({ create: { width: 1400, height: 700, channels: 3, background: "#227744" } }).withMetadata({ exif: { IFD0: { Artist: "Synthetic Student" } } }).png().toBuffer();
+    const b64 = "data:image/png;base64," + shot.toString("base64");
+    expect((await call("/api/add", { slot: "spotlight-9", files: [{ data: b64 }] })).json.error).toMatch(/UNKNOWN_SLOT/);
+    expect((await call("/api/add", { slot: "spotlight-1", files: [{ data: Buffer.from("<svg onload=x>").toString("base64") }] })).json.error).toMatch(/BAD_IMAGE/);
+    expect((await call("/api/add", { slot: "spotlight-1", files: [] })).json.error).toMatch(/BAD_FILES/);
+    const r = await call("/api/add", { slot: "spotlight-1", files: [{ data: b64 }] });
+    expect((r.json.images as Array<{ file: string; host: string; width: number }>).map((x) => [x.file, x.host, x.width])).toEqual([["spotlight-1-own-1.png", "this computer", 1400]]);
+    // A later download keeps the user's own screenshot and adds beside it.
+    const d = await call("/api/download", { slot: "spotlight-1", urls: ["https://cdn-v2.yellowdig.app/wide.png"] });
+    expect((d.json.images as Array<{ file: string }>).map((x) => x.file)).toEqual(["spotlight-1-own-1.png", "spotlight-1.png"]);
+    expect(readdirSync(dir).sort()).toEqual(["spotlight-1-own-1.png", "spotlight-1.png"]);
+    const f = await call("/api/finalize", { spotlights: { "spotlight-1": "spotlight-1-own-1.png" }, hero: { file: "spotlight-1-own-1.png", from: "spotlight-1" }, pdf: false });
+    expect(f.json).toMatchObject({ filled: ["hero", "spotlight-1"], images: 2, remoteImages: 0 });
+    const html = readFileSync(String(f.json.html), "utf8");
+    expect(Buffer.from(html).toString("latin1")).not.toContain("Synthetic Student");
+  });
+
   it("rates hero fit by aspect ratio", () => {
     expect(heroFit(1088, 1847).fit).toBe("poor");
     expect(heroFit(1000, 900).fit).toBe("weak");

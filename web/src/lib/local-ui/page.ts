@@ -31,7 +31,7 @@ button:disabled { opacity:.5; cursor:default; }
 code { background:#F2F2F2; padding:1px 4px; }
 </style></head><body><main>
 <h1>Finalize newsletter images</h1>
-<p class="sub">Runs only on this computer (127.0.0.1). Images are downloaded from Yellowdig into the folder you choose and embedded into the newsletter here. Nothing is uploaded.</p>
+<p class="sub">Runs only on this computer (127.0.0.1). Add your own screenshots, or download images from Yellowdig, into the folder you choose; they are embedded into the newsletter here. Nothing is uploaded.</p>
 
 <section id="step-open"><h2>1 · Open the generated newsletter</h2>
 <label for="html">Newsletter HTML (downloaded from the generator)</label><input id="html" type="file" accept=".html,.htm,text/html">
@@ -67,8 +67,8 @@ function slotLabel(s) { return s.slot === "hero" ? "Hero image" : s.slot.replace
 
 function renderSlots() {
   const box = $("slots"); box.textContent = "";
-  const head = el("section", {}, el("h2", { text: "2 · Paste Yellowdig image addresses" }),
-    el("p", { class: "note", text: "Open each post, right-click the screenshot, choose “Copy image address”, and paste it below (one address per line; several are fine). Then pick which image each spotlight uses, and which one is the hero." }));
+  const head = el("section", {}, el("h2", { text: "2 · Add images" }),
+    el("p", { class: "note", text: "For each spotlight, open the post and either choose screenshot files you took (PNG, JPEG or WebP; a workflow canvas reads best), or right-click the post's image, choose “Copy image address” and paste it. Then pick which image each spotlight uses, and which one is the hero." }));
   box.appendChild(head);
   for (const s of state.slots) {
     const card = el("section", { class: "card" });
@@ -80,6 +80,8 @@ function renderSlots() {
       if (s.href) { meta.appendChild(document.createTextNode(" · ")); meta.appendChild(el("a", { href: s.href, target: "_blank", rel: "noopener noreferrer", text: "Open post ↗" })); }
       card.appendChild(meta);
     }
+    const pick = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp", multiple: "" });
+    const addBtn = el("button", { text: "Add screenshots" });
     const ta = el("textarea", { placeholder: "Paste Yellowdig image address" });
     const btn = el("button", { text: "Download images" });
     const msg = el("div", { class: "msg" });
@@ -96,7 +98,28 @@ function renderSlots() {
       } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
       btn.disabled = false;
     };
-    card.append(el("label", { text: "Image address(es)" }), ta, btn, msg, thumbs);
+    // One screenshot per request keeps large PNGs under the page's request limit.
+    addBtn.onclick = async () => {
+      const files = [...pick.files];
+      if (!files.length) { msg.className = "msg err"; msg.textContent = "Choose one or more screenshot files first."; return; }
+      addBtn.disabled = true; msg.className = "msg";
+      try {
+        let r = null;
+        for (let i = 0; i < files.length; i++) {
+          msg.textContent = "Adding " + (i + 1) + " of " + files.length + "…";
+          const data = await new Promise((ok, fail) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = () => fail(new Error("could not read " + files[i].name)); fr.readAsDataURL(files[i]); });
+          r = await api("add", { slot: s.slot, files: [{ data }] });
+        }
+        state.images[s.slot] = r.images;
+        if (s.slot !== "hero" && !state.use[s.slot]) state.use[s.slot] = r.images[0] ? r.images[0].file : null;
+        if (!state.heroTouched && r.suggestedHero) { const owner = Object.keys(state.images).find((k) => state.images[k].some((x) => x.file === r.suggestedHero)); state.hero = r.suggestedHero; state.heroFrom = owner === "hero" ? null : owner; }
+        msg.textContent = files.length + " screenshot(s) saved to your folder.";
+        pick.value = "";
+        renderAllThumbs();
+      } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+      addBtn.disabled = false;
+    };
+    card.append(el("label", { text: "Your screenshots" }), pick, addBtn, el("label", { text: "Or Yellowdig image address(es)" }), ta, btn, msg, thumbs);
     card.dataset.slot = s.slot;
     box.appendChild(card);
   }

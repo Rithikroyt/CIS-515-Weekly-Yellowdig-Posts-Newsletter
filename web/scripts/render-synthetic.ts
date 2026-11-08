@@ -2,6 +2,8 @@
 // Usage (from web/): npx tsx scripts/render-synthetic.ts <out.html> [scenario] [--reference [--slots]]
 // --reference renders the 27-post reference-sized week with drawn placeholder screenshots (clearly labelled
 // synthetic) flowing through the same asset, curator, selection and renderer path as real post images.
+// --slots: no images reach the generator (every image position is a slot). --no-files: also no workflow files, so
+// spotlight pipelines are reconstructed from the post text, as for a real week without uploaded workflow files.
 import { writeFileSync } from "node:fs";
 import sharp from "sharp";
 import * as E from "../src/lib/editorial";
@@ -41,7 +43,8 @@ async function main() {
   if (process.argv.includes("--reference") && process.argv.includes("--slots")) {
     // As a real week arrives now: no images reach the generator, so every image position is a slot to fill locally.
     const week = referenceWeek();
-    const input = E.buildEditorialInput({ dataset: week.dataset, manifest: week.manifest, profiles: week.profiles, images: [], course: { ...E.SYNTHETIC_COURSE }, coverageComplete: false });
+    const noFiles = process.argv.includes("--no-files");
+    const input = E.buildEditorialInput({ dataset: week.dataset, manifest: noFiles ? null : week.manifest, profiles: noFiles ? [] : week.profiles, images: [], course: { ...E.SYNTHETIC_COURSE }, coverageComplete: false });
     const draft = await E.runEditorial({ input, provider: E.createMockProvider(week.scenario), now: () => "2026-11-01T12:00:00Z" });
     const r = renderNewsletter({ input, draft });
     assertPublicationQuality(input, r);

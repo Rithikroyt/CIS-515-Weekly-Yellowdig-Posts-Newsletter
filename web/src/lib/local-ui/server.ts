@@ -1,6 +1,6 @@
 // Local finalize UI: a small web page served only on 127.0.0.1 for adding class images to a generated newsletter.
-// Images are downloaded from Yellowdig to a folder the user chooses, embedded, and saved as HTML and PDF on this
-// computer. Nothing is uploaded; there is no analytics or telemetry and no external script. State lives in memory.
+// Images are downloaded from Yellowdig or chosen from the user's own screenshots, kept in a folder the user chooses,
+// embedded, and saved as HTML and PDF on this computer. Nothing is uploaded; there is no analytics or telemetry and no external script. State lives in memory.
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -14,7 +14,10 @@ import { PAGE } from "./page";
 
 export const LOCAL_HOST = "127.0.0.1";
 const MAX_BODY = 40 * 1024 * 1024;
-const FILE_NAME = /^(hero|spotlight-[1-9][0-9]?)(-[1-9][0-9]?)?\.(png|jpg|webp|gif)$/;
+const FILE_NAME = /^(hero|spotlight-[1-9][0-9]?)(-[1-9][0-9]?|-own-[1-9][0-9]?)?\.(png|jpg|webp|gif)$/;
+/** The user's own screenshots: at most this many per request and per slot, each within the intake limits. */
+const OWN_PER_REQUEST = 4, OWN_PER_SLOT = 8, OWN_MAX_BYTES = 15 * 1024 * 1024, OWN_MAX_PIXELS = 60_000_000;
+const OWN_FORMATS: Record<string, string> = { png: "png", jpeg: "jpg", webp: "webp" };
 const OUT_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,80}$/;
 
 export type FinalizeServerOptions = {
@@ -29,6 +32,10 @@ export type FinalizeServerOptions = {
 type Image = { file: string; width: number; height: number; format: string; kb: number; host: string; fit: ReturnType<typeof heroFit>; thumb: string };
 type Session = { html: string; slots: Slot[]; workdir: string; images: Record<string, Image[]> };
 
+/** The host shown for the user's own screenshots. */
+const OWN_HOST = "this computer";
+const widestFile = (s: Session) => Object.values(s.images).flat().reduce<Image | null>((best, x) => (!best || x.fit.ratio > best.fit.ratio ? x : best), null)?.file ?? null;
+
 const LOCAL_BROWSERS = [
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
   "C:/Program Files/Google/Chrome/Application/chrome.exe", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium",
@@ -42,6 +49,14 @@ async function defaultPdf(html: string): Promise<Uint8Array> {
   }
   const { htmlToPdf } = await import("../server/pdf");
   return htmlToPdf(html);
+}
+
+/** The page's record of one saved image: size, hero fit and a small JPEG preview. */
+async function imageRecord(buf: Buffer, file: string, host: string, ext: string): Promise<Image> {
+  const meta = await sharp(buf).metadata();
+  const w = meta.autoOrient?.width ?? meta.width ?? 0, h = meta.autoOrient?.height ?? meta.height ?? 0;
+  const thumb = "data:image/jpeg;base64," + (await sharp(buf).rotate().resize({ width: 360, height: 240, fit: "inside" }).flatten({ background: "#FFFFFF" }).jpeg({ quality: 70 }).toBuffer()).toString("base64");
+  return { file, width: w, height: h, format: ext, kb: Math.round(buf.length / 1024), host, fit: heroFit(w, h), thumb };
 }
 
 export function createFinalizeServer(o: FinalizeServerOptions) {
@@ -95,15 +110,39 @@ export function createFinalizeServer(o: FinalizeServerOptions) {
         const d = await downloadAsset(urls[i], o.fetchImpl);
         const file = localName(slot, i, urls.length, d.kind.ext);
         writeFileSync(join(session.workdir, file), d.buf);
-        const meta = await sharp(d.buf).metadata();
-        const w = meta.autoOrient?.width ?? meta.width ?? 0, h = meta.autoOrient?.height ?? meta.height ?? 0;
-        const thumb = "data:image/jpeg;base64," + (await sharp(d.buf).rotate().resize({ width: 360, height: 240, fit: "inside" }).flatten({ background: "#FFFFFF" }).jpeg({ quality: 70 }).toBuffer()).toString("base64");
-        images.push({ file, width: w, height: h, format: d.kind.ext.slice(1), kb: Math.round(d.buf.length / 1024), host: d.host, fit: heroFit(w, h), thumb });
+        images.push(await imageRecord(d.buf, file, d.host, d.kind.ext.slice(1)));
       }
-      session.images[slot] = images;
-      const all = Object.values(session.images).flat();
-      const widest = all.reduce<Image | null>((best, x) => (!best || x.fit.ratio > best.fit.ratio ? x : best), null);
-      return { slot, images, suggestedHero: widest?.file ?? null };
+      // New downloads replace earlier downloads for the slot; the user's own screenshots stay.
+      session.images[slot] = [...(session.images[slot] ?? []).filter((x) => x.host === OWN_HOST), ...images];
+      return { slot, images: session.images[slot], suggestedHero: widestFile(session) };
+    },
+    // Adds screenshots the user took, sent from the page as base64. Each must decode as PNG, JPEG or WebP within the
+    // intake limits; it is saved unchanged and re-encoded (metadata dropped) only when the issue is finalized.
+    async add(b) {
+      if (!session) throw new Error("[NO_SESSION] open a newsletter first");
+      const slot = String(b.slot ?? "");
+      if (!SLOT_ID.test(slot) || !session.slots.some((s) => s.slot === slot)) throw new Error("[UNKNOWN_SLOT] " + slot);
+      const files = Array.isArray(b.files) ? b.files : [];
+      if (!files.length || files.length > OWN_PER_REQUEST) throw new Error("[BAD_FILES] choose one to " + OWN_PER_REQUEST + " screenshots at a time");
+      const current = session.images[slot] ?? [];
+      const own = current.filter((x) => x.host === OWN_HOST).length;
+      if (own + files.length > OWN_PER_SLOT) throw new Error("[TOO_MANY_FILES] at most " + OWN_PER_SLOT + " of your own screenshots per slot");
+      const added: Image[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const raw = String((files[i] as { data?: unknown })?.data ?? "").replace(/^data:image\/[a-z+.-]+;base64,/i, "");
+        if (!/^[A-Za-z0-9+/=]+$/.test(raw)) throw new Error("[BAD_IMAGE] screenshot " + (i + 1) + " could not be read");
+        const buf = Buffer.from(raw, "base64");
+        if (!buf.length || buf.length > OWN_MAX_BYTES) throw new Error("[BAD_IMAGE] screenshot " + (i + 1) + " must be under 15 MB");
+        const meta = await sharp(buf).metadata().catch(() => null);
+        const ext = meta?.format ? OWN_FORMATS[meta.format] : undefined;
+        if (!meta || !ext) throw new Error("[BAD_IMAGE] screenshot " + (i + 1) + " is not a PNG, JPEG or WebP image");
+        if ((meta.width ?? 0) * (meta.height ?? 0) > OWN_MAX_PIXELS) throw new Error("[BAD_IMAGE] screenshot " + (i + 1) + " is larger than 60 megapixels");
+        const file = slot + "-own-" + (own + i + 1) + "." + ext;
+        writeFileSync(join(session.workdir, file), buf);
+        added.push(await imageRecord(buf, file, OWN_HOST, ext));
+      }
+      session.images[slot] = [...current, ...added];
+      return { slot, images: session.images[slot], suggestedHero: widestFile(session) };
     },
     // Embeds the chosen images and writes the standalone HTML (and PDF) into the working folder.
     async finalize(b) {
@@ -152,7 +191,7 @@ export function createFinalizeServer(o: FinalizeServerOptions) {
         res.setHeader("content-security-policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; form-action 'none'; frame-ancestors 'none'");
         return send(res, 200, PAGE.replace("__TOKEN__", token), "text/html; charset=utf-8");
       }
-      const m = /^\/api\/(open|download|finalize)$/.exec(req.url ?? "");
+      const m = /^\/api\/(open|download|add|finalize)$/.exec(req.url ?? "");
       if (req.method !== "POST" || !m) return send(res, 404, { error: "not found" });
       const origin = req.headers.origin;
       if (origin && origin !== "http://" + req.headers.host) return send(res, 403, { error: "forbidden origin" });
